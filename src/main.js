@@ -65,6 +65,7 @@ let autosaveTimer = null;
 let pan = { x: 0, y: 0 };
 let zoom = 1;
 let panning = null;
+let engine;
 const status = (message) => { $('#statusMessage').textContent = message; };
 
 function queueAutosave() {
@@ -84,6 +85,7 @@ function queueAutosave() {
 }
 
 function handleEngineChange(event) {
+  if (!engine) return;
   if (event.reason === 'color-picked') {
     $('#colorInput').value = event.color;
     $('#colorLabel').textContent = event.color;
@@ -93,7 +95,7 @@ function handleEngineChange(event) {
   if (event.reason === 'content' || event.reason === 'project-restored') queueAutosave();
 }
 
-const engine = new CanvasEngine({
+engine = new CanvasEngine({
   artboard, overlay, onChange: handleEngineChange, onStatus: status,
   onPan: {
     start(event) { panning = { clientX: event.clientX, clientY: event.clientY, x: pan.x, y: pan.y }; viewport.classList.add('dragging'); },
