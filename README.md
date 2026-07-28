@@ -130,6 +130,22 @@ Domistika is an independent browser art application created for artists who want
 - Random layout generator
 - An entire array commits as one undo operation
 
+## v0.8 — Effects & Finishing
+
+- Active-layer finishing preview with original-versus-effect comparison
+- Clean Pop, Warm Film, Cool Night, Neon Glow, Mono Ink, Dream Haze, Vintage Print, Pixel Pop, and Solar Candy presets
+- Brightness, contrast, saturation, and hue controls
+- Blur, grayscale, sepia, and partial-invert controls
+- Screen-composited glow and alpha-preserving vignette
+- Pixelation, posterization, and film-grain processing
+- One-click randomized finishing looks
+- Apply directly to the active layer with a drawing-history checkpoint
+- Apply to Copy workflow that keeps the original layer intact
+- Transparent pixels remain transparent throughout processing
+- Last-used finishing controls persist locally
+- Dedicated Effects launcher and inspector panel
+- Plain `J` keyboard shortcut opens the Effects panel
+
 ## Technology
 
 - Vanilla JavaScript and modern browser APIs
@@ -139,6 +155,7 @@ Domistika is an independent browser art application created for artists who want
 - CSS and Canvas mask compositing
 - Triangle-mesh affine image warping
 - Parametric hypotrochoid and epitrochoid rendering
+- Canvas pixel processing and browser-native filter compositing
 - Three.js with a WebGL2 context for the 3D reference lab
 - MediaRecorder and Canvas Capture Stream for process videos
 - Vite production builds
@@ -166,7 +183,7 @@ In the repository settings, open **Pages** and set **Source** to **GitHub Action
 
 ## Roadmap
 
-### v0.8 — Portable Artist Studio
+### v0.9 — Portable Artist Studio
 
 - Installable offline PWA
 - Reference-board persistence
@@ -176,13 +193,13 @@ In the repository settings, open **Pages** and set **Source** to **GitHub Action
 - Keyboard and accessibility customization
 - Workspace backup and restore bundle
 
-### v0.9 — Effects & Finishing
+### v0.10 — Type, Guides & Precision
 
-- Adjustment layers
-- Blur, sharpen, noise, glow, and color effects
+- Text and typography tools
 - Perspective guides and snapping
 - Selection edge smoothing and anti-alias controls
-- Text and typography tools
+- Rulers, angle guides, and measurement overlays
+- Reusable shape and composition templates
 
 ### v1.0 — Open Artist Studio
 
