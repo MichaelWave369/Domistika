@@ -104,6 +104,32 @@ Domistika is an independent browser art application created for artists who want
 - Mask-aware export, compositing, autosave, and `.domistika` project restore
 - Dedicated Layers+ launcher and inspector panel
 
+## v0.7 — Spiro Lab
+
+- Spirograph-style pattern generator for the active drawing layer
+- Hypotrochoid and epitrochoid curve families
+- Live preview using the current Domistika drawing color
+- Classic, flower, starburst, orbit, and gear presets
+- One-click generative randomizer
+- Adjustable ring radius, wheel radius, pen offset, diameter, turns, line width, opacity, rotation, and quality
+- Draw-at-center action for mandalas and medallions
+- Place-on-canvas mode for stamping a pattern anywhere
+- Every single placement commits as one clean undo step
+- Generated artwork remains compatible with layers, exports, autosave, and `.domistika` project files
+
+## v0.7.1 — Spiro Assist
+
+- Ring, golden-angle, grid, and row array layouts
+- Alternating, doubled, and four-way mirrored patterns
+- Start-to-end scale progression across an array
+- Per-pattern rotation stepping
+- Automatic hue cycling from the current drawing color
+- Normal, multiply, screen, overlay, additive glow, and difference blending
+- Live array preview
+- Place-array mode for positioning complete pattern fields anywhere on the canvas
+- Random layout generator
+- An entire array commits as one undo operation
+
 ## Technology
 
 - Vanilla JavaScript and modern browser APIs
@@ -112,6 +138,7 @@ Domistika is an independent browser art application created for artists who want
 - IndexedDB autosave
 - CSS and Canvas mask compositing
 - Triangle-mesh affine image warping
+- Parametric hypotrochoid and epitrochoid rendering
 - Three.js with a WebGL2 context for the 3D reference lab
 - MediaRecorder and Canvas Capture Stream for process videos
 - Vite production builds
@@ -139,7 +166,7 @@ In the repository settings, open **Pages** and set **Source** to **GitHub Action
 
 ## Roadmap
 
-### v0.7 — Portable Artist Studio
+### v0.8 — Portable Artist Studio
 
 - Installable offline PWA
 - Reference-board persistence
@@ -149,7 +176,7 @@ In the repository settings, open **Pages** and set **Source** to **GitHub Action
 - Keyboard and accessibility customization
 - Workspace backup and restore bundle
 
-### v0.8 — Effects & Finishing
+### v0.9 — Effects & Finishing
 
 - Adjustment layers
 - Blur, sharpen, noise, glow, and color effects
