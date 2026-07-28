@@ -8,11 +8,9 @@ Domistika is an independent browser art application created for artists who want
 
 ## Live app
 
-After GitHub Pages is enabled for the repository, the production URL will be:
-
 `https://michaelwave369.github.io/Domistika/`
 
-## v0.1 features
+## Core studio
 
 - Pressure-aware pencil, ink, marker, airbrush, and eraser
 - Adjustable brush size, opacity, and steady-stroke smoothing
@@ -29,13 +27,42 @@ After GitHub Pages is enabled for the repository, the production URL will be:
 - WebGL2/Three.js 3D Form Lab for lighting and volume reference
 - Responsive desktop, tablet, and mobile layouts
 
+## v0.2 — Brush Engine
+
+- Stamp-based stroke renderer
+- 43 built-in sketching, inking, painting, texture, airbrush, and eraser presets
+- Brush spacing, scatter, rotation jitter, grain, hardness, and flow
+- Round, flat, chisel, square, rake, and splatter tip shapes
+- Pressure-to-size and pressure-to-opacity controls
+- Stylus tilt influence
+- Local wet-color mixing
+- Searchable brush shelf, categories, and favorites
+- Brush Lab for live tuning
+- Locally saved custom brushes
+- Brush profiles preserved in `.domistika` projects
+
+## v0.3 — Artist Play Studio
+
+- Floating, draggable reference image board
+- Reference opacity, scale, rotation, and mirror controls
+- Drag-and-drop reference loading
+- Automatic eight-color palette extraction
+- Clickable extracted color swatches
+- Persistent recent-color history
+- Complementary, analogous, triadic, and split-complementary harmonies
+- Stroke-by-stroke time-lapse recording
+- In-app time-lapse playback
+- WebM process-video export where browser support is available
+- PNG storyboard export
+
 ## Technology
 
 - Vanilla JavaScript and modern browser APIs
 - Layered HTML Canvas 2D rendering
-- Pointer Events with stylus pressure support
+- Pointer Events with stylus pressure and tilt support
 - IndexedDB autosave
 - Three.js with a WebGL2 context for the 3D reference lab
+- MediaRecorder and Canvas Capture Stream for process videos
 - Vite production builds
 - GitHub Actions deployment to GitHub Pages
 
@@ -61,26 +88,21 @@ In the repository settings, open **Pages** and set **Source** to **GitHub Action
 
 ## Roadmap
 
-### v0.2 — Brush Workshop
+### v0.4 — Selection & Transform
 
-- Custom brush shape and texture editor
-- Brush preset library and import/export
-- Tilt and rotation-aware stylus behavior
-- Smudge and wet-media simulation
-
-### v0.3 — Selection & Transform
-
-- Lasso, rectangle, magic-wand, and color-range selection
-- Move, scale, rotate, warp, and perspective transforms
+- Lasso and rectangular selection
+- Move, scale, rotate, flip, and duplicate selections
+- Magic-wand and color-range selection
 - Layer masks and clipping groups
+- Perspective and warp transforms
 
-### v0.4 — Artist Workflow
+### v0.5 — Portable Artist Studio
 
-- Reference image boards
-- Time-lapse recording
-- Color harmony and palette extraction
-- SVG export for vector-friendly tools
 - Installable offline PWA
+- Reference-board persistence
+- Brush-pack import and export
+- SVG export for vector-friendly tools
+- Keyboard and accessibility customization
 
 ### v1.0 — Open Artist Studio
 
