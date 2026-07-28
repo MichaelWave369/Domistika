@@ -55,6 +55,21 @@ Domistika is an independent browser art application created for artists who want
 - WebM process-video export where browser support is available
 - PNG storyboard export
 
+## v0.4 — Selection & Transform
+
+- Rectangular and freehand lasso selection
+- Direct canvas manipulation with drag-to-move controls
+- Corner handles for proportional scaling
+- Rotation handle and precise rotation slider
+- Horizontal and vertical flipping
+- Pixel nudging with buttons or arrow keys
+- Select-all support
+- Internal cut, copy, paste, and duplicate clipboard
+- Delete selected pixels without affecting the rest of the layer
+- Commit creates one clean undo step
+- Cancel restores the untouched original layer snapshot
+- Desktop, tablet, phone, and keyboard workflows
+
 ## Technology
 
 - Vanilla JavaScript and modern browser APIs
@@ -88,15 +103,15 @@ In the repository settings, open **Pages** and set **Source** to **GitHub Action
 
 ## Roadmap
 
-### v0.4 — Selection & Transform
+### v0.5 — Smart Selection & Masks
 
-- Lasso and rectangular selection
-- Move, scale, rotate, flip, and duplicate selections
 - Magic-wand and color-range selection
+- Selection feathering, grow, shrink, and invert
 - Layer masks and clipping groups
 - Perspective and warp transforms
+- Reusable selection channels
 
-### v0.5 — Portable Artist Studio
+### v0.6 — Portable Artist Studio
 
 - Installable offline PWA
 - Reference-board persistence
