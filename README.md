@@ -70,12 +70,29 @@ Domistika is an independent browser art application created for artists who want
 - Cancel restores the untouched original layer snapshot
 - Desktop, tablet, phone, and keyboard workflows
 
+## v0.5 — Smart Selection & Masks
+
+- Magic-wand selection for connected regions
+- Global color-range selection
+- Adjustable color tolerance
+- Grow, shrink, feather, and invert selection refinement
+- Copy or cut selected pixels into a new layer
+- Clear only smart-selected pixels
+- Non-destructive layer masks that preserve the underlying canvas
+- Enable, disable, invert, update, or remove masks
+- Mask-aware PNG/JPEG export and layer compositing
+- Reusable named selection channels
+- Layer masks and channels preserved in `.domistika` projects
+- Dedicated Smart Select tool, control-bar launcher, and inspector panel
+- Desktop, tablet, mobile, and keyboard workflows
+
 ## Technology
 
 - Vanilla JavaScript and modern browser APIs
 - Layered HTML Canvas 2D rendering
 - Pointer Events with stylus pressure and tilt support
 - IndexedDB autosave
+- CSS and Canvas mask compositing
 - Three.js with a WebGL2 context for the 3D reference lab
 - MediaRecorder and Canvas Capture Stream for process videos
 - Vite production builds
@@ -103,15 +120,16 @@ In the repository settings, open **Pages** and set **Source** to **GitHub Action
 
 ## Roadmap
 
-### v0.5 — Smart Selection & Masks
+### v0.6 — Advanced Transform & Layer Logic
 
-- Magic-wand and color-range selection
-- Selection feathering, grow, shrink, and invert
-- Layer masks and clipping groups
-- Perspective and warp transforms
-- Reusable selection channels
+- Perspective and freeform warp transforms
+- Clipping groups
+- Editable mask painting mode
+- Mask thumbnails in the Layers panel
+- Linked and unlinked layer-mask movement
+- Selection edge smoothing and anti-alias controls
 
-### v0.6 — Portable Artist Studio
+### v0.7 — Portable Artist Studio
 
 - Installable offline PWA
 - Reference-board persistence
