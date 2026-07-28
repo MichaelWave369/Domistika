@@ -86,6 +86,24 @@ Domistika is an independent browser art application created for artists who want
 - Dedicated Smart Select tool, control-bar launcher, and inspector panel
 - Desktop, tablet, mobile, and keyboard workflows
 
+## v0.6 — Advanced Transform & Layer Logic
+
+- Full-layer perspective warp with four-corner control
+- Freeform 3×3 mesh warp
+- Adjustable warp rendering quality
+- Non-destructive live warp preview with Commit, Cancel, and Reset
+- Warp commits as one undoable operation
+- Linked masks warp with their artwork; unlinked masks stay in place
+- Clipping chains that constrain layers to the alpha beneath them
+- Consecutive clipped layers form reusable clipping groups
+- Editable mask-painting mode with Hide and Reveal brushes
+- Mask-paint session undo and redo
+- Enable, disable, remove, link, or unlink editable masks
+- Existing v0.5 smart masks are preserved when v0.6 editing begins
+- Mask thumbnails and CLIP/MASK indicators in the Layers list
+- Mask-aware export, compositing, autosave, and `.domistika` project restore
+- Dedicated Layers+ launcher and inspector panel
+
 ## Technology
 
 - Vanilla JavaScript and modern browser APIs
@@ -93,6 +111,7 @@ Domistika is an independent browser art application created for artists who want
 - Pointer Events with stylus pressure and tilt support
 - IndexedDB autosave
 - CSS and Canvas mask compositing
+- Triangle-mesh affine image warping
 - Three.js with a WebGL2 context for the 3D reference lab
 - MediaRecorder and Canvas Capture Stream for process videos
 - Vite production builds
@@ -120,22 +139,23 @@ In the repository settings, open **Pages** and set **Source** to **GitHub Action
 
 ## Roadmap
 
-### v0.6 — Advanced Transform & Layer Logic
-
-- Perspective and freeform warp transforms
-- Clipping groups
-- Editable mask painting mode
-- Mask thumbnails in the Layers panel
-- Linked and unlinked layer-mask movement
-- Selection edge smoothing and anti-alias controls
-
 ### v0.7 — Portable Artist Studio
 
 - Installable offline PWA
 - Reference-board persistence
 - Brush-pack import and export
+- Palette-pack import and export
 - SVG export for vector-friendly tools
 - Keyboard and accessibility customization
+- Workspace backup and restore bundle
+
+### v0.8 — Effects & Finishing
+
+- Adjustment layers
+- Blur, sharpen, noise, glow, and color effects
+- Perspective guides and snapping
+- Selection edge smoothing and anti-alias controls
+- Text and typography tools
 
 ### v1.0 — Open Artist Studio
 
