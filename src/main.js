@@ -105,7 +105,11 @@ engine = new CanvasEngine({
 });
 
 function updateCanvasDimensions() { artboard.style.width = `${engine.width}px`; artboard.style.height = `${engine.height}px`; }
-function applyTransform() { artboard.style.transform = `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`; $('#zoomLabel').textContent = `${Math.round(zoom * 100)}%`; }
+function applyTransform() {
+  artboard.style.transform = `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`;
+  $('#zoomLabel').textContent = `${Math.round(zoom * 100)}%`;
+  window.dispatchEvent(new CustomEvent('domistika:viewport-change', { detail: { pan: { ...pan }, zoom } }));
+}
 function fitCanvas() {
   const padding = 72;
   zoom = Math.max(0.05, Math.min(1, (viewport.clientWidth - padding) / engine.width, (viewport.clientHeight - padding) / engine.height));
@@ -122,10 +126,22 @@ function setZoom(next, focalX = viewport.clientWidth / 2, focalY = viewport.clie
   pan.y = focalY - worldY * zoom;
   applyTransform();
 }
+function panCanvasBy(deltaX, deltaY) {
+  pan.x += Number(deltaX) || 0;
+  pan.y += Number(deltaY) || 0;
+  applyTransform();
+}
 function selectTool(tool) {
   engine.setTool(tool);
   document.querySelectorAll('[data-tool]').forEach((button) => button.classList.toggle('active', button.dataset.tool === tool));
 }
+
+window.domistikaNavigation = {
+  panBy: panCanvasBy,
+  zoomBy: (factor) => setZoom(zoom * factor),
+  fit: fitCanvas,
+  getState: () => ({ pan: { ...pan }, zoom }),
+};
 
 document.querySelectorAll('[data-tool]').forEach((button) => button.addEventListener('click', () => selectTool(button.dataset.tool)));
 $('#colorInput').addEventListener('input', (event) => { engine.setSetting('color', event.target.value); $('#colorLabel').textContent = event.target.value; });
@@ -158,7 +174,7 @@ $('#clearLayer').addEventListener('click', () => engine.clearActiveLayer());
 $('#undoButton').addEventListener('click', () => engine.undo());
 $('#redoButton').addEventListener('click', () => engine.redo());
 
-function escapeHtml(value) { return String(value).replace(/[&<>'"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' })[character]); }
+function escapeHtml(value) { return String(value).replace(/[&<>\'\"]/g, (character) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#039;', '"': '&quot;' })[character]); }
 function renderLayers() {
   if (!engine?.layers) return;
   const list = $('#layerList');
@@ -229,12 +245,32 @@ window.addEventListener('keydown', (event) => {
   if (event.code === 'Space') { event.preventDefault(); engine.setSpacePan(true); return; }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'z') { event.preventDefault(); event.shiftKey ? engine.redo() : engine.undo(); return; }
   if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 'y') { event.preventDefault(); engine.redo(); return; }
+
   const shortcuts = { b: 'pencil', i: 'ink', m: 'marker', a: 'airbrush', e: 'eraser', l: 'line', r: 'rectangle', o: 'ellipse', h: 'pan' };
   const key = event.key.toLowerCase();
   if (shortcuts[key]) selectTool(shortcuts[key]);
   if (key === 'g') $('#gridToggle').click();
   if (key === '0') fitCanvas();
   if (key === '[' || key === ']') { const input = $('#sizeInput'); input.value = String(Math.max(1, Math.min(180, Number(input.value) + (key === '[' ? -2 : 2)))); input.dispatchEvent(new Event('input')); }
+
+  if (!event.ctrlKey && !event.metaKey && !event.altKey) {
+    const zoomInKey = event.code === 'NumpadAdd' || key === '+' || (key === '=' && event.shiftKey);
+    const zoomOutKey = event.code === 'NumpadSubtract' || key === '-';
+    if (zoomInKey) { event.preventDefault(); setZoom(zoom * 1.18); return; }
+    if (zoomOutKey) { event.preventDefault(); setZoom(zoom / 1.18); return; }
+
+    const selectionEditing = Boolean(document.querySelector('#v04SelectionCanvas.active'));
+    const panStep = event.shiftKey ? 96 : 38;
+    const panKeys = {
+      Numpad8: [0, -panStep], Numpad2: [0, panStep], Numpad4: [-panStep, 0], Numpad6: [panStep, 0],
+      Numpad7: [-panStep, -panStep], Numpad9: [panStep, -panStep], Numpad1: [-panStep, panStep], Numpad3: [panStep, panStep],
+    };
+    if (!selectionEditing) {
+      panKeys.ArrowUp = [0, -panStep]; panKeys.ArrowDown = [0, panStep]; panKeys.ArrowLeft = [-panStep, 0]; panKeys.ArrowRight = [panStep, 0];
+    }
+    const movement = panKeys[event.code] || panKeys[event.key];
+    if (movement) { event.preventDefault(); panCanvasBy(movement[0], movement[1]); }
+  }
 });
 window.addEventListener('keyup', (event) => { if (event.code === 'Space') engine.setSpacePan(false); });
 window.addEventListener('resize', fitCanvas);
