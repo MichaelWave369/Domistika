@@ -1,13 +1,13 @@
 {
   "name": "domistika",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.8.5",
   "type": "module",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "check": "node --check src/main.js && node --check src/core/CanvasEngine.js && node --check src/core/storage.js && node --check src/three/ReferenceStage.js"
+    "check": "node --check src/main.js && node --check src/core/CanvasEngine.js && node --check src/core/storage.js && node --check src/three/ReferenceStage.js && node --check src/StudioUpgradeV085.js"
   },
   "dependencies": {
     "three": "0.185.1"
