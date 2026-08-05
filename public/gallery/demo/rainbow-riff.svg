@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720">
+  <rect width="960" height="720" fill="#fff8ed"/>
+  <g fill="none" stroke-width="34" stroke-linecap="round">
+    <path d="M-30 90C160 5 250 170 420 80S720 20 990 115" stroke="#ef2b1f"/>
+    <path d="M-30 150C150 65 280 220 430 135S750 70 990 175" stroke="#f0a20d"/>
+    <path d="M-30 215C180 120 290 290 470 195S760 130 990 245" stroke="#cce900"/>
+    <path d="M-30 285C160 190 300 355 455 270S735 205 990 320" stroke="#20d451"/>
+    <path d="M-30 360C185 250 290 430 475 330S750 280 990 390" stroke="#12d4d0"/>
+    <path d="M-30 440C165 330 305 500 460 415S735 350 990 475" stroke="#1748e8"/>
+    <path d="M-30 525C170 405 300 590 470 490S760 435 990 565" stroke="#7a29e8"/>
+    <path d="M-30 615C165 490 310 665 460 580S760 515 990 650" stroke="#ff3f9d"/>
+  </g>
+  <g fill="#1b1820"><circle cx="150" cy="145" r="13"/><circle cx="300" cy="310" r="13"/><circle cx="470" cy="210" r="13"/><circle cx="610" cy="410" r="13"/><circle cx="790" cy="250" r="13"/><circle cx="850" cy="565" r="13"/></g>
+  <g stroke="#1b1820" stroke-width="6" fill="none" opacity=".9"><path d="M75 65l30 30-30 30M875 590l30 30-30 30M710 90l25 25-25 25M230 545l25 25-25 25"/></g>
+</svg>
