@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720">
+  <defs><radialGradient id="b"><stop stop-color="#251237"/><stop offset=".55" stop-color="#0b1120"/><stop offset="1" stop-color="#03050a"/></radialGradient><filter id="g"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  <rect width="960" height="720" fill="url(#b)"/>
+  <g transform="translate(480 360)" fill="none" stroke-linecap="round">
+    <circle r="64" stroke="#f5c542" stroke-width="13" filter="url(#g)"/>
+    <circle r="128" stroke="#10b981" stroke-width="24" stroke-dasharray="24 12"/>
+    <circle r="205" stroke="#3b82f6" stroke-width="18" stroke-dasharray="8 18"/>
+    <circle r="284" stroke="#ec4899" stroke-width="26" stroke-dasharray="32 14"/>
+    <path d="M0-300C170-260 280-170 315 0C280 170 170 260 0 300C-170 260-280 170-315 0C-280-170-170-260 0-300Z" stroke="#f97316" stroke-width="8"/>
+  </g>
+  <g fill="#7dd3fc" stroke="#050910" stroke-width="4">
+    <circle cx="480" cy="156" r="12"/><circle cx="624" cy="216" r="12"/><circle cx="684" cy="360" r="12"/><circle cx="624" cy="504" r="12"/><circle cx="480" cy="564" r="12"/><circle cx="336" cy="504" r="12"/><circle cx="276" cy="360" r="12"/><circle cx="336" cy="216" r="12"/>
+  </g>
+  <g stroke="#00d4aa" stroke-width="3" opacity=".8"><path d="M480 360L480 156M480 360L624 216M480 360L684 360M480 360L624 504M480 360L480 564M480 360L336 504M480 360L276 360M480 360L336 216"/></g>
+  <circle cx="480" cy="360" r="24" fill="#fff"/><circle cx="480" cy="360" r="12" fill="#050910"/>
+</svg>
