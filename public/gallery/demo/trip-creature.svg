@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720">
+  <defs><linearGradient id="bg" x2="1" y2="1"><stop stop-color="#ffd868"/><stop offset=".5" stop-color="#ff7aa9"/><stop offset="1" stop-color="#55dfe1"/></linearGradient><filter id="g"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter></defs>
+  <rect width="960" height="720" fill="url(#bg)"/>
+  <g transform="translate(480 370)" stroke="#1b1820" stroke-width="13" stroke-linejoin="round">
+    <path d="M0-245C-115-238-192-164-186-52C-180 55-121 117-87 183C-53 251 53 251 87 183C121 117 180 55 186-52C192-164 115-238 0-245Z" fill="#7a29e8"/>
+    <path d="M-55-235C-95-310-164-306-185-250C-205-195-149-170-102-189M55-235C95-310 164-306 185-250C205-195 149-170 102-189" fill="#20d451"/>
+    <ellipse cx="-65" cy="-82" rx="46" ry="58" fill="#fff"/><ellipse cx="65" cy="-82" rx="46" ry="58" fill="#fff"/>
+    <circle cx="-55" cy="-70" r="19" fill="#1748e8"/><circle cx="55" cy="-70" r="19" fill="#1748e8"/>
+    <path d="M-105 28C-58 78 58 78 105 28C76 142-76 142-105 28Z" fill="#ef2b1f"/>
+    <path d="M-62 62H62" stroke="#fff" stroke-width="18"/>
+    <path d="M-150 112C-245 104-279 161-235 205C-202 238-155 204-122 169M150 112C245 104 279 161 235 205C202 238 155 204 122 169" fill="#12d4d0"/>
+    <path d="M-72 202L-130 292L-52 278M72 202L130 292L52 278" fill="#cce900"/>
+    <circle cx="0" cy="8" r="20" fill="#f0a20d" filter="url(#g)"/>
+  </g>
+  <g fill="#fff" opacity=".85"><circle cx="120" cy="120" r="15"/><circle cx="830" cy="155" r="12"/><circle cx="160" cy="590" r="10"/><circle cx="790" cy="585" r="16"/></g>
+</svg>
