@@ -1,0 +1,16 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 960 720">
+  <defs>
+    <radialGradient id="bg"><stop stop-color="#f0d59a"/><stop offset=".58" stop-color="#a55b2a"/><stop offset="1" stop-color="#32180f"/></radialGradient>
+    <linearGradient id="petal" x2="0" y2="1"><stop stop-color="#f6cc55"/><stop offset=".45" stop-color="#ea6b35"/><stop offset="1" stop-color="#7d2d54"/></linearGradient>
+    <filter id="glow"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    <path id="p" d="M480 350 C447 286 451 213 480 118 C509 213 513 286 480 350Z"/>
+  </defs>
+  <rect width="960" height="720" fill="url(#bg)"/>
+  <g fill="url(#petal)" stroke="#2a160e" stroke-width="8" stroke-linejoin="round">
+    <use href="#p"/><use href="#p" transform="rotate(30 480 360)"/><use href="#p" transform="rotate(60 480 360)"/><use href="#p" transform="rotate(90 480 360)"/><use href="#p" transform="rotate(120 480 360)"/><use href="#p" transform="rotate(150 480 360)"/><use href="#p" transform="rotate(180 480 360)"/><use href="#p" transform="rotate(210 480 360)"/><use href="#p" transform="rotate(240 480 360)"/><use href="#p" transform="rotate(270 480 360)"/><use href="#p" transform="rotate(300 480 360)"/><use href="#p" transform="rotate(330 480 360)"/>
+  </g>
+  <circle cx="480" cy="360" r="118" fill="#75843a" stroke="#2a160e" stroke-width="10"/>
+  <circle cx="480" cy="360" r="78" fill="#d99537" stroke="#2a160e" stroke-width="8"/>
+  <circle cx="480" cy="360" r="38" fill="#fff0b8" stroke="#2a160e" stroke-width="7" filter="url(#glow)"/>
+  <g fill="#f8e5b8"><circle cx="480" cy="255" r="8"/><circle cx="571" cy="308" r="8"/><circle cx="571" cy="412" r="8"/><circle cx="480" cy="465" r="8"/><circle cx="389" cy="412" r="8"/><circle cx="389" cy="308" r="8"/></g>
+</svg>

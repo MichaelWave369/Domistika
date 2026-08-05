@@ -1,0 +1,54 @@
+{
+  "version": 1,
+  "updatedAt": "2026-08-05T00:00:00Z",
+  "artworks": [
+    {
+      "id": "demo-basement-bloom",
+      "title": "Basement Bloom",
+      "artist": "Domistika Demo Studio",
+      "category": "Mandala",
+      "description": "A warm radial bloom made to celebrate the BasementVision creative console.",
+      "image": "gallery/demo/basement-bloom.svg"
+    },
+    {
+      "id": "demo-phi-circuit",
+      "title": "Phi Circuit",
+      "artist": "Domistika Demo Studio",
+      "category": "Sacred Geometry",
+      "description": "Golden-angle growth moving through a dark recursive circuit field.",
+      "image": "gallery/demo/phi-circuit.svg"
+    },
+    {
+      "id": "demo-pixel-portal",
+      "title": "Pixel Portal",
+      "artist": "Domistika Demo Studio",
+      "category": "Pixel / Retro",
+      "description": "A 16-bit console portal inspired by the shared visual language of Domistika and Auralith369.",
+      "image": "gallery/demo/pixel-portal.svg"
+    },
+    {
+      "id": "demo-swarm-mandala",
+      "title": "Swarm Mandala",
+      "artist": "Domistika Demo Studio",
+      "category": "Experimental",
+      "description": "Mirrored lanes orbit a bright observer core in a playful computational swarm.",
+      "image": "gallery/demo/swarm-mandala.svg"
+    },
+    {
+      "id": "demo-rainbow-riff",
+      "title": "Rainbow Riff",
+      "artist": "Domistika Demo Studio",
+      "category": "Abstract",
+      "description": "A color-first improvisation built from repeating human marks and small mutations.",
+      "image": "gallery/demo/rainbow-riff.svg"
+    },
+    {
+      "id": "demo-trip-creature",
+      "title": "Trip Creature",
+      "artist": "Domistika Demo Studio",
+      "category": "Character",
+      "description": "A friendly strange species discovered between symmetry, doodling, and imagination.",
+      "image": "gallery/demo/trip-creature.svg"
+    }
+  ]
+}
