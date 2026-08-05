@@ -25,6 +25,7 @@ for (const family of ["[16, 18, 24]", "[13, 21]"]) {
 }
 if (!panels.includes('Sacred Geometry Lab') || !panels.includes('Phi + Fibonacci Lab') || !panels.includes('customRadialCount')) throw new Error('Geometry workspace contract missing');
 if (!index.includes('DomistikaPrecisionGeometryV092.js')) throw new Error('v0.9.2 entrypoint is not loaded');
-if (pkg.version !== '0.9.2') throw new Error(`Expected package version 0.9.2, got ${pkg.version}`);
+const [major = 0, minor = 0, patch = 0] = String(pkg.version).split('.').map(Number);
+if (!(major > 0 || minor > 9 || (minor === 9 && patch >= 2))) throw new Error(`Expected package version 0.9.2 or newer, got ${pkg.version}`);
 
 console.log('Domistika v0.9.2 static contracts passed.');
