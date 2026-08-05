@@ -17,7 +17,12 @@ if (!wheel.includes('studio-wheel-toggle-copy strong') || !wheel.includes('point
 for (const mode of ['sacred-vesica', 'sacred-seed-6', 'sacred-flower-12', 'sacred-metatron-13', 'phi-spiral-13', 'phi-bloom-21', 'golden-angle-34', 'fib-ring-13', 'fib-echo-8', 'phi-mirror-12']) {
   if (!modes.includes(mode)) throw new Error(`Geometry mode missing: ${mode}`);
 }
-if (!modes.includes('Radial 48') || !modes.includes('Kaleido 24') || !modes.includes('Spiral 21')) throw new Error('Extended symmetry families missing');
+for (const count of ['7', '9', '14', '18', '20', '30', '32', '36', '48']) {
+  if (!modes.includes(count)) throw new Error(`Extended radial count missing: ${count}`);
+}
+for (const family of ["[16, 18, 24]", "[13, 21]"]) {
+  if (!modes.includes(family)) throw new Error(`Extended symmetry family missing: ${family}`);
+}
 if (!panels.includes('Sacred Geometry Lab') || !panels.includes('Phi + Fibonacci Lab') || !panels.includes('customRadialCount')) throw new Error('Geometry workspace contract missing');
 if (!index.includes('DomistikaPrecisionGeometryV092.js')) throw new Error('v0.9.2 entrypoint is not loaded');
 if (pkg.version !== '0.9.2') throw new Error(`Expected package version 0.9.2, got ${pkg.version}`);
