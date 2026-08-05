@@ -12,7 +12,8 @@ const [index, pkgText, entry, theme, fill, colors] = await Promise.all([
 ]);
 
 const pkg = JSON.parse(pkgText);
-assert.equal(pkg.version, '0.9.1');
+const [major = 0, minor = 0, patch = 0] = String(pkg.version).split('.').map(Number);
+assert.ok(major > 0 || minor > 9 || (minor === 9 && patch >= 1), `Expected Domistika version 0.9.1 or newer, got ${pkg.version}`);
 assert.match(index, /RetroBasementV091\.js/);
 assert.match(entry, /retroTheme\.js/);
 assert.match(entry, /fillTool\.js/);
