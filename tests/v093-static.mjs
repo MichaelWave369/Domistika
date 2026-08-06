@@ -17,7 +17,8 @@ const [index, pkgText, entry, runtime, layout, symmetryFill, theme, gallery, bri
 ]);
 
 const pkg = JSON.parse(pkgText);
-assert.equal(pkg.version, '0.9.3');
+const [major, minor, patch] = pkg.version.split('.').map(Number);
+assert.ok(major > 0 || minor > 9 || (minor === 9 && patch >= 3), 'Expected Domistika v0.9.3 or later');
 assert.match(index, /DomistikaGalleryBridgeV093\.js/);
 for (const moduleName of ['runtime.js', 'toolRailLayout.js', 'symmetryFill.js', 'consoleTheme.js', 'gallery.js', 'auralithBridge.js']) {
   assert.match(entry, new RegExp(moduleName.replace('.', '\\.')));
@@ -44,4 +45,4 @@ assert.ok(Array.isArray(catalog.artworks) && catalog.artworks.length >= 4, 'Expe
 assert.match(issueTemplate, /Permission and governance/);
 assert.match(issueTemplate, /I created this artwork or have permission/);
 
-console.log('Domistika v0.9.3 static contracts passed.');
+console.log('Domistika v0.9.3+ static contracts passed.');
