@@ -23,6 +23,7 @@ assert.match(runtime, /historyQueue/);
 assert.match(runtime, /boundedSymmetryFill/);
 assert.match(runtime, /shared background was protected/);
 assert.match(runtime, /isEligibleSymmetryRegion/);
+assert.match(runtime, /__v096PerformanceInstalled/);
 assert.doesNotMatch(runtime, /new OffscreenCanvas/);
 
 console.log('Domistika v0.9.7 reliability contracts passed');
