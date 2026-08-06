@@ -4,16 +4,33 @@ import { TransformControls } from 'three/addons/controls/TransformControls.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { GLTFExporter } from 'three/addons/exporters/GLTFExporter.js';
-import helvetikerRegularData from 'three/examples/fonts/helvetiker_regular.typeface.json';
-import helvetikerBoldData from 'three/examples/fonts/helvetiker_bold.typeface.json';
-import optimerRegularData from 'three/examples/fonts/optimer_regular.typeface.json';
-
 const FONT_LOADER = new FontLoader();
-const FONTS = Object.freeze({
-  helvetiker: FONT_LOADER.parse(helvetikerRegularData),
-  'helvetiker-bold': FONT_LOADER.parse(helvetikerBoldData),
-  optimer: FONT_LOADER.parse(optimerRegularData),
+const FONT_CACHE = new Map();
+const FONT_SOURCES = Object.freeze({
+  helvetiker: 'https://raw.githubusercontent.com/mrdoob/three.js/r185/examples/fonts/helvetiker_regular.typeface.json',
+  'helvetiker-bold': 'https://raw.githubusercontent.com/mrdoob/three.js/r185/examples/fonts/helvetiker_bold.typeface.json',
+  optimer: 'https://raw.githubusercontent.com/mrdoob/three.js/r185/examples/fonts/optimer_regular.typeface.json',
 });
+
+async function loadFont(id) {
+  const key = FONT_SOURCES[id] ? id : 'helvetiker';
+  if (FONT_CACHE.has(key)) return FONT_CACHE.get(key);
+  const storageKey = `domistika-v095-font-${key}`;
+  let data = null;
+  try {
+    const cached = localStorage.getItem(storageKey);
+    if (cached) data = JSON.parse(cached);
+  } catch { /* Storage can be unavailable in private contexts. */ }
+  if (!data) {
+    const response = await fetch(FONT_SOURCES[key], { mode: 'cors', cache: 'force-cache' });
+    if (!response.ok) throw new Error(`Could not load ${key} font (${response.status})`);
+    data = await response.json();
+    try { localStorage.setItem(storageKey, JSON.stringify(data)); } catch { /* Font still works for this session. */ }
+  }
+  const font = FONT_LOADER.parse(data);
+  FONT_CACHE.set(key, font);
+  return font;
+}
 
 export const TEXT_MESH_FONTS = Object.freeze([
   ['Helvetiker', 'helvetiker'],
@@ -82,7 +99,7 @@ export class TextMeshStage {
     this.canvas = canvas;
     this.onStateChange = onStateChange ?? (() => {});
     this.onStatus = onStatus ?? (() => {});
-    this.state = JSON.parse(JSON.stringify(TEXT_MESH_DEFAULTS));
+    this.state = structuredClone(TEXT_MESH_DEFAULTS);
     this.scene = new THREE.Scene();
     this.scene.background = new THREE.Color(this.state.background);
     this.camera = new THREE.PerspectiveCamera(34, 1, 0.05, 120);
@@ -138,6 +155,9 @@ export class TextMeshStage {
     this.clock = new THREE.Clock();
     this.resizeObserver = new ResizeObserver(() => this.resize());
     this.resizeObserver.observe(canvas.parentElement);
+    this.buildToken = 0;
+    this.fontError = null;
+    this.readyPromise = Promise.resolve();
     this.applyState(this.state, { rebuild: true, notify: false });
     this.animate();
   }
@@ -197,62 +217,72 @@ export class TextMeshStage {
   }
 
   rebuildText() {
-    disposeTree(this.textContent);
-    const font = FONTS[this.state.font] || FONTS.helvetiker;
-    const materials = materialPair(this.state);
-    const size = clamp(this.state.size, 0.12, 4);
-    const depth = clamp(this.state.depth, 0.01, 2.5);
-    const tracking = clamp(this.state.tracking, -0.2, 1.2) * size;
-    const lineHeight = clamp(this.state.lineHeight, 0.7, 3) * size;
-    const lines = String(this.state.text || 'Domistika').replace(/\r/g, '').split('\n').slice(0, 8);
+    const token = ++this.buildToken;
+    this.fontError = null;
+    this.onStatus('Loading editable 3D font…');
+    this.readyPromise = loadFont(this.state.font).then((font) => {
+      if (token !== this.buildToken) return;
+      disposeTree(this.textContent);
+      const materials = materialPair(this.state);
+      const size = clamp(this.state.size, 0.12, 4);
+      const depth = clamp(this.state.depth, 0.01, 2.5);
+      const tracking = clamp(this.state.tracking, -0.2, 1.2) * size;
+      const lineHeight = clamp(this.state.lineHeight, 0.7, 3) * size;
+      const lines = String(this.state.text || 'Domistika').replace(/\r/g, '').split('\n').slice(0, 8);
 
-    lines.forEach((line, lineIndex) => {
-      const glyphs = [];
-      let lineWidth = 0;
-      for (const character of line.slice(0, 80)) {
-        if (character === ' ') {
-          const advance = size * 0.44 + tracking;
-          glyphs.push({ character, advance, geometry: null });
+      lines.forEach((line, lineIndex) => {
+        const glyphs = [];
+        let lineWidth = 0;
+        for (const character of line.slice(0, 80)) {
+          if (character === ' ') {
+            const advance = size * 0.44 + tracking;
+            glyphs.push({ character, advance, geometry: null });
+            lineWidth += advance;
+            continue;
+          }
+          const geometry = new TextGeometry(character, {
+            font, size, depth, curveSegments: clamp(this.state.curveSegments, 2, 18),
+            bevelEnabled: Boolean(this.state.bevelEnabled),
+            bevelSize: clamp(this.state.bevelSize, 0, size * 0.22),
+            bevelThickness: clamp(this.state.bevelThickness, 0, depth * 0.75),
+            bevelSegments: clamp(this.state.bevelSegments, 1, 8),
+          });
+          geometry.computeBoundingBox();
+          const bounds = geometry.boundingBox;
+          const width = Math.max(size * 0.12, (bounds?.max.x || 0) - (bounds?.min.x || 0));
+          const advance = width + tracking;
+          glyphs.push({ character, advance, geometry });
           lineWidth += advance;
-          continue;
         }
-        const geometry = new TextGeometry(character, {
-          font, size, depth, curveSegments: clamp(this.state.curveSegments, 2, 18),
-          bevelEnabled: Boolean(this.state.bevelEnabled),
-          bevelSize: clamp(this.state.bevelSize, 0, size * 0.22),
-          bevelThickness: clamp(this.state.bevelThickness, 0, depth * 0.75),
-          bevelSegments: clamp(this.state.bevelSegments, 1, 8),
-        });
-        geometry.computeBoundingBox();
-        const bounds = geometry.boundingBox;
-        const width = Math.max(size * 0.12, (bounds?.max.x || 0) - (bounds?.min.x || 0));
-        const advance = width + tracking;
-        glyphs.push({ character, advance, geometry });
-        lineWidth += advance;
-      }
-      if (glyphs.length) lineWidth -= tracking;
-      let cursor = this.state.align === 'left' ? 0 : this.state.align === 'right' ? -lineWidth : -lineWidth / 2;
-      const lineGroup = new THREE.Group();
-      lineGroup.position.y = -lineIndex * lineHeight;
-      for (const glyph of glyphs) {
-        if (glyph.geometry) {
-          const mesh = new THREE.Mesh(glyph.geometry, materials);
-          mesh.position.x = cursor;
-          mesh.castShadow = true;
-          mesh.receiveShadow = true;
-          lineGroup.add(mesh);
+        if (glyphs.length) lineWidth -= tracking;
+        let cursor = this.state.align === 'left' ? 0 : this.state.align === 'right' ? -lineWidth : -lineWidth / 2;
+        const lineGroup = new THREE.Group();
+        lineGroup.position.y = -lineIndex * lineHeight;
+        for (const glyph of glyphs) {
+          if (glyph.geometry) {
+            const mesh = new THREE.Mesh(glyph.geometry, materials);
+            mesh.position.x = cursor;
+            mesh.castShadow = true;
+            mesh.receiveShadow = true;
+            lineGroup.add(mesh);
+          }
+          cursor += glyph.advance;
         }
-        cursor += glyph.advance;
-      }
-      this.textContent.add(lineGroup);
-    });
+        this.textContent.add(lineGroup);
+      });
 
-    const bounds = new THREE.Box3().setFromObject(this.textContent);
-    if (!bounds.isEmpty()) {
-      const center = bounds.getCenter(new THREE.Vector3());
-      this.textContent.position.set(-center.x, -center.y, -center.z);
-    }
-    this.onStatus('Editable 3D text rebuilt');
+      const bounds = new THREE.Box3().setFromObject(this.textContent);
+      if (!bounds.isEmpty()) {
+        const center = bounds.getCenter(new THREE.Vector3());
+        this.textContent.position.set(-center.x, -center.y, -center.z);
+      }
+      this.onStatus('Editable 3D text rebuilt');
+    }).catch((error) => {
+      this.fontError = error;
+      this.onStatus(`3D font load failed: ${error.message}`);
+      return null;
+    });
+    return this.readyPromise;
   }
 
   cameraPreset(preset) {
@@ -267,6 +297,8 @@ export class TextMeshStage {
   }
 
   async capturePng({ width = 1600, height = 900, transparent = true } = {}) {
+    await this.readyPromise;
+    if (this.fontError) throw this.fontError;
     const previousSize = this.renderer.getSize(new THREE.Vector2());
     const previousAspect = this.camera.aspect;
     const previousBackground = this.scene.background;
@@ -298,6 +330,8 @@ export class TextMeshStage {
   }
 
   async exportGlb() {
+    await this.readyPromise;
+    if (this.fontError) throw this.fontError;
     const exporter = new GLTFExporter();
     const scene = new THREE.Scene();
     const clone = this.textRoot.clone(true);
