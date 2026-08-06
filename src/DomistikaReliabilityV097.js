@@ -330,7 +330,7 @@ function install(engine) {
 
 function wait(attempt = 0) {
   const engine = window.domistikaEngine;
-  if (engine && window.domistikaPerformanceV096) return install(engine);
+  if (engine?.__v096PerformanceInstalled && window.domistikaPerformanceV096) return install(engine);
   if (attempt < 300) setTimeout(() => wait(attempt + 1), 50);
 }
 
