@@ -4,7 +4,7 @@ Domistika v0.9.5 replaces the prior “3D-looking” text boundary with a real T
 
 ## Included
 
-- Real `TextGeometry` extrusion using bundled Three.js typeface fonts.
+- Real `TextGeometry` extrusion using official Three.js typeface fonts.
 - Per-character geometry so multiline text supports tracking, line height, and left/center/right alignment.
 - Live depth, curve quality, bevel size, bevel thickness, and bevel enable/disable controls.
 - Matte, chrome, neon, glass, and toon material systems with separate front and side colors.
@@ -19,7 +19,9 @@ Domistika v0.9.5 replaces the prior “3D-looking” text boundary with a real T
 
 ## Local-first boundary
 
-Text geometry is generated entirely in the browser. No text, artwork, or mesh data is uploaded. The font data is resolved from Domistika's pinned Three.js package during the Vite build.
+Text geometry is generated entirely in the browser. No entered text, artwork, project, or mesh data is uploaded.
+
+On first use of a font, Domistika downloads the official typeface JSON pinned to the Three.js **r185** release from the Three.js GitHub repository. The typeface is then cached in browser local storage so repeat use can load locally. A browser with neither network access nor a previously cached font receives a clear font-loading error instead of silently substituting different geometry.
 
 ## Canvas bake workflow
 
@@ -44,3 +46,4 @@ Text geometry is generated entirely in the browser. No text, artwork, or mesh da
 - Bake at multiple widths and positions, then undo each bake.
 - Export transparent PNG and GLB.
 - Save and reopen a `.domistika` project and confirm the mesh editor state returns.
+- Reload after font use and confirm the cached typeface works without another network request.
