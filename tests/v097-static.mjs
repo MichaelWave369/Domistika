@@ -14,7 +14,10 @@ assert.equal(isEligibleSymmetryRegion({ touchesEdge: true, pixelCount: 100, tota
 assert.equal(isEligibleSymmetryRegion({ touchesEdge: false, pixelCount: 600, totalPixels: 1000 }), false);
 assert.equal(isEligibleSymmetryRegion({ touchesEdge: false, pixelCount: 200, totalPixels: 1000 }), true);
 
-assert.equal(pkg.version, '0.9.7');
+const [major, minor, patch] = pkg.version.split('.').map(Number);
+assert.equal(major, 0);
+assert.equal(minor, 9);
+assert.ok(patch >= 7, `Expected Domistika 0.9.7 or newer, got ${pkg.version}`);
 assert.match(index, /DomistikaReliabilityV097\.js/);
 assert.match(pkg.scripts.check, /v097-static\.mjs/);
 assert.match(runtime, /domistika-history-v097/);
@@ -26,4 +29,4 @@ assert.match(runtime, /isEligibleSymmetryRegion/);
 assert.match(runtime, /__v096PerformanceInstalled/);
 assert.doesNotMatch(runtime, /new OffscreenCanvas/);
 
-console.log('Domistika v0.9.7 reliability contracts passed');
+console.log('Domistika v0.9.7+ reliability contracts passed');
