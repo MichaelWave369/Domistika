@@ -173,6 +173,26 @@ Domistika is an independent browser art application created for artists who want
 - Single-frame PNG export from the kinetic performance renderer
 - Original authored paint layers remain untouched throughout performance mode
 
+## v0.9.15 — Kinetic Live-Source Hotfix
+
+- Motion always snapshots the current authored artwork immediately before preview begins
+- Stale startup snapshots are invalidated after drawing/content changes
+- Restored and imported projects no longer disappear when kinetic motion begins
+- Existing Kinetic Expansion features remain non-destructive
+
+## v0.9.16 — Kinetic Composer
+
+- Ghost Trails with adjustable temporal memory and new-frame mix
+- Kaleidoscope Lens with 3–18 radial slices, alternating mirrors, and signed lens spin
+- Orbit Pivot with elliptical and Figure-8 motion paths
+- Adjustable X/Y pivot travel radius and orbit frequency
+- Scene Sequencer for automatically advancing through existing kinetic performance presets
+- Dream Cycle, Energy Run, Storm Ride, and Meditation Loop scene sets
+- Ordered or shuffled scene playback with adjustable scene duration
+- Composer presets: Ghost Mandala, Orbit Bloom, Infinite Dream, and Calm Drift
+- WebM and PNG export automatically capture the visible Composer output when trails or kaleidoscope optics are active
+- Additive runtime preserves the v0.9.15 live-source protection and authored paint layers
+
 ## Technology
 
 - Vanilla JavaScript and modern browser APIs
@@ -183,6 +203,8 @@ Domistika is an independent browser art application created for artists who want
 - Triangle-mesh affine image warping
 - Parametric hypotrochoid and epitrochoid rendering
 - Canvas pixel processing and browser-native filter compositing
+- Temporal canvas feedback for kinetic motion trails
+- Radial clip-and-transform compositing for kaleidoscope optics
 - Web Audio API analysis for audio-reactive kinetic performance
 - MediaRecorder and Canvas Capture Stream for process and motion videos
 - Three.js with a WebGL2 context for the 3D reference lab
