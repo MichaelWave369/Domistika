@@ -158,6 +158,21 @@ Domistika is an independent browser art application created for artists who want
 - 3·6·9 Portal preset for counter-rotating kinetic compositions
 - Authored paint layers remain untouched and return immediately when Motion mode stops
 
+## v0.9.14 — Kinetic Expansion
+
+- Motion Region selection for rotating only a chosen part of the artwork
+- Alpha-weighted automatic art-center detection for mandala and portal pivots
+- Manual X/Y pivot placement and center-on-region control
+- Recursive Mirror Tunnel with echo count, scale, rotation, and alpha-decay controls
+- Performance presets: Slow Drift, Portal 3·6·9, Chaos, Hypnosis, Inversion Storm, and Bass Bloom
+- Microphone-driven audio reactivity using local Web Audio analysis
+- Local audio-file playback and frequency-band analysis
+- Bass-to-pulse, mids-to-middle-motion, and highs-to-core/hue mappings
+- Audio smoothing, input gain, and kinetic sensitivity controls
+- Live WebM motion recording at 24/30/60 fps with maximum-duration control
+- Single-frame PNG export from the kinetic performance renderer
+- Original authored paint layers remain untouched throughout performance mode
+
 ## Technology
 
 - Vanilla JavaScript and modern browser APIs
@@ -168,8 +183,9 @@ Domistika is an independent browser art application created for artists who want
 - Triangle-mesh affine image warping
 - Parametric hypotrochoid and epitrochoid rendering
 - Canvas pixel processing and browser-native filter compositing
+- Web Audio API analysis for audio-reactive kinetic performance
+- MediaRecorder and Canvas Capture Stream for process and motion videos
 - Three.js with a WebGL2 context for the 3D reference lab
-- MediaRecorder and Canvas Capture Stream for process videos
 - Vite production builds
 - GitHub Actions deployment to GitHub Pages
 
