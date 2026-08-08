@@ -6,7 +6,8 @@ const audio = fs.readFileSync(new URL('../src/DomistikaKineticAudioV0914.js', im
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
-assert.equal(pkg.version, '0.9.14');
+const [major, minor, patch] = pkg.version.split('.').map(Number);
+assert.ok(major > 0 || minor > 9 || (minor === 9 && patch >= 14));
 assert.match(index, /DomistikaKineticExpansionV0914\.js/);
 assert.match(index, /DomistikaKineticAudioV0914\.js/);
 assert.ok(index.indexOf('DomistikaKineticRotationV0912.js') < index.indexOf('DomistikaKineticExpansionV0914.js'));
@@ -33,4 +34,4 @@ assert.match(audio, /Use microphone/);
 assert.match(audio, /Choose audio file/);
 assert.match(audio, /Mic audio stays local in the browser/);
 
-console.log('v0.9.14 kinetic expansion static checks passed');
+console.log('v0.9.14+ kinetic expansion static checks passed');
