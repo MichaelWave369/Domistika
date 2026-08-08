@@ -146,6 +146,18 @@ Domistika is an independent browser art application created for artists who want
 - Dedicated Effects launcher and inspector panel
 - Plain `J` keyboard shortcut opens the Effects panel
 
+## v0.9.12 — Kinetic Rotation Lab
+
+- Live, non-destructive Motion mode for finished artwork
+- Whole-artwork rotation or three independent radial rotation bands
+- Separate signed speeds for outer, middle, and core motion
+- Adjustable core and middle radial boundaries
+- Optional pulse and hue-drift animation
+- Play, pause, stop, reverse, reset, and refresh-source controls
+- Random motion generator
+- 3·6·9 Portal preset for counter-rotating kinetic compositions
+- Authored paint layers remain untouched and return immediately when Motion mode stops
+
 ## Technology
 
 - Vanilla JavaScript and modern browser APIs
