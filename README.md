@@ -193,6 +193,18 @@ Domistika is an independent browser art application created for artists who want
 - WebM and PNG export automatically capture the visible Composer output when trails or kaleidoscope optics are active
 - Additive runtime preserves the v0.9.15 live-source protection and authored paint layers
 
+## v0.9.17 — Mind Melt Pack
+
+- One-click Slow Trails mode with long temporal memory and Slow Drift base motion
+- Kaleidoscope quick buttons for 8, 12, and 16 mirrored slices
+- Orbit quick paths for Circle, Ellipse, and Figure 8
+- Quick WebM capture with 10, 12, 20, and 30 second duration choices
+- Capture automatically uses Composer output when Trails or Kaleidoscope are active and falls back to the base kinetic recorder otherwise
+- Black Stage toggle for a checker-free black void behind transparent kinetic artwork
+- One-click MIND MELT combination: Hypnosis + Ghost Trails + Kaleido 12 + Figure-8 Orbit + Black Stage
+- Reset action turns off Mind Melt add-ons while preserving the underlying kinetic motion state
+- Additive control layer leaves authored artwork untouched
+
 ## Technology
 
 - Vanilla JavaScript and modern browser APIs
