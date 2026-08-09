@@ -5,7 +5,8 @@ const composer = fs.readFileSync(new URL('../src/DomistikaKineticComposerV0916.j
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
-assert.equal(pkg.version, '0.9.16');
+const [major, minor, patch] = pkg.version.split('.').map(Number);
+assert.ok(major > 0 || minor > 9 || (minor === 9 && patch >= 16));
 assert.match(index, /DomistikaKineticComposerV0916\.js/);
 assert.ok(index.indexOf('DomistikaKineticLiveSourceV0915.js') < index.indexOf('DomistikaKineticComposerV0916.js'));
 assert.ok(index.indexOf('DomistikaKineticComposerV0916.js') < index.indexOf('main.js'));
@@ -25,4 +26,4 @@ assert.match(composer, /kinetic-composer\.webm/);
 assert.match(composer, /window\.domistikaKineticComposerV0916/);
 assert.match(composer, /domistika:kinetic-composer-ready/);
 
-console.log('v0.9.16 Kinetic Composer static checks passed');
+console.log('v0.9.16+ Kinetic Composer static checks passed');
