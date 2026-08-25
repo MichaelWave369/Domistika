@@ -1,0 +1,45 @@
+{
+  "schema": "parallax.creative_interop_profile_manifest.v1",
+  "protocol_id": "parallax.creative-interop.v1",
+  "status": "canonicalization_candidate_pending_repository_ratification",
+  "spec_sha256": "6f4956f885cd383b0c09850dc756e1efc1ad45ee3182525ddbcf0c798e61bf0c",
+  "scope": [
+    "MichaelWave369/Domistika",
+    "MichaelWave369/Auralith369",
+    "MichaelWave369/paracut",
+    "MichaelWave369/WaveForgeStudio"
+  ],
+  "parent_envelope": "parallax.bridge.v1",
+  "native_contracts": {
+    "domistika_auralith": "parallax-creative-bridge-v1",
+    "paracut_render_plan": "native RenderPlan",
+    "waveforge_intake": "waveforge.paracut_bridge_intake.v1_alpha"
+  },
+  "required_invariants": {
+    "local_only": true,
+    "requires_user_action": true,
+    "hash_algorithm": "sha256",
+    "real_rendering_authorized": false,
+    "network_authorized": false,
+    "subprocess_authorized": false,
+    "automatic_import_authorized": false
+  },
+  "freshness": {
+    "field": "planRevision",
+    "type": "positive_integer",
+    "optional_for_legacy_reference_only": true,
+    "consumer_owned_state": true,
+    "rules": {
+      "first": "accept_and_record",
+      "higher": "accept_and_advance",
+      "same_same_hash": "idempotent_replay",
+      "lower": "reject_stale",
+      "same_different_hash": "reject_equivocation"
+    }
+  },
+  "compatibility": {
+    "pass5_legacy_bridge_shape_preserved_when_planRevision_omitted": true,
+    "product_versions_independent_from_protocol_version": true
+  },
+  "canonicality_scope": "bounded_creative_profile_only"
+}
