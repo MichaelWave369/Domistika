@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
 import { normalizeCreativeBridgeV1 } from '../src/v093/parallaxBridgeAdapter.js';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
-const [index, pkgText, entry, runtime, layout, symmetryFill, theme, gallery, bridge, galleryJson, issueTemplate] = await Promise.all([
+const [index, pkgText, entry, runtime, layout, symmetryFill, theme, gallery, bridge, galleryJson, issueTemplate, pass5FixtureText] = await Promise.all([
   read('index.html'),
   read('package.json'),
   read('src/DomistikaGalleryBridgeV093.js'),
@@ -15,6 +16,7 @@ const [index, pkgText, entry, runtime, layout, symmetryFill, theme, gallery, bri
   read('src/v093/auralithBridge.js'),
   read('public/gallery/artworks.json'),
   read('.github/ISSUE_TEMPLATE/art-gallery-submission.md'),
+  read('tests/fixtures/parallax-pass5-artifact.json'),
 ]);
 
 const pkg = JSON.parse(pkgText);
@@ -54,6 +56,33 @@ assert.equal(normalizedBridge.schema, 'parallax.bridge.v1');
 assert.equal(normalizedBridge.localOnly, true);
 assert.equal(normalizedBridge.requiresUserAction, true);
 assert.equal(normalizedBridge.payloadRefOrInline.native.protocol, 'parallax-creative-bridge');
+
+const pass5 = JSON.parse(pass5FixtureText);
+const encodedPng = pass5.data_uri.split(',', 2)[1];
+const pngBytes = Buffer.from(encodedPng, 'base64');
+const pngSha256 = createHash('sha256').update(pngBytes).digest('hex');
+assert.equal(pngBytes.length, pass5.bytes, 'Pass 5 PNG byte count must match the frozen fixture');
+assert.equal(pngSha256, pass5.sha256, 'Pass 5 PNG SHA-256 must match the frozen fixture');
+
+const pass5NativeBridge = {
+  protocol: 'parallax-creative-bridge',
+  version: 1,
+  source: 'domistika',
+  target: 'auralith369',
+  createdAt: '2026-08-25T22:00:00Z',
+  name: pass5.name,
+  image: pass5.data_uri,
+  canvas: { width: pass5.width, height: pass5.height },
+  note: pass5.rights_note,
+};
+const pass5Normalized = normalizeCreativeBridgeV1(pass5NativeBridge, {
+  contentHash: `sha256:${pngSha256}`,
+});
+assert.equal(pass5Normalized.contentHash, `sha256:${pass5.sha256}`);
+assert.equal(pass5Normalized.payloadRefOrInline.native.image, pass5.data_uri);
+assert.equal(pass5Normalized.localOnly, true);
+assert.equal(pass5Normalized.requiresUserAction, true);
+assert.deepEqual(pass5Normalized.warnings, []);
 
 const catalog = JSON.parse(galleryJson);
 assert.ok(Array.isArray(catalog.artworks) && catalog.artworks.length >= 4, 'Expected seeded gallery artworks');
