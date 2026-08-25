@@ -91,6 +91,36 @@ assert.equal(pass5Normalized.localOnly, true);
 assert.equal(pass5Normalized.requiresUserAction, true);
 assert.deepEqual(pass5Normalized.warnings, []);
 
+// Pass 6 producer-side adversarial checks.
+// A caller cannot smuggle a substituted hash through the producer: binding recomputes it from bytes.
+const substitutedHash = await bindCreativeBridgeContentHash({
+  ...pass5NativeBridge,
+  contentHash: `sha256:${'0'.repeat(64)}`,
+});
+assert.equal(
+  substitutedHash.contentHash,
+  `sha256:${pass5.sha256}`,
+  'Producer must overwrite a caller-supplied hash with the hash of the actual artwork bytes',
+);
+
+await assert.rejects(
+  bindCreativeBridgeContentHash({
+    ...pass5NativeBridge,
+    image: 'data:image/svg+xml;base64,%%%',
+  }),
+  /Invalid base64 image data/,
+  'Malformed image bytes must fail closed before a bridge is emitted',
+);
+
+await assert.rejects(
+  bindCreativeBridgeContentHash({
+    ...pass5NativeBridge,
+    target: 'unexpected-target',
+  }),
+  /Unsupported creative bridge route\/version/,
+  'Route substitution must fail before content is hash-bound',
+);
+
 const catalog = JSON.parse(galleryJson);
 assert.ok(Array.isArray(catalog.artworks) && catalog.artworks.length >= 4, 'Expected seeded gallery artworks');
 assert.match(issueTemplate, /Permission and governance/);
