@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import {
+  bindCreativeBridgeContentHash,
+  normalizeCreativeBridgeV1,
+} from '../src/v093/parallaxBridgeAdapter.js';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
-const [index, pkgText, entry, runtime, layout, symmetryFill, theme, gallery, bridge, galleryJson, issueTemplate] = await Promise.all([
+const [index, pkgText, entry, runtime, layout, symmetryFill, theme, gallery, bridge, galleryJson, issueTemplate, pass5FixtureText] = await Promise.all([
   read('index.html'),
   read('package.json'),
   read('src/DomistikaGalleryBridgeV093.js'),
@@ -14,6 +19,7 @@ const [index, pkgText, entry, runtime, layout, symmetryFill, theme, gallery, bri
   read('src/v093/auralithBridge.js'),
   read('public/gallery/artworks.json'),
   read('.github/ISSUE_TEMPLATE/art-gallery-submission.md'),
+  read('tests/fixtures/parallax-pass5-artifact.json'),
 ]);
 
 const pkg = JSON.parse(pkgText);
@@ -39,6 +45,81 @@ assert.match(gallery, /Submit to Public Gallery/);
 assert.match(gallery, /gallery\/artworks\.json/);
 assert.match(bridge, /parallax-creative-bridge-v1/);
 assert.match(bridge, /Auralith369/);
+assert.match(bridge, /bindCreativeBridgeContentHash/);
+assert.match(bridge, /contentHash: payload\.contentHash/);
+
+const normalizedBridge = normalizeCreativeBridgeV1({
+  protocol: 'parallax-creative-bridge',
+  version: 1,
+  source: 'domistika',
+  target: 'auralith369',
+  createdAt: '2026-08-25T17:00:00Z',
+  name: 'Interop fixture',
+  image: 'data:image/webp;base64,QUJD',
+});
+assert.equal(normalizedBridge.schema, 'parallax.bridge.v1');
+assert.equal(normalizedBridge.localOnly, true);
+assert.equal(normalizedBridge.requiresUserAction, true);
+assert.equal(normalizedBridge.payloadRefOrInline.native.protocol, 'parallax-creative-bridge');
+
+const pass5 = JSON.parse(pass5FixtureText);
+const encodedArtifact = pass5.data_uri.split(',', 2)[1];
+const artifactBytes = Buffer.from(encodedArtifact, 'base64');
+const artifactSha256 = createHash('sha256').update(artifactBytes).digest('hex');
+assert.equal(artifactBytes.length, pass5.bytes, 'Pass 5 artifact byte count must match the frozen fixture');
+assert.equal(artifactSha256, pass5.sha256, 'Pass 5 artifact SHA-256 must match the frozen fixture');
+
+const pass5NativeBridge = {
+  protocol: 'parallax-creative-bridge',
+  version: 1,
+  source: 'domistika',
+  target: 'auralith369',
+  createdAt: '2026-08-25T22:00:00Z',
+  name: pass5.name,
+  image: pass5.data_uri,
+  canvas: { width: pass5.width, height: pass5.height },
+  note: pass5.rights_note,
+};
+const boundPass5 = await bindCreativeBridgeContentHash(pass5NativeBridge);
+assert.equal(boundPass5.contentHash, `sha256:${pass5.sha256}`);
+assert.equal(boundPass5.image, pass5.data_uri);
+
+const pass5Normalized = normalizeCreativeBridgeV1(boundPass5);
+assert.equal(pass5Normalized.contentHash, `sha256:${pass5.sha256}`);
+assert.equal(pass5Normalized.payloadRefOrInline.native.image, pass5.data_uri);
+assert.equal(pass5Normalized.localOnly, true);
+assert.equal(pass5Normalized.requiresUserAction, true);
+assert.deepEqual(pass5Normalized.warnings, []);
+
+// Pass 6 producer-side adversarial checks.
+// A caller cannot smuggle a substituted hash through the producer: binding recomputes it from bytes.
+const substitutedHash = await bindCreativeBridgeContentHash({
+  ...pass5NativeBridge,
+  contentHash: `sha256:${'0'.repeat(64)}`,
+});
+assert.equal(
+  substitutedHash.contentHash,
+  `sha256:${pass5.sha256}`,
+  'Producer must overwrite a caller-supplied hash with the hash of the actual artwork bytes',
+);
+
+await assert.rejects(
+  bindCreativeBridgeContentHash({
+    ...pass5NativeBridge,
+    image: 'data:image/svg+xml;base64,%%%',
+  }),
+  /Invalid base64 image data/,
+  'Malformed image bytes must fail closed before a bridge is emitted',
+);
+
+await assert.rejects(
+  bindCreativeBridgeContentHash({
+    ...pass5NativeBridge,
+    target: 'unexpected-target',
+  }),
+  /Unsupported creative bridge route\/version/,
+  'Route substitution must fail before content is hash-bound',
+);
 
 const catalog = JSON.parse(galleryJson);
 assert.ok(Array.isArray(catalog.artworks) && catalog.artworks.length >= 4, 'Expected seeded gallery artworks');
