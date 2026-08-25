@@ -1,7 +1,10 @@
 import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import { normalizeCreativeBridgeV1 } from '../src/v093/parallaxBridgeAdapter.js';
+import {
+  bindCreativeBridgeContentHash,
+  normalizeCreativeBridgeV1,
+} from '../src/v093/parallaxBridgeAdapter.js';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const [index, pkgText, entry, runtime, layout, symmetryFill, theme, gallery, bridge, galleryJson, issueTemplate, pass5FixtureText] = await Promise.all([
@@ -42,6 +45,8 @@ assert.match(gallery, /Submit to Public Gallery/);
 assert.match(gallery, /gallery\/artworks\.json/);
 assert.match(bridge, /parallax-creative-bridge-v1/);
 assert.match(bridge, /Auralith369/);
+assert.match(bridge, /bindCreativeBridgeContentHash/);
+assert.match(bridge, /contentHash: payload\.contentHash/);
 
 const normalizedBridge = normalizeCreativeBridgeV1({
   protocol: 'parallax-creative-bridge',
@@ -58,11 +63,11 @@ assert.equal(normalizedBridge.requiresUserAction, true);
 assert.equal(normalizedBridge.payloadRefOrInline.native.protocol, 'parallax-creative-bridge');
 
 const pass5 = JSON.parse(pass5FixtureText);
-const encodedPng = pass5.data_uri.split(',', 2)[1];
-const pngBytes = Buffer.from(encodedPng, 'base64');
-const pngSha256 = createHash('sha256').update(pngBytes).digest('hex');
-assert.equal(pngBytes.length, pass5.bytes, 'Pass 5 PNG byte count must match the frozen fixture');
-assert.equal(pngSha256, pass5.sha256, 'Pass 5 PNG SHA-256 must match the frozen fixture');
+const encodedArtifact = pass5.data_uri.split(',', 2)[1];
+const artifactBytes = Buffer.from(encodedArtifact, 'base64');
+const artifactSha256 = createHash('sha256').update(artifactBytes).digest('hex');
+assert.equal(artifactBytes.length, pass5.bytes, 'Pass 5 artifact byte count must match the frozen fixture');
+assert.equal(artifactSha256, pass5.sha256, 'Pass 5 artifact SHA-256 must match the frozen fixture');
 
 const pass5NativeBridge = {
   protocol: 'parallax-creative-bridge',
@@ -75,9 +80,11 @@ const pass5NativeBridge = {
   canvas: { width: pass5.width, height: pass5.height },
   note: pass5.rights_note,
 };
-const pass5Normalized = normalizeCreativeBridgeV1(pass5NativeBridge, {
-  contentHash: `sha256:${pngSha256}`,
-});
+const boundPass5 = await bindCreativeBridgeContentHash(pass5NativeBridge);
+assert.equal(boundPass5.contentHash, `sha256:${pass5.sha256}`);
+assert.equal(boundPass5.image, pass5.data_uri);
+
+const pass5Normalized = normalizeCreativeBridgeV1(boundPass5);
 assert.equal(pass5Normalized.contentHash, `sha256:${pass5.sha256}`);
 assert.equal(pass5Normalized.payloadRefOrInline.native.image, pass5.data_uri);
 assert.equal(pass5Normalized.localOnly, true);
