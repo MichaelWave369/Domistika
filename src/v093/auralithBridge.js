@@ -5,6 +5,7 @@ import {
   readFavoriteColors,
   setStatus,
 } from './runtime.js';
+import { bindCreativeBridgeContentHash } from './parallaxBridgeAdapter.js';
 
 const BRIDGE_KEY = 'parallax-creative-bridge-v1';
 const AURALITH_URL = 'https://michaelwave369.github.io/Auralith369/#domistika-import';
@@ -31,9 +32,9 @@ function storePayload(payload) {
   }
 }
 
-function buildPayload(image) {
+async function buildPayload(image) {
   const engine = getEngine();
-  return {
+  return bindCreativeBridgeContentHash({
     protocol: 'parallax-creative-bridge',
     version: 1,
     source: 'domistika',
@@ -45,10 +46,10 @@ function buildPayload(image) {
     palette: readFavoriteColors(),
     symmetry: engine?.settings?.symmetry || 'none',
     note: 'Transferred locally by the user from Domistika to Auralith369.',
-  };
+  });
 }
 
-function transfer() {
+async function transfer() {
   const attempts = [
     { maxDimension: 1400, quality: 0.9 },
     { maxDimension: 1100, quality: 0.83 },
@@ -57,11 +58,16 @@ function transfer() {
   for (const options of attempts) {
     try {
       const image = currentArtworkDataUrl({ ...options, type: 'image/webp', includeBackground: true });
-      if (storePayload(buildPayload(image))) {
+      const payload = await buildPayload(image);
+      if (storePayload(payload)) {
         setStatus('Artwork bridged to Auralith369 — opening the visual alchemy studio');
         window.open(AURALITH_URL, '_blank', 'noopener,noreferrer');
         document.dispatchEvent(new CustomEvent('domistika:v093-bridge-sent', {
-          detail: { target: 'auralith369', maxDimension: options.maxDimension },
+          detail: {
+            target: 'auralith369',
+            maxDimension: options.maxDimension,
+            contentHash: payload.contentHash,
+          },
         }));
         return;
       }
@@ -69,7 +75,7 @@ function transfer() {
       console.warn('Domistika bridge attempt failed', error);
     }
   }
-  setStatus('The bridge package was too large for browser storage. Try a smaller canvas or export the image normally.');
+  setStatus('The bridge package was too large or could not be integrity-bound. Try a smaller canvas or export the image normally.');
 }
 
 function init() {
@@ -86,7 +92,7 @@ function init() {
   const gallery = topActions.querySelector('#openGalleryButton');
   gallery?.insertAdjacentElement('afterend', button);
   if (!gallery) topActions.insertBefore(button, topActions.firstChild);
-  button.addEventListener('click', transfer);
+  button.addEventListener('click', () => { void transfer(); });
   window.domistikaAuralithBridgeV093 = { transfer, key: BRIDGE_KEY, target: AURALITH_URL };
   return true;
 }
