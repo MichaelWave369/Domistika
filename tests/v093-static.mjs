@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
+import { normalizeCreativeBridgeV1 } from '../src/v093/parallaxBridgeAdapter.js';
 
 const read = (path) => readFile(new URL(`../${path}`, import.meta.url), 'utf8');
 const [index, pkgText, entry, runtime, layout, symmetryFill, theme, gallery, bridge, galleryJson, issueTemplate] = await Promise.all([
@@ -39,6 +40,20 @@ assert.match(gallery, /Submit to Public Gallery/);
 assert.match(gallery, /gallery\/artworks\.json/);
 assert.match(bridge, /parallax-creative-bridge-v1/);
 assert.match(bridge, /Auralith369/);
+
+const normalizedBridge = normalizeCreativeBridgeV1({
+  protocol: 'parallax-creative-bridge',
+  version: 1,
+  source: 'domistika',
+  target: 'auralith369',
+  createdAt: '2026-08-25T17:00:00Z',
+  name: 'Interop fixture',
+  image: 'data:image/webp;base64,QUJD',
+});
+assert.equal(normalizedBridge.schema, 'parallax.bridge.v1');
+assert.equal(normalizedBridge.localOnly, true);
+assert.equal(normalizedBridge.requiresUserAction, true);
+assert.equal(normalizedBridge.payloadRefOrInline.native.protocol, 'parallax-creative-bridge');
 
 const catalog = JSON.parse(galleryJson);
 assert.ok(Array.isArray(catalog.artworks) && catalog.artworks.length >= 4, 'Expected seeded gallery artworks');
