@@ -68,6 +68,8 @@ Keyboard navigation:
 
 ### Rooms
 
+- Playground · Demo the Studio
+- Playground · Return to Previous Artwork
 - Color Studio
 - Spiro Lab
 - Motion Studio

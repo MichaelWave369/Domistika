@@ -8,7 +8,7 @@ const sdk=fs.readFileSync(new URL('../src/DomistikaSDKV0921.js',import.meta.url)
 const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 const pkg=JSON.parse(fs.readFileSync(new URL('../package.json',import.meta.url),'utf8'));
 
-assert.equal(pkg.version,'0.9.26');
+assert.ok(Number(pkg.version.split('.')[2]) >= 26);
 assert.match(engine,/LAYER_ROLES = Object\.freeze\(\['paint', 'guide', 'type', 'motion-ignore'\]\)/);
 assert.match(engine,/canvas\.dataset\.layerRole = role/);
 assert.match(engine,/setLayerRole\(id, role\)/);
@@ -26,7 +26,7 @@ assert.match(main,/value="motion-ignore"/);
 assert.match(main,/layer-role-badge/);
 assert.match(main,/engine\.setLayerRole/);
 
-assert.match(sdk,/SDK_VERSION = '0\.1\.5'/);
+assert.match(sdk,/SDK_VERSION = '0\.1\.6'/);
 assert.match(sdk,/role: layerRole/);
 assert.match(sdk,/layer\.role\.motion-ignore/);
 assert.match(sdk,/layerRoles:/);
