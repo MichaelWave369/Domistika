@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.22';
-const SDK_VERSION = '0.1.1';
+const APP_VERSION = '0.9.23';
+const SDK_VERSION = '0.1.2';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -518,19 +518,235 @@ function once(name, handler) {
   return on(name, handler, { once: true });
 }
 
-const commandMap = new Map([
-  ['undo', async () => requireEngine().undo()],
-  ['redo', async () => requireEngine().redo()],
-  ['canvas.fit', async () => window.domistikaNavigation?.fit?.()],
-  ['layer.clear', async ({ id } = {}) => layerClear(id || requireEngine().activeLayerId)],
-  ['motion.play', async ({ preset } = {}) => motionPlay(preset)],
-  ['motion.stop', async () => motionStop()],
-  ['motion.portal', async () => motionPlay('portal-369')],
-  ['export.png', async (args = {}) => exportPng(args)],
-]);
+const commandMap = new Map();
+const commandMeta = new Map();
+
+function registerSdkCommand(id, meta, handler) {
+  commandMap.set(id, handler);
+  commandMeta.set(id, Object.freeze({
+    id,
+    label: String(meta.label || id),
+    category: String(meta.category || 'General'),
+    description: String(meta.description || ''),
+    keywords: Object.freeze([...(meta.keywords || [])].map(String)),
+    shortcut: meta.shortcut ? String(meta.shortcut) : null,
+  }));
+}
+
+registerSdkCommand('undo', {
+  label: 'Undo',
+  category: 'Canvas',
+  description: 'Undo the last canvas operation.',
+  keywords: ['back', 'history'],
+  shortcut: 'Ctrl/Cmd+Z',
+}, async () => requireEngine().undo());
+
+registerSdkCommand('redo', {
+  label: 'Redo',
+  category: 'Canvas',
+  description: 'Redo the last undone canvas operation.',
+  keywords: ['forward', 'history'],
+  shortcut: 'Ctrl/Cmd+Shift+Z',
+}, async () => requireEngine().redo());
+
+registerSdkCommand('canvas.fit', {
+  label: 'Fit Canvas',
+  category: 'Canvas',
+  description: 'Fit the artwork into the current viewport.',
+  keywords: ['zoom', 'center', 'viewport'],
+  shortcut: '0',
+}, async () => window.domistikaNavigation?.fit?.());
+
+registerSdkCommand('layer.clear', {
+  label: 'Clear Active Layer',
+  category: 'Layers',
+  description: 'Clear the active paint layer.',
+  keywords: ['erase', 'empty', 'layer'],
+}, async ({ id } = {}) => layerClear(id || requireEngine().activeLayerId));
+
+for (const [tool, label, shortcut] of [
+  ['pencil', 'Pencil', 'B'],
+  ['ink', 'Ink', 'I'],
+  ['marker', 'Marker', 'M'],
+  ['airbrush', 'Airbrush', 'A'],
+  ['eraser', 'Eraser', 'E'],
+]) {
+  registerSdkCommand(`tool.${tool}`, {
+    label: `Select ${label}`,
+    category: 'Tools',
+    description: `Switch the active drawing tool to ${label}.`,
+    keywords: ['brush', 'draw', tool],
+    shortcut,
+  }, async () => setTool(tool));
+}
+
+registerSdkCommand('room.spiro', {
+  label: 'Open Spiro Lab',
+  category: 'Rooms',
+  description: 'Open the generative Spiro Lab.',
+  keywords: ['spirograph', 'generative', 'curves', 'flower', 'gear'],
+}, async () => {
+  const api = window.domistikaSpiroV07;
+  if (!api?.activatePanel) throw new Error('DOMISTIKA_SDK_SPIRO_UNAVAILABLE');
+  api.activatePanel('spiroPanel');
+  return true;
+});
+
+registerSdkCommand('room.motion', {
+  label: 'Open Motion Studio',
+  category: 'Rooms',
+  description: 'Open the non-destructive Kinetic Motion workspace.',
+  keywords: ['kinetic', 'animate', 'rotation', 'composer', 'mind melt'],
+}, async () => {
+  const button = document.querySelector('#kineticOpen');
+  if (!button) throw new Error('DOMISTIKA_SDK_MOTION_ROOM_UNAVAILABLE');
+  button.click();
+  return true;
+});
+
+registerSdkCommand('room.gallery', {
+  label: 'Open Gallery',
+  category: 'Rooms',
+  description: 'Open the local Domistika Art Gallery.',
+  keywords: ['art', 'saved', 'motion clip', 'house'],
+}, async () => {
+  const gallery = window.domistikaGalleryV093;
+  if (!gallery?.open) throw new Error('DOMISTIKA_SDK_GALLERY_UNAVAILABLE');
+  gallery.open();
+  return true;
+});
+
+registerSdkCommand('room.creature', {
+  label: 'Open Creature Lab',
+  category: 'Rooms',
+  description: 'Open Creature Lab for mirrored and multiplied characters.',
+  keywords: ['character', 'mask', 'crowd', 'mirror'],
+}, async () => {
+  const button = document.querySelector('#creatureLabToggle');
+  if (!button) throw new Error('DOMISTIKA_SDK_CREATURE_UNAVAILABLE');
+  button.click();
+  return true;
+});
+
+registerSdkCommand('motion.play', {
+  label: 'Play Motion',
+  category: 'Motion',
+  description: 'Play the current Motion setup.',
+  keywords: ['kinetic', 'animate', 'start'],
+}, async ({ preset } = {}) => motionPlay(preset));
+
+registerSdkCommand('motion.stop', {
+  label: 'Stop Motion',
+  category: 'Motion',
+  description: 'Stop Motion and return to the untouched artwork.',
+  keywords: ['kinetic', 'restore', 'still'],
+}, async () => motionStop());
+
+for (const [id, preset, label] of [
+  ['motion.portal', 'portal-369', 'Play 3·6·9 Portal'],
+  ['motion.hypnosis', 'hypnosis', 'Play Hypnosis'],
+  ['motion.slow-drift', 'slow-drift', 'Play Slow Drift'],
+  ['motion.chaos', 'chaos', 'Play Chaos'],
+]) {
+  registerSdkCommand(id, {
+    label,
+    category: 'Motion',
+    description: `Load and play the ${label.replace(/^Play /, '')} preset.`,
+    keywords: ['kinetic', 'preset', 'animate'],
+  }, async () => motionPlay(preset));
+}
+
+registerSdkCommand('motion.composer.ghost-mandala', {
+  label: 'Composer · Ghost Mandala',
+  category: 'Motion',
+  description: 'Load the Ghost Mandala Composer preset.',
+  keywords: ['trails', 'kaleido', 'composer', 'mandala'],
+}, async () => motionComposer('ghost-mandala'));
+
+registerSdkCommand('motion.scene.particle-portal', {
+  label: 'Visual Scene · Particle Portal',
+  category: 'Motion',
+  description: 'Load the Particle Portal Visual Performance scene.',
+  keywords: ['particles', 'portal', 'visual performance'],
+}, async () => motionScene('particle-portal'));
+
+registerSdkCommand('motion.record.start', {
+  label: 'Record Motion Clip',
+  category: 'Motion',
+  description: 'Start recording the current Motion performance.',
+  keywords: ['webm', 'capture', 'video', 'clip'],
+}, async () => motionRecordStart());
+
+registerSdkCommand('motion.record.stop', {
+  label: 'Stop Motion Recording',
+  category: 'Motion',
+  description: 'Stop the active Motion recording and save its clip.',
+  keywords: ['webm', 'capture', 'video', 'clip'],
+}, async () => motionRecordStop());
+
+registerSdkCommand('motion.clip.download-latest', {
+  label: 'Download Latest Motion Clip',
+  category: 'Motion',
+  description: 'Download the newest project motion clip as WebM.',
+  keywords: ['webm', 'video', 'latest', 'export'],
+}, async () => {
+  const latestClip = motionClipLatest();
+  if (!latestClip) throw new Error('DOMISTIKA_SDK_MOTION_CLIP_NOT_FOUND');
+  return motionClipDownload(latestClip.id);
+});
+
+registerSdkCommand('export.png', {
+  label: 'Export PNG Blob',
+  category: 'Export',
+  description: 'Create a PNG blob from the visible artwork.',
+  keywords: ['image', 'save', 'png'],
+}, async (args = {}) => exportPng(args));
+
+registerSdkCommand('ui.export', {
+  label: 'Open Export',
+  category: 'Export',
+  description: 'Open the artwork export dialog.',
+  keywords: ['png', 'jpeg', 'download'],
+}, async () => {
+  const button = document.querySelector('#exportImage');
+  if (!button) throw new Error('DOMISTIKA_SDK_EXPORT_UI_UNAVAILABLE');
+  button.click();
+  return true;
+});
+
+registerSdkCommand('ui.new-canvas', {
+  label: 'New Canvas',
+  category: 'Canvas',
+  description: 'Open the New Canvas dialog.',
+  keywords: ['new', 'project', 'size'],
+}, async () => {
+  const button = document.querySelector('#newProject');
+  if (!button) throw new Error('DOMISTIKA_SDK_NEW_CANVAS_UI_UNAVAILABLE');
+  button.click();
+  return true;
+});
+
+registerSdkCommand('ui.shortcuts', {
+  label: 'Keyboard Shortcuts',
+  category: 'Help',
+  description: 'Open the keyboard shortcut reference.',
+  keywords: ['keys', 'help', 'controls'],
+}, async () => {
+  const button = document.querySelector('#shortcutsButton');
+  if (!button) throw new Error('DOMISTIKA_SDK_SHORTCUTS_UI_UNAVAILABLE');
+  button.click();
+  return true;
+});
 
 function commandList() {
   return Object.freeze([...commandMap.keys()]);
+}
+
+function commandCatalog() {
+  return Object.freeze([...commandMeta.values()].map((entry) => Object.freeze({
+    ...entry,
+    keywords: Object.freeze([...entry.keywords]),
+  })));
 }
 
 async function commandExecute(name, args = {}) {
@@ -676,6 +892,7 @@ if (!window[INSTALL_FLAG]) {
 
     commands: {
       list: commandList,
+      catalog: commandCatalog,
       execute: commandExecute,
     },
   };

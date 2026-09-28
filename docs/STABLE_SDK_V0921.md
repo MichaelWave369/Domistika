@@ -13,8 +13,8 @@ The purpose is to give humans, local scripts, accessibility tools, MIDI controll
 ## Contract
 
 - schema: `domistika.sdk.v1`
-- SDK version: `0.1.1`
-- app version: `0.9.22`
+- SDK version: `0.1.2`
+- app version: `0.9.23`
 - global: `window.Domistika`
 - object: deeply frozen
 - network access: none
@@ -186,7 +186,7 @@ Known Visual Performance scenes:
 - `aurora-breath`
 - `cosmic-pulse`
 
-Recording currently keeps the existing Motion Studio download behavior. Persisted motion clips inside `.domistika` projects are a separate future rung.
+Recording keeps the existing Motion Studio download behavior and, since v0.9.22, also saves bounded WebM motion clips into the current project.
 
 ### Motion clips
 
@@ -240,19 +240,23 @@ The SDK emits bounded semantic events for SDK-driven tool, setting, stroke, laye
 
 ### Commands
 
-The initial command bus is deliberately small:
+The stable command bus now backs the v0.9.23 command palette.
 
 ```js
 Domistika.commands.list();
+Domistika.commands.catalog();
 
 await Domistika.commands.execute('undo');
 await Domistika.commands.execute('canvas.fit');
+await Domistika.commands.execute('room.spiro');
+await Domistika.commands.execute('room.motion');
 await Domistika.commands.execute('motion.portal');
+await Domistika.commands.execute('motion.record.start');
 await Domistika.commands.execute('layer.clear');
-await Domistika.commands.execute('export.png');
+await Domistika.commands.execute('ui.export');
 ```
 
-This is intended to become the backing layer for a future command palette rather than having a palette reach directly into UI implementation details.
+`catalog()` returns bounded metadata for search and presentation while `execute()` remains the sole execution path. The palette therefore does not carry a second hidden command implementation.
 
 ## Design rule
 
