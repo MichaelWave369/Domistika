@@ -13,8 +13,8 @@ The purpose is to give humans, local scripts, accessibility tools, MIDI controll
 ## Contract
 
 - schema: `domistika.sdk.v1`
-- SDK version: `0.1.0`
-- app version: `0.9.21`
+- SDK version: `0.1.1`
+- app version: `0.9.22`
 - global: `window.Domistika`
 - object: deeply frozen
 - network access: none
@@ -187,6 +187,25 @@ Known Visual Performance scenes:
 - `cosmic-pulse`
 
 Recording currently keeps the existing Motion Studio download behavior. Persisted motion clips inside `.domistika` projects are a separate future rung.
+
+### Motion clips
+
+Recorded Kinetic / Composer / Visual Performance WebM clips are project objects in v0.9.22.
+
+```js
+Domistika.motion.clips.list();
+Domistika.motion.clips.latest();
+
+const url = await Domistika.motion.clips.url(id);
+await Domistika.motion.clips.download(id);
+await Domistika.motion.clips.remove(id);
+
+const portableProject = await Domistika.project.serialize({
+  embedMotion: true,
+});
+```
+
+Routine autosave stores clip metadata plus local IndexedDB references. Explicit project serialization with `embedMotion: true` embeds the WebM media so a `.domistika` file remains portable.
 
 ### Export and clean capture
 
