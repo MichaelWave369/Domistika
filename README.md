@@ -1,3 +1,19 @@
+## v0.9.22 — Motion Clips as Project Objects
+
+Motion recording now belongs to the artwork instead of only leaving through the browser download tray.
+
+- Kinetic, Composer, and Visual Performance WebM recordings are saved to a bounded local motion-clip registry.
+- Autosave stores clip metadata and IndexedDB references without repeatedly duplicating video base64.
+- Explicit `.domistika` project downloads embed motion media for portability.
+- Opening an embedded project restores the clips locally.
+- Each recording lands in **My Gallery** with a poster, motion badge, and local video playback.
+- Existing WebM download behavior remains available.
+- Per-clip limit: 24 MiB.
+- Per-project limit: 8 clips.
+- Stable SDK v0.1.1 exposes `Domistika.motion.clips.*` and portable project serialization.
+
+See [Motion Clips v0.9.22](docs/MOTION_CLIPS_V0922.md).
+
 ## v0.9.21 — Stable SDK v0.1
 
 Domistika now exposes one frozen public runtime surface:
