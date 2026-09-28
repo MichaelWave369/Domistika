@@ -136,3 +136,16 @@ Playground emits:
 - Playground schema: \`domistika.playground.v1\`
 
 No network service, cloud account, or remote authority is introduced.
+
+
+## v0.9.28 return UX
+
+The Playground runtime remains schema-compatible, but its first-run ergonomics are improved:
+
+- the top bar exposes a visible Playground action;
+- after a run, that action becomes **Return to Artwork**;
+- an explicit return notice appears after the demo completes;
+- the status line names the Command Palette return command;
+- public Playground state now summarizes the latest clip without carrying poster/base64 payloads.
+
+See [Playground UX v0.9.28](PLAYGROUND_UX_V0928.md).
