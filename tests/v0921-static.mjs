@@ -24,7 +24,7 @@ assert.match(sdk, /motion:/);
 assert.match(sdk, /export:/);
 assert.match(sdk, /events:/);
 assert.match(sdk, /commands:/);
-assert.match(sdk, /domistika:stroke/);
+assert.match(sdk, /emit\('stroke'/);
 assert.match(sdk, /pressure \?\? point\.p \?\? 1/);
 assert.doesNotMatch(sdk, /eval\s*\(/);
 assert.doesNotMatch(sdk, /new Function\s*\(/);
