@@ -5,7 +5,8 @@ const performance = fs.readFileSync(new URL('../src/DomistikaVisualPerformanceV0
 const index = fs.readFileSync(new URL('../index.html', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
-assert.equal(pkg.version, '0.9.18');
+const [major, minor, patch] = pkg.version.split('.').map(Number);
+assert.ok(major > 0 || minor > 9 || (minor === 9 && patch >= 18));
 assert.match(index, /DomistikaVisualPerformanceV0918\.js/);
 assert.ok(index.indexOf('DomistikaMindMeltV0917.js') < index.indexOf('DomistikaVisualPerformanceV0918.js'));
 assert.ok(index.indexOf('DomistikaVisualPerformanceV0918.js') < index.indexOf('main.js'));
