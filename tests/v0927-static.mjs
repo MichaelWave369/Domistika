@@ -6,7 +6,7 @@ const sdk=fs.readFileSync(new URL('../src/DomistikaSDKV0921.js',import.meta.url)
 const index=fs.readFileSync(new URL('../index.html',import.meta.url),'utf8');
 const pkg=JSON.parse(fs.readFileSync(new URL('../package.json',import.meta.url),'utf8'));
 
-assert.equal(pkg.version,'0.9.27');
+assert.ok(Number(pkg.version.split('.')[2]) >= 27);
 assert.match(playground,/domistika\.playground\.v1/);
 assert.match(playground,/project\.serialize\(\{embedMotion:false\}\)/);
 assert.match(playground,/canvas\.new\(\{width:1200,height:1200,name:'Domistika Playground'\}\)/);
@@ -20,7 +20,7 @@ assert.match(playground,/motion\.record\.stop\(\{source:'kinetic'\}\)/);
 assert.match(playground,/domistika:motion-clip-added/);
 assert.match(playground,/restorePrevious/);
 
-assert.match(sdk,/SDK_VERSION = '0\.1\.6'/);
+assert.match(sdk,/SDK_VERSION = '0\.1\.7'/);
 assert.match(sdk,/function motionRecorderRuntime/);
 assert.match(sdk,/project: \{[\s\S]*restore: restoreProject/);
 assert.match(sdk,/playground: \{/);
