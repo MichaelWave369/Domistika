@@ -1,3 +1,20 @@
+## v0.9.20 — Clean Composite Capture
+
+Domistika now exposes a bounded read-only clean-art capture surface at `window.domistikaCleanCaptureV0920`.
+
+It returns the current `CanvasEngine.compositeCanvas()` artwork as a PNG payload without Studio chrome, symmetry guides, zoom controls, or other overlay UI. The surface is intentionally narrow:
+
+- PNG only;
+- base64 only;
+- maximum output dimension 2048 px;
+- optional white background;
+- no network access;
+- no filesystem access;
+- no local-storage access;
+- no mutation of the canvas.
+
+This is designed for governed local visual-critic bridges such as Browsallax while keeping capture separate from drawing authority.
+
 # Domistika
 
 **A free, lefty-friendly drawing studio for the open web.**
