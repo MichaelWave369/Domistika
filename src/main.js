@@ -89,6 +89,9 @@ function handleEngineChange(event) {
   if (event.reason === 'color-picked') {
     $('#colorInput').value = event.color;
     $('#colorLabel').textContent = event.color;
+    document.dispatchEvent(new CustomEvent('domistika:color-change', {
+      detail: { color: event.color, source: 'eyedropper' },
+    }));
   }
   renderLayers();
   updateCanvasDimensions();
@@ -144,7 +147,13 @@ window.domistikaNavigation = {
 };
 
 document.querySelectorAll('[data-tool]').forEach((button) => button.addEventListener('click', () => selectTool(button.dataset.tool)));
-$('#colorInput').addEventListener('input', (event) => { engine.setSetting('color', event.target.value); $('#colorLabel').textContent = event.target.value; });
+$('#colorInput').addEventListener('input', (event) => {
+  engine.setSetting('color', event.target.value);
+  $('#colorLabel').textContent = event.target.value;
+  document.dispatchEvent(new CustomEvent('domistika:color-change', {
+    detail: { color: event.target.value, source: 'picker' },
+  }));
+});
 function bindRange(inputSelector, outputSelector, setting, formatter = (value) => value) {
   const input = $(inputSelector);
   input.addEventListener('input', () => {
