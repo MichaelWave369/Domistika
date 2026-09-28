@@ -138,6 +138,8 @@ CanvasEngine.prototype.createLayer = function createLayerV090(name, options = {}
   const layer = originalCreateLayer.call(this, name, options);
   if (options.kind === 'guide' || options.guide === true || options.exportPolicy === 'exclude-guide') {
     layer.kind = 'guide';
+    layer.role = 'guide';
+    layer.canvas.dataset.layerRole = 'guide';
     layer.guide = true;
     layer.locked = options.locked !== false;
     layer.exportPolicy = 'exclude';
@@ -187,11 +189,11 @@ CanvasEngine.prototype.serialize = function serializeV090() {
 
 CanvasEngine.prototype.compositeCanvas = function compositeCanvasV090(includeBackground = true, background = '#ffffff', options = {}) {
   const includeGuides = Boolean(options?.includeGuides);
-  if (includeGuides) return originalCompositeCanvas.call(this, includeBackground, background);
+  if (includeGuides) return originalCompositeCanvas.call(this, includeBackground, background, options);
   const states = this.layers.map((layer) => ({ layer, visible: layer.visible }));
   this.layers.forEach((layer) => { if (layer.kind === 'guide' || layer.exportPolicy === 'exclude') layer.visible = false; });
   try {
-    return originalCompositeCanvas.call(this, includeBackground, background);
+    return originalCompositeCanvas.call(this, includeBackground, background, options);
   } finally {
     states.forEach(({ layer, visible }) => { layer.visible = visible; });
   }
