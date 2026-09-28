@@ -1,3 +1,21 @@
+## v0.9.23 — Command Palette
+
+Domistika now has a searchable command palette backed by the stable SDK command bus.
+
+- Open with `Ctrl/Cmd+K` or the **Commands** button.
+- Search by command label, id, category, description, keywords, or shortcut.
+- Keyboard navigation with Up / Down / Enter / Escape.
+- Jump directly to Spiro Lab, Motion Studio, Gallery, and Creature Lab.
+- Select common drawing tools without hunting the tool rail.
+- Launch Motion presets, Composer / Visual Performance scenes, and recording controls.
+- Open export/new-canvas/shortcut surfaces through the same command bus.
+- Download the latest project motion clip.
+- Stable SDK v0.1.2 adds `Domistika.commands.catalog()` while preserving `list()` and `execute()`.
+
+The palette owns search and presentation only. Feature execution stays inside `window.Domistika`.
+
+See [Command Palette v0.9.23](docs/COMMAND_PALETTE_V0923.md).
+
 ## v0.9.22 — Motion Clips as Project Objects
 
 Motion recording now belongs to the artwork instead of only leaving through the browser download tray.
