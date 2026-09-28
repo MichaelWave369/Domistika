@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.21';
-const SDK_VERSION = '0.1.0';
+const APP_VERSION = '0.9.22';
+const SDK_VERSION = '0.1.1';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -442,6 +442,52 @@ function motionRecordStop() {
   return true;
 }
 
+function motionClipRuntime() {
+  return window.domistikaMotionClipsV0922 || null;
+}
+
+function motionClipList() {
+  const runtime = motionClipRuntime();
+  if (!runtime?.list) return Object.freeze([]);
+  return runtime.list();
+}
+
+function motionClipLatest() {
+  return motionClipRuntime()?.latest?.() || null;
+}
+
+async function motionClipUrl(id) {
+  const runtime = motionClipRuntime();
+  if (!runtime?.playbackUrl) throw new Error('DOMISTIKA_SDK_MOTION_CLIPS_UNAVAILABLE');
+  return runtime.playbackUrl(id);
+}
+
+async function motionClipDownload(id, filename = null) {
+  const runtime = motionClipRuntime();
+  if (!runtime?.download) throw new Error('DOMISTIKA_SDK_MOTION_CLIPS_UNAVAILABLE');
+  return runtime.download(id, filename);
+}
+
+async function motionClipRemove(id, options = {}) {
+  const runtime = motionClipRuntime();
+  if (!runtime?.remove) throw new Error('DOMISTIKA_SDK_MOTION_CLIPS_UNAVAILABLE');
+  return runtime.remove(id, options);
+}
+
+async function serializeProject({ embedMotion = true } = {}) {
+  const engine = requireEngine();
+  let project = engine.serialize();
+  project.name = projectName();
+  const runtime = motionClipRuntime();
+  if (embedMotion && runtime?.embedProject) project = await runtime.embedProject(project);
+  emit('sdk-project', {
+    action: 'serialize',
+    embedMotion: Boolean(embedMotion),
+    motionClips: Array.isArray(project?.motionClips?.items) ? project.motionClips.items.length : 0,
+  });
+  return project;
+}
+
 function cleanCapture(options = {}) {
   const capture = window.domistikaCleanCaptureV0920;
   if (!capture?.capture) throw new Error('DOMISTIKA_SDK_CLEAN_CAPTURE_UNAVAILABLE');
@@ -517,6 +563,12 @@ function capabilities() {
       presets: Object.freeze([...MOTION_PRESETS]),
       composerPresets: Object.freeze([...COMPOSER_PRESETS]),
       visualScenes: Object.freeze([...VISUAL_SCENES]),
+      clips: Object.freeze({
+        available: Boolean(motionClipRuntime()?.list),
+        version: motionClipRuntime()?.version || null,
+        schema: motionClipRuntime()?.schema || null,
+        count: motionClipList().length,
+      }),
     }),
     capture: Object.freeze({
       available: Boolean(window.domistikaCleanCaptureV0920?.capture),
@@ -596,6 +648,17 @@ if (!window[INSTALL_FLAG]) {
         start: motionRecordStart,
         stop: motionRecordStop,
       },
+      clips: {
+        list: motionClipList,
+        latest: motionClipLatest,
+        url: motionClipUrl,
+        download: motionClipDownload,
+        remove: motionClipRemove,
+      },
+    },
+
+    project: {
+      serialize: serializeProject,
     },
 
     export: {

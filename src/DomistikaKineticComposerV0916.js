@@ -21,7 +21,7 @@ if (!window[INSTALL_FLAG]) {
       index: -1,
       lastSwitch: 0,
     },
-    recorder: { active: false, mediaRecorder: null, chunks: [], timer: null },
+    recorder: { active: false, mediaRecorder: null, chunks: [], timer: null, startedAt: 0, fps: 30 },
   };
 
   const CYCLES = {
@@ -291,23 +291,46 @@ if (!window[INSTALL_FLAG]) {
     const fps = clamp(Number($('#kineticRecordFps')?.value) || 30, 10, 60);
     const maxSeconds = clamp(Number($('#kineticRecordSeconds')?.value) || 20, 2, 180);
     const mimeType = preferredMimeType();
+    state.recorder.fps = fps;
     const stream = state.canvas.captureStream(fps);
     const recorder = new MediaRecorder(stream, mimeType ? { mimeType } : undefined);
     state.recorder.mediaRecorder = recorder;
     state.recorder.chunks = [];
     recorder.ondataavailable = (event) => { if (event.data.size) state.recorder.chunks.push(event.data); };
-    recorder.onstop = () => {
+    recorder.onstop = async () => {
       clearTimeout(state.recorder.timer);
       state.recorder.timer = null;
       state.recorder.active = false;
       const blob = new Blob(state.recorder.chunks, { type: mimeType || 'video/webm' });
       const name = ($('#projectName')?.value || 'domistika-composer').trim().replace(/[^a-z0-9_-]+/gi, '-');
+      const durationSeconds = state.recorder.startedAt
+        ? Math.max(0, (performance.now() - state.recorder.startedAt) / 1000)
+        : 0;
+      let clipSaved = false;
+      try {
+        if (window.domistikaMotionClipsV0922?.addBlob) {
+          await window.domistikaMotionClipsV0922.addBlob(blob, {
+            name: `${name} · Composer`,
+            kind: 'composer',
+            durationSeconds,
+            fps: state.recorder.fps,
+            sourceCanvas: state.canvas,
+          });
+          clipSaved = true;
+        }
+      } catch (error) {
+        console.warn('Domistika could not save Composer motion clip', error);
+      }
       downloadBlob(blob, `${name}-kinetic-composer.webm`);
+      state.recorder.startedAt = 0;
       syncRecordButton();
-      status('Kinetic Composer video exported');
+      status(clipSaved
+        ? 'Kinetic Composer clip saved to project and exported'
+        : 'Kinetic Composer video exported');
     };
     recorder.start(250);
     state.recorder.active = true;
+    state.recorder.startedAt = performance.now();
     state.recorder.timer = setTimeout(stopComposerRecording, maxSeconds * 1000);
     syncRecordButton();
     status(`Recording Kinetic Composer at ${fps} fps`);

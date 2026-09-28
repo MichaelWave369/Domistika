@@ -15,7 +15,7 @@ if (!window[INSTALL_FLAG]) {
     beat: { enabled: false, rate: 1, strength: 0.2, smoothing: 0.84, level: 0 },
     fractal: { enabled: false, copies: 5, scale: 0.78, rotation: 8, alpha: 0.6, spin: 1.2, angle: 0 },
     autoplay: { enabled: false, seconds: 12, index: -1, lastSwitch: 0, preferSaved: true },
-    recorder: { active: false, mediaRecorder: null, chunks: [], timer: null },
+    recorder: { active: false, mediaRecorder: null, chunks: [], timer: null, startedAt: 0, fps: 30 },
     lastScene: 'ready',
   };
 
@@ -645,22 +645,45 @@ if (!window[INSTALL_FLAG]) {
     const fps = clamp(Number($('#kineticRecordFps')?.value) || 30, 10, 60);
     const maxSeconds = clamp(Number($('#kineticRecordSeconds')?.value) || 20, 2, 180);
     const mimeType = preferredMimeType();
+    state.recorder.fps = fps;
     const recorder = new MediaRecorder(state.canvas.captureStream(fps), mimeType ? { mimeType } : undefined);
     state.recorder.mediaRecorder = recorder;
     state.recorder.chunks = [];
     recorder.ondataavailable = (event) => { if (event.data?.size) state.recorder.chunks.push(event.data); };
-    recorder.onstop = () => {
+    recorder.onstop = async () => {
       clearTimeout(state.recorder.timer);
       state.recorder.timer = null;
       state.recorder.active = false;
       const blob = new Blob(state.recorder.chunks, { type: mimeType || 'video/webm' });
       const name = ($('#projectName')?.value || 'domistika-performance').trim().replace(/[^a-z0-9_-]+/gi, '-');
+      const durationSeconds = state.recorder.startedAt
+        ? Math.max(0, (performance.now() - state.recorder.startedAt) / 1000)
+        : 0;
+      let clipSaved = false;
+      try {
+        if (window.domistikaMotionClipsV0922?.addBlob) {
+          await window.domistikaMotionClipsV0922.addBlob(blob, {
+            name: `${name} · Visual Performance`,
+            kind: 'visual-performance',
+            durationSeconds,
+            fps: state.recorder.fps,
+            sourceCanvas: state.canvas,
+          });
+          clipSaved = true;
+        }
+      } catch (error) {
+        console.warn('Domistika could not save Visual Performance clip', error);
+      }
       downloadBlob(blob, `${name}-visual-performance.webm`);
+      state.recorder.startedAt = 0;
       syncRecordButton();
-      status('Final visual performance video exported');
+      status(clipSaved
+        ? 'Visual Performance clip saved to project and exported'
+        : 'Final visual performance video exported');
     };
     recorder.start(250);
     state.recorder.active = true;
+    state.recorder.startedAt = performance.now();
     state.recorder.timer = setTimeout(stopRecording, maxSeconds * 1000);
     syncRecordButton();
     status(`Recording final visual performance at ${fps} fps`);

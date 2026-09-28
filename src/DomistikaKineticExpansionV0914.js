@@ -21,7 +21,7 @@ if (!window[INSTALL_FLAG]) {
     sourceMode: 'rings-3',
     pivot: null,
     tunnel: { enabled: false, echoes: 6, scale: 0.82, rotation: 14, fade: 0.55 },
-    recorder: { active: false, mediaRecorder: null, chunks: [], fps: 30, maxSeconds: 20, timer: null },
+    recorder: { active: false, mediaRecorder: null, chunks: [], fps: 30, maxSeconds: 20, timer: null, startedAt: 0 },
     audioProvider: null,
     audioReactive: false,
     audioSensitivity: 1,
@@ -608,19 +608,41 @@ if (!window[INSTALL_FLAG]) {
     state.recorder.chunks = [];
     state.recorder.mediaRecorder = recorder;
     recorder.ondataavailable = (event) => { if (event.data?.size) state.recorder.chunks.push(event.data); };
-    recorder.onstop = () => {
+    recorder.onstop = async () => {
       const blob = new Blob(state.recorder.chunks, { type: mimeType || 'video/webm' });
       const name = ($('#projectName')?.value || 'domistika-motion').trim().replace(/[^a-z0-9_-]+/gi, '-');
+      const durationSeconds = state.recorder.startedAt
+        ? Math.max(0, (performance.now() - state.recorder.startedAt) / 1000)
+        : 0;
+      let clipSaved = false;
+      try {
+        if (window.domistikaMotionClipsV0922?.addBlob) {
+          await window.domistikaMotionClipsV0922.addBlob(blob, {
+            name: `${name} · Kinetic`,
+            kind: 'kinetic',
+            durationSeconds,
+            fps: state.recorder.fps,
+            sourceCanvas: state.displayCanvas,
+          });
+          clipSaved = true;
+        }
+      } catch (error) {
+        console.warn('Domistika could not save Kinetic motion clip', error);
+      }
       downloadBlob(blob, `${name}-kinetic.webm`);
       state.recorder.active = false;
       state.recorder.mediaRecorder = null;
+      state.recorder.startedAt = 0;
       clearTimeout(state.recorder.timer);
       state.recorder.timer = null;
       syncRecorderUi();
-      status('Kinetic motion video exported');
+      status(clipSaved
+        ? 'Kinetic motion clip saved to project and exported'
+        : 'Kinetic motion video exported');
     };
     recorder.start(250);
     state.recorder.active = true;
+    state.recorder.startedAt = performance.now();
     state.recorder.timer = setTimeout(() => stopRecording(), maxSeconds * 1000);
     syncRecorderUi();
     status(`Recording kinetic motion at ${fps} fps`);

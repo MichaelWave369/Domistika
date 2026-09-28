@@ -18,6 +18,7 @@ let searchQuery = '';
 let featuredOverride = null;
 let pendingPreview = '';
 let page = null;
+let viewerMotionUrl = '';
 
 function escapeHtml(value) {
   return String(value ?? '')
@@ -104,10 +105,10 @@ function addStyles() {
     .gallery-content{min-width:0}.gallery-feature{display:grid;grid-template-columns:minmax(220px,42%) 1fr;min-height:290px;border:1px solid rgba(255,180,90,.32);border-radius:16px;overflow:hidden;background:linear-gradient(135deg,rgba(86,47,30,.72),rgba(24,18,31,.9));box-shadow:0 18px 50px rgba(0,0,0,.35)}
     .gallery-feature-image{min-height:290px;background:#09080c center/cover no-repeat}.gallery-feature-copy{display:flex;flex-direction:column;justify-content:center;padding:26px}.gallery-kicker{color:#ffb45d;font-size:10px;letter-spacing:.18em;text-transform:uppercase}.gallery-feature h2{margin:8px 0 3px;font:900 clamp(25px,4vw,50px)/.98 Georgia,serif}.gallery-feature .artist{color:#8fd9ff}.gallery-feature p{max-width:620px;color:#d8c9bb;line-height:1.55}.gallery-chip{display:inline-flex;align-items:center;width:max-content;margin-top:8px;padding:5px 8px;border:1px solid rgba(143,217,255,.35);border-radius:999px;color:#8fd9ff;background:rgba(13,74,97,.2);font-size:9px;text-transform:uppercase;letter-spacing:.08em}
     .gallery-filters{display:flex;align-items:center;gap:8px;margin:18px 0 12px;flex-wrap:wrap}.gallery-search{flex:1;min-width:210px;height:38px;padding:0 12px;border:1px solid #60442f;border-radius:8px;color:#fff;background:#110d12}.gallery-category{padding:7px 9px;border:1px solid #60442f;border-radius:7px;color:#d8c9bb;background:#21151a;font-size:9px}.gallery-category.active{color:#211108;border-color:#ffbd68;background:#ffbd68}.gallery-count{margin-left:auto;color:#9b8c85;font-size:9px}
-    .gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}.gallery-card{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:#171117;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;transition:transform .16s ease,border-color .16s ease}.gallery-card:hover{transform:translateY(-3px);border-color:#ffb45d}.gallery-card img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#09080c}.gallery-card-copy{padding:11px}.gallery-card h3{margin:0 0 4px;color:#fff;font:800 15px/1.15 Georgia,serif}.gallery-card p{margin:0;color:#9f9290;font-size:9px}.gallery-card-category{display:inline-block;margin-top:8px;color:#8fd9ff;font-size:8px;text-transform:uppercase;letter-spacing:.08em}.gallery-local-badge{position:absolute;top:8px;left:8px;padding:4px 6px;border-radius:5px;color:#15200e;background:#b7e66c;font-size:7px;font-weight:900;text-transform:uppercase}.gallery-delete{position:absolute;top:8px;right:8px;width:27px;height:27px;border:1px solid rgba(255,255,255,.35);border-radius:50%;color:#fff;background:rgba(70,15,20,.85);cursor:pointer}
+    .gallery-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:12px}.gallery-card{position:relative;overflow:hidden;border:1px solid rgba(255,255,255,.12);border-radius:12px;background:#171117;box-shadow:0 8px 24px rgba(0,0,0,.28);cursor:pointer;transition:transform .16s ease,border-color .16s ease}.gallery-card:hover{transform:translateY(-3px);border-color:#ffb45d}.gallery-card img{display:block;width:100%;aspect-ratio:4/3;object-fit:cover;background:#09080c}.gallery-card-copy{padding:11px}.gallery-card h3{margin:0 0 4px;color:#fff;font:800 15px/1.15 Georgia,serif}.gallery-card p{margin:0;color:#9f9290;font-size:9px}.gallery-card-category{display:inline-block;margin-top:8px;color:#8fd9ff;font-size:8px;text-transform:uppercase;letter-spacing:.08em}.gallery-local-badge{position:absolute;top:8px;left:8px;padding:4px 6px;border-radius:5px;color:#15200e;background:#b7e66c;font-size:7px;font-weight:900;text-transform:uppercase}.gallery-motion-badge{position:absolute;top:8px;left:74px;padding:4px 6px;border-radius:5px;color:#130b1a;background:#d8a7ff;font-size:7px;font-weight:900;text-transform:uppercase}.gallery-delete{position:absolute;top:8px;right:8px;width:27px;height:27px;border:1px solid rgba(255,255,255,.35);border-radius:50%;color:#fff;background:rgba(70,15,20,.85);cursor:pointer}
     .gallery-empty{grid-column:1/-1;padding:60px 20px;text-align:center;border:1px dashed #60442f;border-radius:12px;color:#a99488}
     .gallery-submit{position:sticky;top:0;align-self:start;padding:16px;border:1px solid rgba(255,180,90,.35);border-radius:14px;background:linear-gradient(#2c1b18,#171119);box-shadow:0 14px 38px rgba(0,0,0,.35)}.gallery-submit h2{margin:0;font:900 22px/1 Georgia,serif}.gallery-submit>p{color:#b9a79c;font-size:10px;line-height:1.45}.gallery-preview{display:grid;place-items:center;min-height:170px;margin:12px 0;border:1px dashed #72503a;border-radius:10px;overflow:hidden;color:#8e7b72;background:#0d0b0f center/contain no-repeat}.gallery-preview.has-image{color:transparent;background-repeat:no-repeat}.gallery-submit form{display:grid;gap:9px}.gallery-submit label{display:grid;gap:4px;color:#c9b6a6;font-size:8px;text-transform:uppercase;letter-spacing:.08em}.gallery-submit input,.gallery-submit textarea,.gallery-submit select{width:100%;padding:9px;border:1px solid #60442f;border-radius:7px;color:#fff;background:#100c11}.gallery-submit textarea{min-height:72px;resize:vertical}.gallery-submit .check-row{display:flex;grid-template-columns:none;align-items:flex-start;gap:8px;text-transform:none;letter-spacing:0;line-height:1.35}.gallery-submit .check-row input{width:auto;margin-top:2px}.gallery-submit-buttons{display:grid;grid-template-columns:1fr 1fr;gap:8px}.gallery-submit button{min-height:36px;padding:8px;border:1px solid #775136;border-radius:7px;color:#f6e7cc;background:linear-gradient(#5b3723,#321e15);cursor:pointer}.gallery-submit .gallery-public{grid-column:1/-1;color:#1a1008;border-color:#ffbd68;background:linear-gradient(#ffd18d,#e78c31);font-weight:900}.gallery-note{margin-top:10px;color:#8e7b72;font-size:8px;line-height:1.45}
-    .gallery-viewer{width:min(930px,92vw);max-height:90vh;padding:0;border:2px solid #ffb45d;border-radius:13px;color:#f5ecdf;background:#100d12;box-shadow:0 30px 120px rgba(0,0,0,.8)}.gallery-viewer::backdrop{background:rgba(3,2,5,.82)}.gallery-viewer img{display:block;width:100%;max-height:68vh;object-fit:contain;background:#070608}.gallery-viewer-copy{padding:15px 18px}.gallery-viewer h2{margin:0;font:900 26px/1 Georgia,serif}.gallery-viewer p{color:#bbaaa0;line-height:1.5}.gallery-viewer-close{position:absolute;top:10px;right:10px;width:36px;height:36px;border:1px solid #fff;border-radius:50%;color:#fff;background:rgba(0,0,0,.72);cursor:pointer}
+    .gallery-viewer{width:min(930px,92vw);max-height:90vh;padding:0;border:2px solid #ffb45d;border-radius:13px;color:#f5ecdf;background:#100d12;box-shadow:0 30px 120px rgba(0,0,0,.8)}.gallery-viewer::backdrop{background:rgba(3,2,5,.82)}.gallery-viewer img,.gallery-viewer video{display:block;width:100%;max-height:68vh;object-fit:contain;background:#070608}.gallery-viewer video[hidden],.gallery-viewer img[hidden]{display:none!important}.gallery-viewer-copy{padding:15px 18px}.gallery-viewer h2{margin:0;font:900 26px/1 Georgia,serif}.gallery-viewer p{color:#bbaaa0;line-height:1.5}.gallery-viewer-close{position:absolute;top:10px;right:10px;width:36px;height:36px;border:1px solid #fff;border-radius:50%;color:#fff;background:rgba(0,0,0,.72);cursor:pointer}
     html.domistika-16bit-console .domistika-gallery-page{color:#e2e8f0;background:radial-gradient(circle at 20% 0,rgba(139,92,246,.14),transparent 34rem),#050910}.domistika-16bit-console .gallery-topbar{border-color:#00d4aa;background:#080d1a}.domistika-16bit-console .gallery-brand-mark{border-radius:4px;border-color:#00d4aa;color:#f5c542;background:#172249}.domistika-16bit-console .gallery-feature,.domistika-16bit-console .gallery-submit{border-radius:5px;border-color:#26355f;background:linear-gradient(#121b3a,#090e1b)}.domistika-16bit-console .gallery-card{border-radius:4px;background:#090e1b}.domistika-16bit-console .gallery-category.active{color:#050910;border-color:#00d4aa;background:#00d4aa}.domistika-16bit-console .gallery-kicker{color:#00d4aa}.domistika-16bit-console .gallery-chip,.domistika-16bit-console .gallery-card-category{color:#7dd3fc}.domistika-16bit-console .gallery-public{border-color:#00d4aa!important;background:linear-gradient(#4ff2d1,#00a886)!important}
     @media(max-width:980px){.gallery-shell{grid-template-columns:1fr}.gallery-submit{position:static}.gallery-feature{grid-template-columns:1fr}.gallery-feature-image{min-height:260px}}
     @media(max-width:620px){.gallery-main{padding:10px}.gallery-topbar{padding:9px}.gallery-brand p{display:none}.gallery-feature-copy{padding:18px}.gallery-grid{grid-template-columns:1fr 1fr}.gallery-submit-buttons{grid-template-columns:1fr}.gallery-submit .gallery-public{grid-column:auto}}
@@ -132,6 +133,7 @@ async function loadCurated() {
 function artworkCard(item) {
   return `<article class="gallery-card" data-art-id="${escapeHtml(item.id)}" tabindex="0">
     ${item.local ? '<span class="gallery-local-badge">My gallery</span>' : ''}
+    ${item.motionClipId ? '<span class="gallery-motion-badge">Motion</span>' : ''}
     ${item.local ? `<button class="gallery-delete" type="button" data-delete-art="${escapeHtml(item.id)}" title="Remove local artwork">×</button>` : ''}
     <img src="${escapeHtml(safeImageUrl(item.image))}" alt="${escapeHtml(item.title)}" loading="lazy">
     <div class="gallery-card-copy"><h3>${escapeHtml(item.title)}</h3><p>by ${escapeHtml(item.artist || 'Anonymous')}</p><span class="gallery-card-category">${escapeHtml(item.category || 'Other')}</span></div>
@@ -166,13 +168,42 @@ function render() {
   page.querySelectorAll('.gallery-category').forEach((button) => button.classList.toggle('active', button.dataset.category === activeCategory));
 }
 
-function showArtwork(item) {
+async function showArtwork(item) {
   const dialog = page.querySelector('#galleryViewer');
-  dialog.querySelector('img').src = safeImageUrl(item.image);
-  dialog.querySelector('img').alt = item.title;
+  const image = dialog.querySelector('img');
+  const video = dialog.querySelector('video');
+
+  if (viewerMotionUrl) {
+    URL.revokeObjectURL(viewerMotionUrl);
+    viewerMotionUrl = '';
+  }
+
+  image.src = safeImageUrl(item.image);
+  image.alt = item.title;
+  image.hidden = false;
+  video.hidden = true;
+  video.removeAttribute('src');
+
+  if (item.motionClipId && window.domistikaMotionClipsV0922?.playbackUrl) {
+    try {
+      const url = await window.domistikaMotionClipsV0922.playbackUrl(item.motionClipId);
+      if (url) {
+        viewerMotionUrl = url;
+        video.src = url;
+        video.poster = safeImageUrl(item.image);
+        video.hidden = false;
+        image.hidden = true;
+      }
+    } catch (error) {
+      console.warn('Domistika gallery motion clip unavailable', error);
+    }
+  }
+
   dialog.querySelector('h2').textContent = item.title;
   dialog.querySelector('.gallery-viewer-artist').textContent = `by ${item.artist || 'Anonymous'} · ${item.category || 'Other'}`;
-  dialog.querySelector('.gallery-viewer-description').textContent = item.description || 'A creation from the Domistika community.';
+  const motionNote = item.motionClipId ? ' · includes a project motion clip' : '';
+  dialog.querySelector('.gallery-viewer-description').textContent =
+    `${item.description || 'A creation from the Domistika community.'}${motionNote}`;
   dialog.showModal();
 }
 
@@ -222,7 +253,21 @@ async function captureCurrent() {
     setPreview(currentArtworkDataUrl({ maxDimension: 960, type: 'image/webp', quality: 0.84, includeBackground: true }));
     const title = page.querySelector('#galleryTitle');
     if (!title.value.trim()) title.value = getProjectName();
-    setStatus('Current canvas captured for the gallery');
+    const latestClip = window.domistikaMotionClipsV0922?.latest?.() || null;
+    const attach = page.querySelector('#galleryAttachMotion');
+    const label = page.querySelector('#galleryAttachMotionLabel');
+    if (attach) {
+      attach.disabled = !latestClip;
+      attach.checked = Boolean(latestClip);
+    }
+    if (label) {
+      label.textContent = latestClip
+        ? `Attach latest motion clip · ${latestClip.name}`
+        : 'No motion clip in the current project yet';
+    }
+    setStatus(latestClip
+      ? 'Current canvas captured · latest project motion clip ready to attach'
+      : 'Current canvas captured for the gallery');
   } catch (error) {
     setStatus(error.message);
   }
@@ -235,6 +280,8 @@ function formArtwork() {
   const category = form.querySelector('#gallerySubmitCategory').value;
   const description = form.querySelector('#galleryDescription').value.trim();
   const consent = form.querySelector('#galleryConsent').checked;
+  const latestClip = window.domistikaMotionClipsV0922?.latest?.() || null;
+  const attachMotion = Boolean(form.querySelector('#galleryAttachMotion')?.checked && latestClip);
   if (!title) throw new Error('Give the artwork a title first');
   if (!pendingPreview) throw new Error('Capture the canvas or choose an image first');
   if (!consent) throw new Error('Please confirm that you have permission to submit this artwork');
@@ -245,6 +292,13 @@ function formArtwork() {
     category,
     description,
     image: pendingPreview,
+    motionClipId: attachMotion ? latestClip.id : null,
+    motionClip: attachMotion ? {
+      name: latestClip.name,
+      kind: latestClip.kind,
+      durationSeconds: latestClip.durationSeconds,
+      fps: latestClip.fps,
+    } : null,
     createdAt: new Date().toISOString(),
     local: true,
   };
@@ -263,6 +317,54 @@ function addLocalSubmission() {
     return null;
   }
 }
+function addMotionClipToGallery(clip) {
+  if (!clip?.id) return null;
+  const id = `motion-gallery-${clip.id}`;
+  const existing = localArtwork.find((item) => item.id === id);
+  if (existing) return existing;
+
+  let image = clip.poster || '';
+  if (!image) {
+    try {
+      image = currentArtworkDataUrl({
+        maxDimension: 960,
+        type: 'image/webp',
+        quality: 0.84,
+        includeBackground: true,
+      });
+    } catch {}
+  }
+  if (!image) return null;
+
+  const duration = Number(clip.durationSeconds) > 0
+    ? `${Number(clip.durationSeconds).toFixed(1)} s`
+    : 'recorded motion';
+
+  const item = {
+    id,
+    title: clip.name || 'Domistika Motion Clip',
+    artist: 'Local studio',
+    category: 'Experimental',
+    description: `Motion clip · ${duration} · ${clip.kind || 'motion'}`,
+    image,
+    motionClipId: clip.id,
+    motionClip: {
+      name: clip.name || 'Motion clip',
+      kind: clip.kind || 'motion',
+      durationSeconds: Number(clip.durationSeconds) || 0,
+      fps: Number(clip.fps) || 0,
+    },
+    createdAt: clip.createdAt || new Date().toISOString(),
+    local: true,
+  };
+
+  localArtwork = [item, ...localArtwork].slice(0, MAX_LOCAL_ARTWORKS);
+  if (!saveLocalArtwork()) return null;
+  render();
+  setStatus(`Motion clip “${item.title}” landed in My Gallery`);
+  return item;
+}
+
 
 async function submitPublicly() {
   const item = addLocalSubmission();
@@ -337,6 +439,21 @@ function bindPage() {
     if (item) showArtwork(item);
   });
   page.querySelector('#galleryViewerClose').addEventListener('click', () => page.querySelector('#galleryViewer').close());
+  page.querySelector('#galleryViewer').addEventListener('close', () => {
+    const video = page.querySelector('#galleryViewer video');
+    video?.pause();
+    if (viewerMotionUrl) {
+      URL.revokeObjectURL(viewerMotionUrl);
+      viewerMotionUrl = '';
+    }
+    if (video) {
+      video.removeAttribute('src');
+      video.load?.();
+    }
+  });
+  window.addEventListener('domistika:motion-clip-added', (event) => {
+    addMotionClipToGallery(event.detail?.clip);
+  });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !page.hidden && !page.querySelector('#galleryViewer').open) closeGallery();
   });
@@ -366,14 +483,20 @@ function init() {
   page.setAttribute('aria-hidden', 'true');
   page.innerHTML = `<header class="gallery-topbar"><div class="gallery-brand"><div class="gallery-brand-mark">D</div><div><h1>Domistika Art Gallery</h1><p>Carbon-made art · shared with permission</p></div></div><div class="gallery-top-actions"><button type="button" id="closeGallery">Back to Studio</button></div></header>
     <main class="gallery-main"><div class="gallery-shell"><section class="gallery-content"><section class="gallery-feature" id="galleryFeature"></section><div class="gallery-filters"><input class="gallery-search" id="gallerySearch" type="search" placeholder="Search titles, artists, categories…"><div id="galleryCategories">${CATEGORIES.map((category) => `<button type="button" class="gallery-category${category === 'All' ? ' active' : ''}" data-category="${escapeHtml(category)}">${escapeHtml(category)}</button>`).join('')}</div><span class="gallery-count" id="galleryCount">0 artworks</span></div><section class="gallery-grid" id="galleryGrid"></section></section>
-    <aside class="gallery-submit"><h2>Submit your art</h2><p>Add the current Domistika canvas or choose an image. Local submissions appear instantly on this device. Public submissions open a curated GitHub workflow.</p><div class="gallery-preview" id="galleryPreview">Capture the current canvas or choose an image</div><form id="gallerySubmitForm"><button type="button" id="captureGalleryCanvas">Use current canvas</button><label>Or choose an image<input id="galleryImageFile" type="file" accept="image/*"></label><label>Title<input id="galleryTitle" maxlength="80" placeholder="Artwork title" required></label><label>Artist<input id="galleryArtist" maxlength="60" placeholder="Name or alias"></label><label>Category<select id="gallerySubmitCategory">${CATEGORIES.filter((category) => category !== 'All').map((category) => `<option>${escapeHtml(category)}</option>`).join('')}</select></label><label>Description<textarea id="galleryDescription" maxlength="500" placeholder="Tell the gallery about this piece"></textarea></label><label class="check-row"><input id="galleryConsent" type="checkbox" required><span>I created this artwork or have permission to submit it, and I choose whether it stays local or enters public review.</span></label><div class="gallery-submit-buttons"><button type="submit">Add to My Gallery</button><button type="button" id="submitGalleryPublic" class="gallery-public">Submit to Public Gallery</button></div></form><p class="gallery-note">Public review is intentionally human-governed. The image is downloaded to your device and a GitHub submission form opens so you can attach it. Nothing is uploaded silently.</p></aside></div></main>
-    <dialog class="gallery-viewer" id="galleryViewer"><button class="gallery-viewer-close" id="galleryViewerClose" type="button">×</button><img alt=""><div class="gallery-viewer-copy"><h2></h2><strong class="gallery-viewer-artist"></strong><p class="gallery-viewer-description"></p></div></dialog>`;
+    <aside class="gallery-submit"><h2>Submit your art</h2><p>Add the current Domistika canvas or choose an image. Local submissions appear instantly on this device. Public submissions open a curated GitHub workflow.</p><div class="gallery-preview" id="galleryPreview">Capture the current canvas or choose an image</div><form id="gallerySubmitForm"><button type="button" id="captureGalleryCanvas">Use current canvas</button><label>Or choose an image<input id="galleryImageFile" type="file" accept="image/*"></label><label>Title<input id="galleryTitle" maxlength="80" placeholder="Artwork title" required></label><label>Artist<input id="galleryArtist" maxlength="60" placeholder="Name or alias"></label><label>Category<select id="gallerySubmitCategory">${CATEGORIES.filter((category) => category !== 'All').map((category) => `<option>${escapeHtml(category)}</option>`).join('')}</select></label><label>Description<textarea id="galleryDescription" maxlength="500" placeholder="Tell the gallery about this piece"></textarea></label><label class="check-row"><input id="galleryAttachMotion" type="checkbox" disabled><span id="galleryAttachMotionLabel">No motion clip in the current project yet</span></label><label class="check-row"><input id="galleryConsent" type="checkbox" required><span>I created this artwork or have permission to submit it, and I choose whether it stays local or enters public review.</span></label><div class="gallery-submit-buttons"><button type="submit">Add to My Gallery</button><button type="button" id="submitGalleryPublic" class="gallery-public">Submit to Public Gallery</button></div></form><p class="gallery-note">Public review is intentionally human-governed. The image is downloaded to your device and a GitHub submission form opens so you can attach it. Nothing is uploaded silently.</p></aside></div></main>
+    <dialog class="gallery-viewer" id="galleryViewer"><button class="gallery-viewer-close" id="galleryViewerClose" type="button">×</button><video controls loop playsinline hidden></video><img alt=""><div class="gallery-viewer-copy"><h2></h2><strong class="gallery-viewer-artist"></strong><p class="gallery-viewer-description"></p></div></dialog>`;
   document.body.appendChild(page);
   button.addEventListener('click', () => openGallery());
   bindPage();
   loadCurated();
   if (location.hash === '#gallery') openGallery(false);
-  window.domistikaGalleryV093 = { open: openGallery, close: closeGallery, render, getAll: allArtwork };
+  window.domistikaGalleryV093 = {
+    open: openGallery,
+    close: closeGallery,
+    render,
+    getAll: allArtwork,
+    addMotionClip: addMotionClipToGallery,
+  };
   return true;
 }
 
