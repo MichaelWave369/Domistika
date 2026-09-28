@@ -205,6 +205,20 @@ Domistika is an independent browser art application created for artists who want
 - Reset action turns off Mind Melt add-ons while preserving the underlying kinetic motion state
 - Additive control layer leaves authored artwork untouched
 
+## v0.9.19 — Accessible Input Bridge
+
+- Sticky Draw toggle: click once for pen down, move the cursor to draw, click again for pen up
+- Sticky strokes keep the existing brush engine, symmetry modes, layers, autosave, and one-step undo behavior
+- Sticky Draw safely lifts on tool/layer changes, pan activation, pointer cancel, or interaction with controls outside the canvas
+- Leaving and re-entering the canvas suspends and resumes Sticky Draw without connecting an accidental line across the gap
+- Polyline mode for click-only precision drawing with live segment preview
+- Enter or double-click commits a polyline; Backspace removes the last point; Escape cancels and restores the untouched layer
+- Sticky Draw and Polyline are mutually exclusive alternative-input modes
+- Keyboard access: Shift+D toggles Sticky Draw and Shift+P toggles Polyline
+- ARIA pressed states and a live on-canvas mode indicator make input state explicit
+- Public runtime API: `window.domistikaAccessibleInputV0919`
+- Designed as an accessibility feature for people and alternative-input operators rather than a device-specific accommodation
+
 ## Technology
 
 - Vanilla JavaScript and modern browser APIs
