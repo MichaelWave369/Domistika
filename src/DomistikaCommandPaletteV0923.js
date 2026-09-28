@@ -123,6 +123,7 @@ function installStyles() {
     .command-palette-footer{display:flex;justify-content:space-between;gap:12px;padding:9px 14px;border-top:1px solid var(--line);color:var(--muted);font-size:9px}
     .command-palette-footer span{display:flex;align-items:center;gap:7px}
     .command-palette-footer kbd{min-width:auto;padding:2px 5px;font-size:8px}
+    @media(max-width:1000px){.top-actions .command-palette-launcher{display:inline-flex}}
     @media(max-width:680px){
       .command-palette-launcher span{display:none}
       .command-palette-dialog{max-height:88vh}
