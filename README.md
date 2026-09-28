@@ -1,3 +1,18 @@
+## v0.9.28 — Playground UX + Capability Hygiene
+
+Playground now makes its return path impossible to miss and keeps capability snapshots lightweight.
+
+- A visible **▶ Playground** chip sits beside Commands.
+- After a demo, the chip becomes **↩ Return to Artwork**.
+- Playground completion shows an on-screen **Return to my artwork** action.
+- The status line explicitly names **⌘K / Ctrl+K → Playground · Return to Previous Artwork**.
+- `Domistika.playground.state()` and `Domistika.capabilities().playground` now expose lightweight clip metadata only, excluding poster/data-URL payloads.
+- Stable SDK advances to `0.1.7`.
+
+The first live end-to-end Playground run is preserved as **Domistika Stable Runtime Acceptance 001**.
+
+See [Playground UX v0.9.28](docs/PLAYGROUND_UX_V0928.md) and [Stable Runtime Acceptance 001](docs/acceptance/DOMISTIKA_STABLE_RUNTIME_ACCEPTANCE_001.md).
+
 ## v0.9.27 — Playground
 
 Domistika now has a one-command first-run demo that performs the studio instead of merely describing it.

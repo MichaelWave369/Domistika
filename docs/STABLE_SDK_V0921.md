@@ -13,8 +13,8 @@ The purpose is to give humans, local scripts, accessibility tools, MIDI controll
 ## Contract
 
 - schema: `domistika.sdk.v1`
-- SDK version: `0.1.6`
-- app version: `0.9.27`
+- SDK version: `0.1.7`
+- app version: `0.9.28`
 - global: `window.Domistika`
 - object: deeply frozen
 - network access: none
@@ -227,6 +227,12 @@ const portableProject = await Domistika.project.serialize({
 ```
 
 Routine autosave stores clip metadata plus local IndexedDB references. Explicit project serialization with `embedMotion: true` embeds the WebM media so a `.domistika` file remains portable.
+
+### Lightweight Playground capability state
+
+Starting in v0.9.28, `Domistika.playground.state()` and `Domistika.capabilities().playground` deliberately return only lightweight clip metadata.
+
+They do not include poster data URLs or media bytes. Integrations that need clip media or presentation data should use the explicit Motion Clips surface instead of polling capability snapshots.
 
 ### Playground
 
