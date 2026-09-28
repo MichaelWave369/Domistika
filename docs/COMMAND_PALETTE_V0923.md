@@ -68,6 +68,7 @@ Keyboard navigation:
 
 ### Rooms
 
+- Color Studio
 - Spiro Lab
 - Motion Studio
 - Gallery
