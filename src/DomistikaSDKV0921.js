@@ -9,6 +9,7 @@ const TOOLS = new Set([
   'line', 'rectangle', 'ellipse', 'eyedropper', 'pan',
 ]);
 const SETTINGS = new Set(['color', 'size', 'opacity', 'smoothing', 'pressure', 'symmetry', 'grid', 'gridSize']);
+const BLEND_MODES = new Set(['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference']);
 const MOTION_PRESETS = new Set(['slow-drift', 'portal', 'portal-369', 'chaos', 'hypnosis', 'inversion-storm', 'bass-bloom']);
 const COMPOSER_PRESETS = new Set(['ghost-mandala', 'orbit-bloom', 'infinite-dream', 'calm-drift']);
 const VISUAL_SCENES = new Set(['particle-portal', 'fractal-bloom', 'aurora-breath', 'cosmic-pulse']);
@@ -275,7 +276,9 @@ function layerOpacity(id, opacity) {
   const engine = requireEngine();
   const target = engine.layers.find((layer) => layer.id === id);
   if (!target) throw new Error('DOMISTIKA_SDK_LAYER_NOT_FOUND');
-  engine.setLayerOpacity(id, clamp(Number(opacity), 0, 1));
+  const value = Number(opacity);
+  if (!Number.isFinite(value)) throw new Error('DOMISTIKA_SDK_LAYER_OPACITY_INVALID');
+  engine.setLayerOpacity(id, clamp(value, 0, 1));
   emit('sdk-layer', { action: 'opacity', layer: safeLayer(target) });
   return safeLayer(target);
 }
@@ -284,7 +287,9 @@ function layerBlend(id, blendMode) {
   const engine = requireEngine();
   const target = engine.layers.find((layer) => layer.id === id);
   if (!target) throw new Error('DOMISTIKA_SDK_LAYER_NOT_FOUND');
-  engine.setLayerBlendMode(id, String(blendMode || 'normal'));
+  const mode = String(blendMode || 'normal').trim().toLowerCase();
+  if (!BLEND_MODES.has(mode)) throw new Error('DOMISTIKA_SDK_LAYER_BLEND_INVALID');
+  engine.setLayerBlendMode(id, mode);
   emit('sdk-layer', { action: 'blend', layer: safeLayer(target) });
   return safeLayer(target);
 }
