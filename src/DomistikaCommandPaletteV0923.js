@@ -211,8 +211,9 @@ function install() {
   };
 
   const render = () => {
-    const commands = commandCatalog();
-    visibleCommands = filterCommands(commands, search.value);
+    visibleCommands = window.Domistika.commands.search
+      ? window.Domistika.commands.search(search.value, MAX_RESULTS)
+      : filterCommands(commandCatalog(), search.value);
     activeIndex = Math.min(activeIndex, Math.max(0, visibleCommands.length - 1));
 
     if (!visibleCommands.length) {
@@ -336,7 +337,16 @@ function install() {
     open: openPalette,
     close: closePalette,
     search(query = '') {
-      return Object.freeze(filterCommands(commandCatalog(), query));
+      const value = String(query || '');
+      if (dialog.open) {
+        search.value = value;
+        activeIndex = 0;
+        render();
+      }
+      const results = window.Domistika.commands.search
+        ? window.Domistika.commands.search(value, MAX_RESULTS)
+        : filterCommands(commandCatalog(), value);
+      return Object.freeze([...results]);
     },
   });
 
