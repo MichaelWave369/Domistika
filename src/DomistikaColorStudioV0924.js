@@ -265,6 +265,13 @@ function buildUi(){
 
   colorInput()?.addEventListener('input',()=>{syncEditor();renderHarmony();});
   colorInput()?.addEventListener('change',()=>rememberColor(currentColor()));
+  document.addEventListener('domistika:color-change',(event)=>{
+    const color=normalizeHex(event.detail?.color);
+    if(!color) return;
+    syncEditor(color);
+    renderHarmony();
+    if(event.detail?.source==='eyedropper') rememberColor(color);
+  });
   syncEditor();renderRecents();renderHarmony();renderGradients();return true;
 }
 function install(){
