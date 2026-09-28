@@ -1,3 +1,27 @@
+## v0.9.21 — Stable SDK v0.1
+
+Domistika now exposes one frozen public runtime surface:
+
+```js
+window.Domistika
+```
+
+The SDK wraps the existing versioned modules instead of replacing them. It provides stable canvas, tool, brush, stroke, layer, Spiro, Motion, clean-capture, event, and command surfaces for scripts, accessibility tools, test harnesses, MIDI experiments, and governed agents.
+
+Highlights:
+
+- `Domistika.setTool(...)`, `Domistika.color(...)`, and `Domistika.stroke(...)`;
+- canvas-coordinate or normalized-coordinate scripted strokes;
+- missing scripted pressure defaults safely to full pressure, so direct `drawSegment` calls no longer collapse brush width;
+- metadata-only layer controls without exposing raw canvas contexts;
+- stable Spiro placement and Motion preset/scene wrappers;
+- `Domistika.export.capture()` over the clean-art v0.9.20 contract;
+- semantic `domistika:*` events;
+- an initial command bus intended to back a future command palette;
+- no network, filesystem, arbitrary JavaScript, or raw context surface.
+
+See [Stable SDK v0.1](docs/STABLE_SDK_V0921.md).
+
 ## v0.9.20 — Clean Composite Capture
 
 Domistika now exposes a bounded read-only clean-art capture surface at `window.domistikaCleanCaptureV0920`.

@@ -1,0 +1,640 @@
+const APP_VERSION = '0.9.21';
+const SDK_VERSION = '0.1.0';
+const SCHEMA = 'domistika.sdk.v1';
+const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
+
+const DRAW_TOOLS = new Set(['pencil', 'ink', 'marker', 'airbrush', 'eraser']);
+const TOOLS = new Set([
+  ...DRAW_TOOLS,
+  'line', 'rectangle', 'ellipse', 'eyedropper', 'pan',
+]);
+const SETTINGS = new Set(['color', 'size', 'opacity', 'smoothing', 'pressure', 'symmetry', 'grid', 'gridSize']);
+const BLEND_MODES = new Set(['normal', 'multiply', 'screen', 'overlay', 'darken', 'lighten', 'color-dodge', 'color-burn', 'hard-light', 'soft-light', 'difference']);
+const MOTION_PRESETS = new Set(['slow-drift', 'portal', 'portal-369', 'chaos', 'hypnosis', 'inversion-storm', 'bass-bloom']);
+const COMPOSER_PRESETS = new Set(['ghost-mandala', 'orbit-bloom', 'infinite-dream', 'calm-drift']);
+const VISUAL_SCENES = new Set(['particle-portal', 'fractal-bloom', 'aurora-breath', 'cosmic-pulse']);
+
+const clamp = (value, min, max) => Math.min(max, Math.max(min, value));
+
+function currentEngine() {
+  return window.__domistikaEngine || globalThis.domistikaEngine || null;
+}
+
+function requireEngine() {
+  const engine = currentEngine();
+  if (!engine) throw new Error('DOMISTIKA_SDK_ENGINE_NOT_READY');
+  return engine;
+}
+
+function projectName() {
+  return String(document.querySelector('#projectName')?.value || 'Untitled Domistika').trim() || 'Untitled Domistika';
+}
+
+function emit(name, detail = {}) {
+  const type = String(name || '').startsWith('domistika:') ? String(name) : `domistika:${name}`;
+  window.dispatchEvent(new CustomEvent(type, {
+    detail: {
+      sdkVersion: SDK_VERSION,
+      appVersion: APP_VERSION,
+      ...detail,
+    },
+  }));
+}
+
+function safeLayer(layer) {
+  if (!layer) return null;
+  return Object.freeze({
+    id: String(layer.id || ''),
+    name: String(layer.name || ''),
+    visible: layer.visible !== false,
+    opacity: Number(layer.opacity ?? 1),
+    blendMode: String(layer.blendMode || 'normal'),
+  });
+}
+
+function syncToolUi(tool) {
+  document.querySelectorAll('[data-tool]').forEach((button) => {
+    button.classList.toggle('active', button.dataset.tool === tool);
+  });
+}
+
+function syncSettingUi(key, value) {
+  const bindings = {
+    color: ['#colorInput', '#colorLabel', (raw) => String(raw)],
+    size: ['#sizeInput', '#sizeOutput', (raw) => String(raw)],
+    opacity: ['#opacityInput', '#opacityOutput', (raw) => `${Math.round(Number(raw) * 100)}%`, (raw) => String(Math.round(Number(raw) * 100))],
+    smoothing: ['#smoothingInput', '#smoothingOutput', (raw) => `${Math.round(Number(raw))}%`],
+    symmetry: ['#symmetryInput', null, null],
+  };
+  const binding = bindings[key];
+  if (!binding) return;
+  const [inputSelector, outputSelector, format = (raw) => String(raw), inputFormat = (raw) => String(raw)] = binding;
+  const input = document.querySelector(inputSelector);
+  if (input) input.value = inputFormat(value);
+  const output = outputSelector ? document.querySelector(outputSelector) : null;
+  if (output) output.textContent = format(value);
+}
+
+function setTool(tool) {
+  const name = String(tool || '').trim().toLowerCase();
+  if (!TOOLS.has(name)) throw new Error('DOMISTIKA_SDK_TOOL_INVALID');
+  const engine = requireEngine();
+  engine.setTool(name);
+  syncToolUi(name);
+  emit('sdk-tool', { tool: name });
+  return name;
+}
+
+function setSetting(key, value) {
+  const name = String(key || '').trim();
+  if (!SETTINGS.has(name)) throw new Error('DOMISTIKA_SDK_SETTING_INVALID');
+  const engine = requireEngine();
+
+  let normalized = value;
+  if (name === 'color') {
+    normalized = String(value || '').trim().toLowerCase();
+    if (!/^#[0-9a-f]{6}$/.test(normalized)) throw new Error('DOMISTIKA_SDK_COLOR_INVALID');
+  } else if (name === 'size') {
+    normalized = clamp(Number(value), 1, 180);
+  } else if (name === 'opacity') {
+    normalized = clamp(Number(value), 0.01, 1);
+  } else if (name === 'smoothing') {
+    normalized = clamp(Number(value), 0, 95);
+  } else if (name === 'pressure' || name === 'grid') {
+    normalized = Boolean(value);
+  } else if (name === 'gridSize') {
+    normalized = clamp(Math.round(Number(value)), 8, 512);
+  } else if (name === 'symmetry') {
+    normalized = String(value || 'none').trim().toLowerCase() || 'none';
+  }
+
+  if (typeof normalized === 'number' && !Number.isFinite(normalized)) {
+    throw new Error('DOMISTIKA_SDK_SETTING_VALUE_INVALID');
+  }
+
+  engine.setSetting(name, normalized);
+  syncSettingUi(name, normalized);
+  emit('sdk-setting', { key: name, value: normalized });
+  return normalized;
+}
+
+function normalizePoint(point, engine, space = 'canvas') {
+  if (!point || typeof point !== 'object' || Array.isArray(point)) {
+    throw new Error('DOMISTIKA_SDK_POINT_INVALID');
+  }
+
+  let x = Number(point.x);
+  let y = Number(point.y);
+  if (!Number.isFinite(x) || !Number.isFinite(y)) throw new Error('DOMISTIKA_SDK_POINT_INVALID');
+
+  if (space === 'normalized') {
+    if (x < 0 || x > 1 || y < 0 || y > 1) throw new Error('DOMISTIKA_SDK_POINT_OUT_OF_RANGE');
+    x *= engine.width;
+    y *= engine.height;
+  } else if (space === 'canvas') {
+    if (x < 0 || x > engine.width || y < 0 || y > engine.height) throw new Error('DOMISTIKA_SDK_POINT_OUT_OF_RANGE');
+  } else {
+    throw new Error('DOMISTIKA_SDK_COORDINATE_SPACE_INVALID');
+  }
+
+  const rawPressure = Number(point.pressure ?? point.p ?? 1);
+  const pressure = Number.isFinite(rawPressure) ? clamp(rawPressure, 0.08, 1) : 1;
+  return { x, y, pressure };
+}
+
+function stroke(points, options = {}) {
+  const engine = requireEngine();
+  if (!Array.isArray(points) || points.length < 1 || points.length > 4096) {
+    throw new Error('DOMISTIKA_SDK_STROKE_POINTS_INVALID');
+  }
+
+  const allowed = new Set(['tool', 'color', 'size', 'opacity', 'smoothing', 'symmetry', 'space', 'history', 'message']);
+  if (Object.keys(options || {}).some((key) => !allowed.has(key))) {
+    throw new Error('DOMISTIKA_SDK_STROKE_OPTIONS_INVALID');
+  }
+
+  if (options.tool != null) setTool(options.tool);
+  if (options.color != null) setSetting('color', options.color);
+  if (options.size != null) setSetting('size', options.size);
+  if (options.opacity != null) setSetting('opacity', options.opacity);
+  if (options.smoothing != null) setSetting('smoothing', options.smoothing);
+  if (options.symmetry != null) setSetting('symmetry', options.symmetry);
+
+  if (!DRAW_TOOLS.has(engine.tool)) throw new Error('DOMISTIKA_SDK_STROKE_TOOL_NOT_DRAWABLE');
+  if (!engine.activeLayer) throw new Error('DOMISTIKA_SDK_ACTIVE_LAYER_REQUIRED');
+
+  const space = options.space || 'canvas';
+  const normalized = points.map((point) => normalizePoint(point, engine, space));
+  if (options.history !== false) engine.captureHistory?.();
+
+  engine.drawDot(normalized[0]);
+  for (let index = 1; index < normalized.length; index += 1) {
+    engine.drawSegment(normalized[index - 1], normalized[index]);
+  }
+
+  engine.markChanged?.(String(options.message || `SDK stroke committed · ${normalized.length} points`));
+  emit('stroke', {
+    tool: engine.tool,
+    pointCount: normalized.length,
+    layerId: engine.activeLayerId,
+    space,
+  });
+
+  return Object.freeze({
+    ok: true,
+    tool: engine.tool,
+    pointCount: normalized.length,
+    layerId: engine.activeLayerId,
+    space,
+  });
+}
+
+function canvasInfo() {
+  const engine = requireEngine();
+  return Object.freeze({
+    width: engine.width,
+    height: engine.height,
+    projectName: projectName(),
+    activeLayerId: engine.activeLayerId,
+    layerCount: engine.layers.length,
+  });
+}
+
+async function newCanvas({ width = 1600, height = 1200, name = 'Untitled Domistika' } = {}) {
+  const engine = requireEngine();
+  const w = clamp(Math.round(Number(width)), 64, 8192);
+  const h = clamp(Math.round(Number(height)), 64, 8192);
+  if (!Number.isFinite(w) || !Number.isFinite(h)) throw new Error('DOMISTIKA_SDK_CANVAS_SIZE_INVALID');
+
+  await engine.restore({
+    format: 'domistika-project',
+    version: 1,
+    width: w,
+    height: h,
+    activeLayerId: 'base-layer',
+    settings: { ...engine.settings },
+    layers: [{
+      id: 'base-layer',
+      name: 'Sketch 1',
+      visible: true,
+      opacity: 1,
+      blendMode: 'normal',
+      image: null,
+    }],
+  });
+
+  const project = document.querySelector('#projectName');
+  if (project) {
+    project.value = String(name || 'Untitled Domistika').trim().slice(0, 120) || 'Untitled Domistika';
+    project.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  window.domistikaNavigation?.fit?.();
+  emit('sdk-canvas-new', { width: w, height: h, name: projectName() });
+  return canvasInfo();
+}
+
+function layerList() {
+  const engine = requireEngine();
+  return Object.freeze(engine.layers.map((layer) => safeLayer(layer)));
+}
+
+function layerCreate(name) {
+  const engine = requireEngine();
+  const layer = engine.createLayer(String(name || `Layer ${engine.layers.length + 1}`).trim().slice(0, 120));
+  emit('sdk-layer', { action: 'create', layer: safeLayer(layer) });
+  return safeLayer(layer);
+}
+
+function layerActivate(id) {
+  const engine = requireEngine();
+  const target = engine.layers.find((layer) => layer.id === id);
+  if (!target) throw new Error('DOMISTIKA_SDK_LAYER_NOT_FOUND');
+  engine.setActiveLayer(id);
+  emit('sdk-layer', { action: 'activate', layer: safeLayer(target) });
+  return safeLayer(target);
+}
+
+function layerRename(id, name) {
+  const engine = requireEngine();
+  const target = engine.layers.find((layer) => layer.id === id);
+  if (!target) throw new Error('DOMISTIKA_SDK_LAYER_NOT_FOUND');
+  engine.renameLayer(id, String(name || '').trim().slice(0, 120));
+  emit('sdk-layer', { action: 'rename', layer: safeLayer(target) });
+  return safeLayer(target);
+}
+
+function layerVisibility(id, visible) {
+  const engine = requireEngine();
+  const target = engine.layers.find((layer) => layer.id === id);
+  if (!target) throw new Error('DOMISTIKA_SDK_LAYER_NOT_FOUND');
+  engine.setLayerVisibility(id, Boolean(visible));
+  emit('sdk-layer', { action: 'visibility', layer: safeLayer(target) });
+  return safeLayer(target);
+}
+
+function layerOpacity(id, opacity) {
+  const engine = requireEngine();
+  const target = engine.layers.find((layer) => layer.id === id);
+  if (!target) throw new Error('DOMISTIKA_SDK_LAYER_NOT_FOUND');
+  const value = Number(opacity);
+  if (!Number.isFinite(value)) throw new Error('DOMISTIKA_SDK_LAYER_OPACITY_INVALID');
+  engine.setLayerOpacity(id, clamp(value, 0, 1));
+  emit('sdk-layer', { action: 'opacity', layer: safeLayer(target) });
+  return safeLayer(target);
+}
+
+function layerBlend(id, blendMode) {
+  const engine = requireEngine();
+  const target = engine.layers.find((layer) => layer.id === id);
+  if (!target) throw new Error('DOMISTIKA_SDK_LAYER_NOT_FOUND');
+  const mode = String(blendMode || 'normal').trim().toLowerCase();
+  if (!BLEND_MODES.has(mode)) throw new Error('DOMISTIKA_SDK_LAYER_BLEND_INVALID');
+  engine.setLayerBlendMode(id, mode);
+  emit('sdk-layer', { action: 'blend', layer: safeLayer(target) });
+  return safeLayer(target);
+}
+
+function layerClear(id = requireEngine().activeLayerId) {
+  const engine = requireEngine();
+  layerActivate(id);
+  engine.clearActiveLayer();
+  emit('sdk-layer', { action: 'clear', layerId: id });
+  return true;
+}
+
+function spiroApi() {
+  return window.domistikaSpiroV07 || null;
+}
+
+function spiroPresets() {
+  const api = spiroApi();
+  return Object.freeze(api?.presets ? Object.keys(api.presets) : []);
+}
+
+function spiroPlace(preset, { x, y, space = 'canvas', ...options } = {}) {
+  const engine = requireEngine();
+  const api = spiroApi();
+  if (!api?.drawAt) throw new Error('DOMISTIKA_SDK_SPIRO_UNAVAILABLE');
+  const name = String(preset || '').trim();
+  if (name) {
+    if (!api.presets?.[name]) throw new Error('DOMISTIKA_SDK_SPIRO_PRESET_INVALID');
+    api.applyPreset?.(name);
+  }
+
+  const point = normalizePoint({ x, y, pressure: 1 }, engine, space);
+  const ok = api.drawAt(point.x, point.y, options);
+  if (!ok) throw new Error('DOMISTIKA_SDK_SPIRO_DRAW_FAILED');
+  emit('sdk-spiro', { preset: name || api.state?.preset || null, x: point.x, y: point.y, space });
+  return true;
+}
+
+function kineticRuntime() {
+  return window.domistikaKineticExpansionV0914 || window.domistikaKineticRuntime || window.domistikaKineticRotationV0912 || null;
+}
+
+function motionSummary() {
+  const runtime = kineticRuntime();
+  const rotation = window.domistikaKineticRotationV0912;
+  return Object.freeze({
+    available: Boolean(runtime || rotation),
+    visible: Boolean(runtime?.state?.visible ?? rotation?.state?.visible),
+    playing: Boolean(runtime?.state?.playing ?? rotation?.state?.playing),
+    rotationVersion: rotation?.version || null,
+    expansionVersion: window.domistikaKineticExpansionV0914?.version || null,
+    composerVersion: window.domistikaKineticComposerV0916?.version || null,
+    performanceVersion: window.domistikaVisualPerformanceV0918?.version || null,
+  });
+}
+
+function motionPlay(preset = null) {
+  const requested = preset == null ? null : String(preset).trim().toLowerCase();
+  const runtime = window.domistikaKineticExpansionV0914 || window.domistikaKineticRuntime;
+  const rotation = window.domistikaKineticRotationV0912;
+  const composer = window.domistikaKineticComposerV0916;
+  const performance = window.domistikaVisualPerformanceV0918;
+
+  if (requested && VISUAL_SCENES.has(requested)) {
+    if (!performance?.applyScene) throw new Error('DOMISTIKA_SDK_VISUAL_PERFORMANCE_UNAVAILABLE');
+    performance.applyScene(requested);
+  } else if (requested && COMPOSER_PRESETS.has(requested)) {
+    if (!composer?.composerPreset) throw new Error('DOMISTIKA_SDK_COMPOSER_UNAVAILABLE');
+    composer.composerPreset(requested);
+    runtime?.play?.();
+  } else if (requested) {
+    const normalizedPreset = requested === 'portal-369' ? 'portal' : requested;
+    if (!MOTION_PRESETS.has(requested) && !MOTION_PRESETS.has(normalizedPreset)) {
+      throw new Error('DOMISTIKA_SDK_MOTION_PRESET_INVALID');
+    }
+    if (runtime?.applyPreset) {
+      runtime.applyPreset(normalizedPreset);
+      runtime.play?.();
+    } else if (normalizedPreset === 'portal' && rotation?.portalPreset) {
+      rotation.portalPreset();
+      rotation.play?.();
+    } else {
+      throw new Error('DOMISTIKA_SDK_MOTION_PRESET_UNAVAILABLE');
+    }
+  } else if (runtime?.play) {
+    runtime.play();
+  } else if (rotation?.play) {
+    rotation.play();
+  } else {
+    throw new Error('DOMISTIKA_SDK_MOTION_UNAVAILABLE');
+  }
+
+  emit('sdk-motion', { action: 'play', preset: requested, state: motionSummary() });
+  return motionSummary();
+}
+
+function motionPause() {
+  const runtime = kineticRuntime();
+  if (!runtime?.pause) throw new Error('DOMISTIKA_SDK_MOTION_UNAVAILABLE');
+  runtime.pause();
+  emit('sdk-motion', { action: 'pause', state: motionSummary() });
+  return motionSummary();
+}
+
+function motionStop() {
+  const runtime = kineticRuntime();
+  if (!runtime?.stop) throw new Error('DOMISTIKA_SDK_MOTION_UNAVAILABLE');
+  runtime.stop();
+  emit('sdk-motion', { action: 'stop', state: motionSummary() });
+  return motionSummary();
+}
+
+function motionScene(name) {
+  const performance = window.domistikaVisualPerformanceV0918;
+  const scene = String(name || '').trim().toLowerCase();
+  if (!VISUAL_SCENES.has(scene)) throw new Error('DOMISTIKA_SDK_VISUAL_SCENE_INVALID');
+  if (!performance?.applyScene) throw new Error('DOMISTIKA_SDK_VISUAL_PERFORMANCE_UNAVAILABLE');
+  performance.applyScene(scene);
+  emit('sdk-motion', { action: 'scene', scene, state: motionSummary() });
+  return motionSummary();
+}
+
+function motionComposer(name) {
+  const composer = window.domistikaKineticComposerV0916;
+  const preset = String(name || '').trim().toLowerCase();
+  if (!COMPOSER_PRESETS.has(preset)) throw new Error('DOMISTIKA_SDK_COMPOSER_PRESET_INVALID');
+  if (!composer?.composerPreset) throw new Error('DOMISTIKA_SDK_COMPOSER_UNAVAILABLE');
+  composer.composerPreset(preset);
+  emit('sdk-motion', { action: 'composer', preset, state: motionSummary() });
+  return motionSummary();
+}
+
+function motionRecordStart() {
+  const recorder = window.domistikaVisualPerformanceV0918?.startRecording
+    || window.domistikaKineticComposerV0916?.startRecording
+    || window.domistikaKineticExpansionV0914?.startRecording;
+  if (!recorder) throw new Error('DOMISTIKA_SDK_MOTION_RECORDING_UNAVAILABLE');
+  recorder();
+  emit('sdk-motion', { action: 'record-start' });
+  return true;
+}
+
+function motionRecordStop() {
+  const recorder = window.domistikaVisualPerformanceV0918?.stopRecording
+    || window.domistikaKineticComposerV0916?.stopRecording
+    || window.domistikaKineticExpansionV0914?.stopRecording;
+  if (!recorder) throw new Error('DOMISTIKA_SDK_MOTION_RECORDING_UNAVAILABLE');
+  recorder();
+  emit('sdk-motion', { action: 'record-stop' });
+  return true;
+}
+
+function cleanCapture(options = {}) {
+  const capture = window.domistikaCleanCaptureV0920;
+  if (!capture?.capture) throw new Error('DOMISTIKA_SDK_CLEAN_CAPTURE_UNAVAILABLE');
+  return capture.capture(options);
+}
+
+async function exportPng({ transparent = false } = {}) {
+  const engine = requireEngine();
+  const blob = await engine.exportImage('image/png', 0.94, Boolean(transparent));
+  emit('sdk-export', { kind: 'png', transparent: Boolean(transparent), bytes: blob?.size || null });
+  return blob;
+}
+
+function eventName(name) {
+  const raw = String(name || '').trim();
+  if (!raw) throw new Error('DOMISTIKA_SDK_EVENT_NAME_REQUIRED');
+  return raw.startsWith('domistika:') ? raw : `domistika:${raw}`;
+}
+
+function on(name, handler, options) {
+  if (typeof handler !== 'function') throw new Error('DOMISTIKA_SDK_EVENT_HANDLER_REQUIRED');
+  const type = eventName(name);
+  window.addEventListener(type, handler, options);
+  return () => window.removeEventListener(type, handler, options);
+}
+
+function once(name, handler) {
+  return on(name, handler, { once: true });
+}
+
+const commandMap = new Map([
+  ['undo', async () => requireEngine().undo()],
+  ['redo', async () => requireEngine().redo()],
+  ['canvas.fit', async () => window.domistikaNavigation?.fit?.()],
+  ['layer.clear', async ({ id } = {}) => layerClear(id || requireEngine().activeLayerId)],
+  ['motion.play', async ({ preset } = {}) => motionPlay(preset)],
+  ['motion.stop', async () => motionStop()],
+  ['motion.portal', async () => motionPlay('portal-369')],
+  ['export.png', async (args = {}) => exportPng(args)],
+]);
+
+function commandList() {
+  return Object.freeze([...commandMap.keys()]);
+}
+
+async function commandExecute(name, args = {}) {
+  const key = String(name || '').trim();
+  const command = commandMap.get(key);
+  if (!command) throw new Error('DOMISTIKA_SDK_COMMAND_UNKNOWN');
+  const result = await command(args);
+  emit('sdk-command', { command: key });
+  return result;
+}
+
+function capabilities() {
+  const engine = currentEngine();
+  const spiro = spiroApi();
+  return Object.freeze({
+    schema: SCHEMA,
+    sdkVersion: SDK_VERSION,
+    appVersion: APP_VERSION,
+    ready: Boolean(engine),
+    tools: Object.freeze([...TOOLS]),
+    drawTools: Object.freeze([...DRAW_TOOLS]),
+    commands: commandList(),
+    spiro: Object.freeze({
+      available: Boolean(spiro),
+      version: spiro?.version || '0.7',
+      presets: spiroPresets(),
+    }),
+    motion: Object.freeze({
+      ...motionSummary(),
+      presets: Object.freeze([...MOTION_PRESETS]),
+      composerPresets: Object.freeze([...COMPOSER_PRESETS]),
+      visualScenes: Object.freeze([...VISUAL_SCENES]),
+    }),
+    capture: Object.freeze({
+      available: Boolean(window.domistikaCleanCaptureV0920?.capture),
+      version: window.domistikaCleanCaptureV0920?.version || null,
+      schema: window.domistikaCleanCaptureV0920?.schema || null,
+    }),
+  });
+}
+
+function deepFreeze(value) {
+  if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
+  Object.freeze(value);
+  Object.values(value).forEach(deepFreeze);
+  return value;
+}
+
+if (!window[INSTALL_FLAG]) {
+  window[INSTALL_FLAG] = true;
+
+  const api = {
+    schema: SCHEMA,
+    sdkVersion: SDK_VERSION,
+    appVersion: APP_VERSION,
+    ready: () => Boolean(currentEngine()),
+    capabilities,
+
+    setTool,
+    color: (value) => value == null ? requireEngine().settings.color : setSetting('color', value),
+    stroke,
+
+    canvas: {
+      info: canvasInfo,
+      new: newCanvas,
+      fit: () => window.domistikaNavigation?.fit?.(),
+      undo: () => requireEngine().undo(),
+      redo: () => requireEngine().redo(),
+    },
+
+    tool: {
+      get: () => requireEngine().tool,
+      set: setTool,
+      list: () => Object.freeze([...TOOLS]),
+    },
+
+    brush: {
+      color: (value) => value == null ? requireEngine().settings.color : setSetting('color', value),
+      size: (value) => value == null ? requireEngine().settings.size : setSetting('size', value),
+      opacity: (value) => value == null ? requireEngine().settings.opacity : setSetting('opacity', value),
+      smoothing: (value) => value == null ? requireEngine().settings.smoothing : setSetting('smoothing', value),
+      symmetry: (value) => value == null ? requireEngine().settings.symmetry : setSetting('symmetry', value),
+    },
+
+    layers: {
+      list: layerList,
+      create: layerCreate,
+      activate: layerActivate,
+      rename: layerRename,
+      visibility: layerVisibility,
+      opacity: layerOpacity,
+      blend: layerBlend,
+      clear: layerClear,
+    },
+
+    spiro: {
+      presets: spiroPresets,
+      place: spiroPlace,
+    },
+
+    motion: {
+      state: motionSummary,
+      play: motionPlay,
+      pause: motionPause,
+      stop: motionStop,
+      scene: motionScene,
+      composer: motionComposer,
+      record: {
+        start: motionRecordStart,
+        stop: motionRecordStop,
+      },
+    },
+
+    export: {
+      png: exportPng,
+      capture: cleanCapture,
+    },
+
+    events: {
+      on,
+      once,
+      off(name, handler, options) {
+        window.removeEventListener(eventName(name), handler, options);
+      },
+    },
+
+    commands: {
+      list: commandList,
+      execute: commandExecute,
+    },
+  };
+
+  window.Domistika = deepFreeze(api);
+
+  emit('sdk-ready', {
+    schema: SCHEMA,
+    sdkVersion: SDK_VERSION,
+    appVersion: APP_VERSION,
+  });
+}
+
+export {
+  APP_VERSION,
+  SDK_VERSION,
+  SCHEMA,
+  DRAW_TOOLS,
+  TOOLS,
+  SETTINGS,
+  currentEngine,
+  normalizePoint,
+  stroke,
+  capabilities,
+};
