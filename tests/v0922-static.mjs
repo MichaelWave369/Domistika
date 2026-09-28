@@ -25,7 +25,7 @@ assert.match(source, /indexedDB\.open/);
 assert.match(source, /motionClips = metadataEnvelope\(\)/);
 assert.match(source, /embedProject/);
 assert.match(source, /restoreProjectClips/);
-assert.match(source, /domistika:motion-clip-added/);
+assert.match(source, /emit\('motion-clip-added'/);
 
 for (const runtime of [expansion, composer, visual]) {
   assert.match(runtime, /domistikaMotionClipsV0922/);
@@ -36,8 +36,10 @@ for (const runtime of [expansion, composer, visual]) {
 assert.match(main, /embedProject/);
 assert.match(gallery, /motionClipId/);
 assert.match(gallery, /gallery-motion-badge/);
+assert.match(gallery, /addMotionClipToGallery/);
 assert.match(gallery, /playbackUrl/);
 assert.match(sdk, /clips:/);
+assert.match(sdk, /serializeProject/);
 
 assert.doesNotMatch(source, /fetch\s*\(/);
 assert.doesNotMatch(source, /eval\s*\(/);
