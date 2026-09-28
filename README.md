@@ -1,3 +1,40 @@
+## v0.9.27 — Playground
+
+Domistika now has a one-command first-run demo that performs the studio instead of merely describing it.
+
+Run **Playground · Demo the Studio** from the Command Palette.
+
+The sequence:
+
+```text
+save return snapshot
+→ fresh demo canvas
+→ Portal Core gradient
+→ Flower + Gear Spiro
+→ static motion-ignore frame
+→ 3·6·9 Portal
+→ 3 second Kinetic recording
+→ project motion clip / Gallery card
+→ Stop
+```
+
+The previous artwork is held as an in-session return snapshot and can be restored with **Playground · Return to Previous Artwork**.
+
+Stable SDK v0.1.6 adds:
+
+```js
+await Domistika.playground.run()
+await Domistika.playground.restorePrevious()
+Domistika.playground.state()
+
+await Domistika.project.restore(project)
+
+Domistika.motion.record.start({ source: 'kinetic' })
+Domistika.motion.record.stop({ source: 'kinetic' })
+```
+
+See [Playground v0.9.27](docs/PLAYGROUND_V0927.md).
+
 ## v0.9.26 — Layer Roles
 
 Layers now carry a persisted semantic role:
