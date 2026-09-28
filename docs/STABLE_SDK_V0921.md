@@ -13,8 +13,8 @@ The purpose is to give humans, local scripts, accessibility tools, MIDI controll
 ## Contract
 
 - schema: `domistika.sdk.v1`
-- SDK version: `0.1.3`
-- app version: `0.9.24`
+- SDK version: `0.1.6`
+- app version: `0.9.27`
 - global: `window.Domistika`
 - object: deeply frozen
 - network access: none
@@ -227,6 +227,35 @@ const portableProject = await Domistika.project.serialize({
 ```
 
 Routine autosave stores clip metadata plus local IndexedDB references. Explicit project serialization with `embedMotion: true` embeds the WebM media so a `.domistika` file remains portable.
+
+### Playground
+
+The stable SDK can run the built-in first-run studio demonstration:
+
+```js
+await Domistika.playground.run();
+
+Domistika.playground.state();
+
+await Domistika.playground.restorePrevious();
+```
+
+Playground keeps an in-session return snapshot before creating its demo canvas.
+
+Project restore is also public:
+
+```js
+await Domistika.project.restore(project);
+```
+
+Motion recording can now target a renderer explicitly:
+
+```js
+Domistika.motion.record.start({ source: 'kinetic' });
+Domistika.motion.record.stop({ source: 'kinetic' });
+```
+
+Valid sources are `auto`, `kinetic`, `composer`, and `visual`.
 
 ### Export and clean capture
 
