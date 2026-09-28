@@ -26,7 +26,7 @@ const [major,minor,patch]=pkg.version.split('.').map(Number);
 assert.ok(major>0||minor>9||(minor===9&&patch>=24));
 assert.match(index,/DomistikaColorStudioV0924\.js/);
 assert.ok(index.indexOf('DomistikaSDKV0921.js')<index.indexOf('DomistikaColorStudioV0924.js'));
-assert.match(sdk,/SDK_VERSION = '0\.1\.5'/);
+assert.match(sdk,/SDK_VERSION = '0\.1\.6'/);
 assert.match(sdk,/room\.colors/);
 assert.match(sdk,/colors:/);
 assert.match(source,/type="color"/);
