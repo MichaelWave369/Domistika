@@ -1,3 +1,22 @@
+## v0.9.26 — Layer Roles
+
+Layers now carry a persisted semantic role:
+
+```text
+paint · guide · type · motion-ignore
+```
+
+- Role is saved in `.domistika` projects and restored with the layer.
+- Existing Superphase guide layers automatically remain `guide`.
+- The Layers panel exposes a role selector and role badges.
+- `motion-ignore` layers are excluded from the Kinetic snapshot and remain visibly static above Motion preview.
+- Stable SDK v0.1.5 exposes `Domistika.layers.role(...)` and `Domistika.layers.roles()`.
+- Command Palette actions can mark the active layer as Paint, Type, or Motion Ignore.
+
+This directly supports static titles, signatures, frames, and captions over animated artwork.
+
+See [Layer Roles v0.9.26](docs/LAYER_ROLES_V0926.md).
+
 ## v0.9.25 — Live Contract + Discovery Polish
 
 Domistika now treats the running SDK as the canonical machine-readable contract.

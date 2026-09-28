@@ -2,6 +2,14 @@ import { canvasToBlob, clamp, hexToRgba, loadImage, rgbaToHex, uid } from './uti
 
 const DRAW_TOOLS = new Set(['pencil', 'ink', 'marker', 'airbrush', 'eraser']);
 const SHAPE_TOOLS = new Set(['line', 'rectangle', 'ellipse']);
+export const LAYER_ROLES = Object.freeze(['paint', 'guide', 'type', 'motion-ignore']);
+
+function normalizeLayerRole(value, options = {}) {
+  if (options.kind === 'guide' || options.guide === true || options.exportPolicy === 'exclude-guide') return 'guide';
+  const requested = String(value || '').trim().toLowerCase();
+  if (LAYER_ROLES.includes(requested)) return requested;
+  return 'paint';
+}
 
 export class CanvasEngine {
   constructor({ artboard, overlay, width = 1600, height = 1200, onChange, onStatus, onPan }) {
@@ -67,6 +75,8 @@ export class CanvasEngine {
     canvas.dataset.layerId = options.id ?? uid('layer');
     canvas.style.opacity = String(options.opacity ?? 1);
     canvas.style.mixBlendMode = options.blendMode ?? 'normal';
+    const role = normalizeLayerRole(options.role, options);
+    canvas.dataset.layerRole = role;
     this.artboard.insertBefore(canvas, this.overlay);
     const layer = {
       id: canvas.dataset.layerId,
@@ -76,6 +86,7 @@ export class CanvasEngine {
       visible: options.visible ?? true,
       opacity: options.opacity ?? 1,
       blendMode: options.blendMode ?? 'normal',
+      role,
     };
     this.layers.push(layer);
     this.setActiveLayer(layer.id);
@@ -87,7 +98,7 @@ export class CanvasEngine {
     const source = this.activeLayer;
     if (!source) return;
     const copy = this.createLayer(`${source.name} copy`, {
-      opacity: source.opacity, blendMode: source.blendMode, visible: source.visible,
+      opacity: source.opacity, blendMode: source.blendMode, visible: source.visible, role: source.role,
     });
     copy.ctx.drawImage(source.canvas, 0, 0);
     this.markChanged('Layer duplicated');
@@ -156,6 +167,17 @@ export class CanvasEngine {
     layer.blendMode = blendMode;
     layer.canvas.style.mixBlendMode = blendMode;
     this.markChanged('Layer blend mode changed');
+  }
+
+  setLayerRole(id, role) {
+    const layer = this.layers.find((candidate) => candidate.id === id);
+    if (!layer) return null;
+    const normalized = normalizeLayerRole(role, layer);
+    layer.role = normalized;
+    layer.canvas.dataset.layerRole = normalized;
+    this.markChanged(`Layer role · ${normalized}`);
+    this.onChange({ reason: 'layer-role', engine: this, layerId: layer.id, role: normalized });
+    return normalized;
   }
 
   clearActiveLayer() {
@@ -455,14 +477,15 @@ export class CanvasEngine {
     this.markChanged('Redo');
   }
 
-  compositeCanvas(includeBackground = true, background = '#ffffff') {
+  compositeCanvas(includeBackground = true, background = '#ffffff', options = {}) {
     const canvas = document.createElement('canvas');
     canvas.width = this.width;
     canvas.height = this.height;
     const ctx = canvas.getContext('2d');
     if (includeBackground) { ctx.fillStyle = background; ctx.fillRect(0, 0, this.width, this.height); }
+    const excludeRoles = new Set(Array.isArray(options?.excludeRoles) ? options.excludeRoles : []);
     for (const layer of this.layers) {
-      if (!layer.visible) continue;
+      if (!layer.visible || excludeRoles.has(layer.role)) continue;
       ctx.save();
       ctx.globalAlpha = layer.opacity;
       ctx.globalCompositeOperation = this.mapBlendMode(layer.blendMode);
@@ -502,7 +525,7 @@ export class CanvasEngine {
       settings: this.settings,
       layers: this.layers.map((layer) => ({
         id: layer.id, name: layer.name, visible: layer.visible, opacity: layer.opacity,
-        blendMode: layer.blendMode, image: layer.canvas.toDataURL('image/png'),
+        blendMode: layer.blendMode, role: layer.role || 'paint', image: layer.canvas.toDataURL('image/png'),
       })),
     };
   }

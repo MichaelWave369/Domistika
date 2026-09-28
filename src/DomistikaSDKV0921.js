@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.25';
-const SDK_VERSION = '0.1.4';
+const APP_VERSION = '0.9.26';
+const SDK_VERSION = '0.1.5';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -49,6 +49,7 @@ function safeLayer(layer) {
     visible: layer.visible !== false,
     opacity: Number(layer.opacity ?? 1),
     blendMode: String(layer.blendMode || 'normal'),
+    role: String(layer.role || (layer.kind === 'guide' ? 'guide' : 'paint')),
   });
 }
 
@@ -351,6 +352,16 @@ function layerClear(id = requireEngine().activeLayerId) {
   emit('sdk-layer', { action: 'clear', layerId: id });
   return true;
 }
+function layerRole(id, role) {
+  const engine = requireEngine();
+  const target = engine.layers.find((layer) => layer.id === id);
+  if (!target) throw new Error('DOMISTIKA_SDK_LAYER_NOT_FOUND');
+  if (typeof engine.setLayerRole !== 'function') throw new Error('DOMISTIKA_SDK_LAYER_ROLE_UNAVAILABLE');
+  const result = engine.setLayerRole(id, role);
+  emit('sdk-layer', { action: 'role', layer: safeLayer(target) });
+  return result;
+}
+
 
 function spiroApi() {
   return window.domistikaSpiroV07 || null;
@@ -652,6 +663,27 @@ registerSdkCommand('layer.clear', {
   description: 'Clear the active paint layer.',
   keywords: ['erase', 'empty', 'layer'],
 }, async ({ id } = {}) => layerClear(id || requireEngine().activeLayerId));
+registerSdkCommand('layer.role.paint', {
+  label: 'Layer Role · Paint',
+  category: 'Layers',
+  description: 'Mark the active layer as normal paint.',
+  keywords: ['layer', 'role', 'paint', 'motion'],
+}, async () => layerRole(requireEngine().activeLayerId, 'paint'));
+
+registerSdkCommand('layer.role.type', {
+  label: 'Layer Role · Type',
+  category: 'Layers',
+  description: 'Mark the active layer as type/text content.',
+  keywords: ['layer', 'role', 'type', 'text', 'title'],
+}, async () => layerRole(requireEngine().activeLayerId, 'type'));
+
+registerSdkCommand('layer.role.motion-ignore', {
+  label: 'Exclude Active Layer from Motion',
+  category: 'Layers',
+  description: 'Keep the active layer static above Kinetic Motion.',
+  keywords: ['layer', 'role', 'motion', 'ignore', 'static', 'title'],
+}, async () => layerRole(requireEngine().activeLayerId, 'motion-ignore'));
+
 
 for (const [tool, label, shortcut] of [
   ['pencil', 'Pencil', 'B'],
@@ -907,6 +939,7 @@ function capabilities() {
     drawTools: Object.freeze([...DRAW_TOOLS]),
     commands: commandList(),
     commandCatalog: commandCatalog(),
+    layerRoles: Object.freeze(['paint', 'guide', 'type', 'motion-ignore']),
     spiro: Object.freeze({
       available: Boolean(spiro),
       version: spiro?.version || '0.7',
@@ -1001,7 +1034,9 @@ if (!window[INSTALL_FLAG]) {
       visibility: layerVisibility,
       opacity: layerOpacity,
       blend: layerBlend,
+      role: layerRole,
       clear: layerClear,
+      roles: () => Object.freeze(['paint', 'guide', 'type', 'motion-ignore']),
     },
 
     spiro: {
