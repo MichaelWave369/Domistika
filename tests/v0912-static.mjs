@@ -10,7 +10,7 @@ assert.ok(major > 0 || minor > 9 || (minor === 9 && patch >= 12));
 assert.match(index, /DomistikaKineticRotationV0912\.js/);
 assert.match(feature, /Three radial bands/);
 assert.match(feature, /3·6·9 Portal/);
-assert.match(feature, /compositeCanvas\(false\)/);
+assert.match(feature, /compositeCanvas\\(false(?:, '#ffffff', \\{ excludeRoles: \\['motion-ignore'\\] \\})?\\)/);
 assert.match(feature, /kinetic-previewing/);
 assert.match(feature, /window\.domistikaKineticRotationV0912/);
 assert.match(feature, /original artwork unchanged/);
