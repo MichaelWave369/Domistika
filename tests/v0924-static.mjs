@@ -36,6 +36,7 @@ assert.match(source,/colorStudioH/);
 assert.match(source,/destination-over/);
 assert.match(source,/engine\.captureHistory\(\)/);
 assert.match(source,/domistika:gradient-applied/);
+assert.match(source,/domistika:color-change/);
 assert.doesNotMatch(source,/eval\s*\(/);
 assert.doesNotMatch(source,/new Function\s*\(/);
 assert.doesNotMatch(source,/fetch\s*\(/);
