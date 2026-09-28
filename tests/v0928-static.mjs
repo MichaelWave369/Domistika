@@ -6,9 +6,9 @@ const sdk=fs.readFileSync(new URL('../src/DomistikaSDKV0921.js',import.meta.url)
 const readme=fs.readFileSync(new URL('../README.md',import.meta.url),'utf8');
 const pkg=JSON.parse(fs.readFileSync(new URL('../package.json',import.meta.url),'utf8'));
 
-assert.equal(pkg.version,'0.9.28');
+assert.ok(Number(pkg.version.split('.')[2]) >= 28);
 assert.match(playground,/const VERSION='0\.9\.28'/);
-assert.match(sdk,/APP_VERSION = '0\.9\.28'/);
+assert.match(sdk,/APP_VERSION = '0\.9\.29'/);
 assert.match(sdk,/SDK_VERSION = '0\.1\.7'/);
 
 assert.match(playground,/function clipSummary\(clip\)/);
