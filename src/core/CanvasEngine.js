@@ -5,9 +5,9 @@ const SHAPE_TOOLS = new Set(['line', 'rectangle', 'ellipse']);
 export const LAYER_ROLES = Object.freeze(['paint', 'guide', 'type', 'motion-ignore']);
 
 function normalizeLayerRole(value, options = {}) {
+  if (options.kind === 'guide' || options.guide === true || options.exportPolicy === 'exclude-guide') return 'guide';
   const requested = String(value || '').trim().toLowerCase();
   if (LAYER_ROLES.includes(requested)) return requested;
-  if (options.kind === 'guide' || options.guide === true || options.exportPolicy === 'exclude-guide') return 'guide';
   return 'paint';
 }
 
