@@ -38,7 +38,7 @@ app.innerHTML = `
       <div class="panel-heading"><div><h2>Layers</h2><p>Non-destructive building blocks</p></div><button id="addLayer" class="icon-button">＋</button></div>
       <div class="layer-actions"><button id="duplicateLayer">Duplicate</button><button id="layerUp">Up</button><button id="layerDown">Down</button><button id="deleteLayer">Delete</button></div>
       <div id="layerList" class="layer-list"></div>
-      <div class="layer-properties"><label>Layer opacity <output id="layerOpacityOutput">100%</output><input id="layerOpacity" type="range" min="0" max="100" value="100"></label><label>Blend mode<select id="blendMode"><option value="normal">Normal</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="overlay">Overlay</option><option value="soft-light">Soft light</option><option value="hard-light">Hard light</option><option value="difference">Difference</option></select></label></div>
+      <div class="layer-properties"><label>Layer role<select id="layerRole"><option value="paint">Paint</option><option value="type">Type</option><option value="motion-ignore">Motion ignore</option><option value="guide">Guide</option></select></label><label>Layer opacity <output id="layerOpacityOutput">100%</output><input id="layerOpacity" type="range" min="0" max="100" value="100"></label><label>Blend mode<select id="blendMode"><option value="normal">Normal</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="overlay">Overlay</option><option value="soft-light">Soft light</option><option value="hard-light">Hard light</option><option value="difference">Difference</option></select></label></div>
     </section>
     <section id="referencePanel" class="inspector-panel">
       <div class="panel-heading"><div><h2>3D Form Lab</h2><p>Rotate forms and study light</p></div><span class="gpu-badge" id="gpuStatus">Starting…</span></div>
@@ -191,7 +191,7 @@ function renderLayers() {
   [...engine.layers].reverse().forEach((layer) => {
     const row = document.createElement('div');
     row.className = `layer-row ${layer.id === engine.activeLayerId ? 'active' : ''}`;
-    row.innerHTML = `<button class="visibility-button">${layer.visible ? '◉' : '○'}</button><div class="layer-thumb"><canvas width="54" height="42"></canvas></div><input class="layer-name" value="${escapeHtml(layer.name)}">`;
+    row.innerHTML = `<button class="visibility-button">${layer.visible ? '◉' : '○'}</button><div class="layer-thumb"><canvas width="54" height="42"></canvas></div><div class="layer-copy"><input class="layer-name" value="${escapeHtml(layer.name)}"><span class="layer-role-badge" data-role="${escapeHtml(layer.role || (layer.kind === 'guide' ? 'guide' : 'paint'))}">${escapeHtml(layer.role || (layer.kind === 'guide' ? 'guide' : 'paint'))}</span></div>`;
     row.addEventListener('click', (event) => { if (!event.target.closest('.visibility-button')) engine.setActiveLayer(layer.id); });
     row.querySelector('.visibility-button').addEventListener('click', () => engine.setLayerVisibility(layer.id, !layer.visible));
     row.querySelector('.layer-name').addEventListener('change', (event) => engine.renameLayer(layer.id, event.target.value));
@@ -201,8 +201,18 @@ function renderLayers() {
     list.appendChild(row);
   });
   const active = engine.activeLayer;
-  if (active) { $('#layerOpacity').value = String(Math.round(active.opacity * 100)); $('#layerOpacityOutput').textContent = `${Math.round(active.opacity * 100)}%`; $('#blendMode').value = active.blendMode; }
+  if (active) {
+    $('#layerRole').value = active.role || (active.kind === 'guide' ? 'guide' : 'paint');
+    $('#layerRole').disabled = active.kind === 'guide';
+    $('#layerOpacity').value = String(Math.round(active.opacity * 100));
+    $('#layerOpacityOutput').textContent = `${Math.round(active.opacity * 100)}%`;
+    $('#blendMode').value = active.blendMode;
+  }
 }
+$('#layerRole').addEventListener('change', (event) => {
+  engine.setLayerRole(engine.activeLayerId, event.target.value);
+  renderLayers();
+});
 $('#layerOpacity').addEventListener('input', (event) => { const value = Number(event.target.value); $('#layerOpacityOutput').textContent = `${value}%`; engine.setLayerOpacity(engine.activeLayerId, value / 100); });
 $('#blendMode').addEventListener('change', (event) => engine.setLayerBlendMode(engine.activeLayerId, event.target.value));
 
@@ -262,7 +272,7 @@ $('#newForm').addEventListener('submit', async (event) => {
   if (event.submitter?.value === 'cancel') return;
   event.preventDefault();
   const width = Number($('#newWidth').value); const height = Number($('#newHeight').value);
-  await engine.restore({ format: 'domistika-project', version: 1, width, height, activeLayerId: 'base-layer', settings: { ...engine.settings }, layers: [{ id: 'base-layer', name: 'Sketch 1', visible: true, opacity: 1, blendMode: 'normal', image: null }] });
+  await engine.restore({ format: 'domistika-project', version: 1, width, height, activeLayerId: 'base-layer', settings: { ...engine.settings }, layers: [{ id: 'base-layer', name: 'Sketch 1', visible: true, opacity: 1, blendMode: 'normal', role: 'paint', image: null }] });
   $('#projectName').value = 'Untitled Domistika'; await clearAutosave(); $('#newDialog').close(); fitCanvas(); queueAutosave(); status(`New ${width} × ${height} canvas created`);
 });
 $('#shortcutsButton').addEventListener('click', () => $('#shortcutsDialog').showModal());
