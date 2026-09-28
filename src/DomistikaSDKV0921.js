@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.24';
-const SDK_VERSION = '0.1.3';
+const APP_VERSION = '0.9.25';
+const SDK_VERSION = '0.1.4';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -75,11 +75,61 @@ function syncSettingUi(key, value) {
   if (output) output.textContent = format(value);
 }
 
+function findToolButton(labels = []) {
+  const wanted = labels.map((value) => String(value).trim().toLowerCase()).filter(Boolean);
+  if (!wanted.length) return null;
+  return [...document.querySelectorAll('button')].find((button) => {
+    const haystack = [
+      button.dataset?.tool,
+      button.dataset?.v04Select ? 'select' : '',
+      button.id,
+      button.getAttribute('aria-label'),
+      button.title,
+      button.textContent,
+    ].filter(Boolean).join(' ').toLowerCase();
+    return wanted.some((label) => haystack.includes(label));
+  }) || null;
+}
+
+function liveToolIds() {
+  const tools = new Set(TOOLS);
+
+  if (window.domistikaFillV091?.select || document.querySelector('[data-tool="fill"]')) {
+    tools.add('fill');
+  }
+
+  if (window.domistikaSelectionV04?.enable || document.querySelector('[data-v04-select]')) {
+    tools.add('select');
+  }
+
+  const smartMasksReady = document.documentElement.dataset.smartMasks
+    && document.documentElement.dataset.smartMasks !== 'unavailable';
+  if (smartMasksReady || findToolButton(['smart select', 'smart mask', 'magic wand'])) {
+    tools.add('smart');
+  }
+
+  return Object.freeze([...tools]);
+}
+
 function setTool(tool) {
-  const name = String(tool || '').trim().toLowerCase();
-  if (!TOOLS.has(name)) throw new Error('DOMISTIKA_SDK_TOOL_INVALID');
+  const requested = String(tool || '').trim().toLowerCase();
+  const name = requested === 'smart-select' ? 'smart' : requested;
   const engine = requireEngine();
-  engine.setTool(name);
+
+  if (TOOLS.has(name)) {
+    engine.setTool(name);
+  } else if (name === 'fill' && window.domistikaFillV091?.select) {
+    window.domistikaFillV091.select();
+  } else if (name === 'select' && window.domistikaSelectionV04?.enable) {
+    window.domistikaSelectionV04.enable();
+  } else if (name === 'smart') {
+    const button = findToolButton(['smart select', 'smart mask', 'magic wand']);
+    if (!button) throw new Error('DOMISTIKA_SDK_TOOL_UNAVAILABLE');
+    button.click();
+  } else {
+    throw new Error('DOMISTIKA_SDK_TOOL_INVALID');
+  }
+
   syncToolUi(name);
   emit('sdk-tool', { tool: name });
   return name;
@@ -795,6 +845,47 @@ function commandCatalog() {
   })));
 }
 
+function commandSearch(query = '', limit = 32) {
+  const raw = String(query || '').trim().toLowerCase();
+  const max = Math.max(1, Math.min(100, Math.round(Number(limit) || 32)));
+  const catalog = commandCatalog();
+  if (!raw) return Object.freeze(catalog.slice(0, max));
+
+  const tokens = raw.split(/\s+/).filter(Boolean);
+  const score = (command) => {
+    const id = String(command.id || '').toLowerCase();
+    const label = String(command.label || '').toLowerCase();
+    const category = String(command.category || '').toLowerCase();
+    const description = String(command.description || '').toLowerCase();
+    const keywords = (command.keywords || []).map((value) => String(value).toLowerCase());
+    const haystack = [id, label, category, description, ...keywords, command.shortcut || ''].join(' ').toLowerCase();
+
+    if (label === raw) return 120;
+    if (id === raw) return 115;
+    if (label.startsWith(raw)) return 100;
+    if (id.startsWith(raw)) return 94;
+    if (keywords.some((keyword) => keyword === raw)) return 90;
+    if (keywords.some((keyword) => keyword.startsWith(raw))) return 82;
+    if (label.includes(raw)) return 76;
+    if (id.includes(raw)) return 70;
+    if (category.includes(raw)) return 55;
+    if (description.includes(raw)) return 46;
+    if (tokens.length > 1 && tokens.every((token) => haystack.includes(token))) return 36 + tokens.length;
+    return 0;
+  };
+
+  return Object.freeze(
+    catalog
+      .map((command, index) => ({ command, index, score: score(command) }))
+      .filter((entry) => entry.score > 0)
+      .sort((a, b) => b.score - a.score
+        || String(a.command.category).localeCompare(String(b.command.category))
+        || a.index - b.index)
+      .slice(0, max)
+      .map((entry) => entry.command),
+  );
+}
+
 async function commandExecute(name, args = {}) {
   const key = String(name || '').trim();
   const command = commandMap.get(key);
@@ -812,9 +903,10 @@ function capabilities() {
     sdkVersion: SDK_VERSION,
     appVersion: APP_VERSION,
     ready: Boolean(engine),
-    tools: Object.freeze([...TOOLS]),
+    tools: liveToolIds(),
     drawTools: Object.freeze([...DRAW_TOOLS]),
     commands: commandList(),
+    commandCatalog: commandCatalog(),
     spiro: Object.freeze({
       available: Boolean(spiro),
       version: spiro?.version || '0.7',
@@ -879,7 +971,7 @@ if (!window[INSTALL_FLAG]) {
     tool: {
       get: () => requireEngine().tool,
       set: setTool,
-      list: () => Object.freeze([...TOOLS]),
+      list: liveToolIds,
     },
 
     brush: {
@@ -957,6 +1049,7 @@ if (!window[INSTALL_FLAG]) {
     commands: {
       list: commandList,
       catalog: commandCatalog,
+      search: commandSearch,
       execute: commandExecute,
     },
   };
@@ -978,7 +1071,9 @@ export {
   TOOLS,
   SETTINGS,
   currentEngine,
+  liveToolIds,
   normalizePoint,
   stroke,
+  commandSearch,
   capabilities,
 };

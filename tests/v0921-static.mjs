@@ -13,7 +13,7 @@ assert.match(index, /DomistikaSDKV0921\.js/);
 assert.ok(index.indexOf('DomistikaCleanCaptureV0920.js') < index.indexOf('DomistikaSDKV0921.js'));
 
 assert.match(sdk, /domistika\.sdk\.v1/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.3'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.4'/);
 assert.match(sdk, /window\.Domistika/);
 assert.match(sdk, /deepFreeze\(api\)/);
 assert.match(sdk, /setTool/);
@@ -34,4 +34,4 @@ assert.doesNotMatch(sdk, /localStorage/);
 assert.match(engine, /Number\.isFinite\(fromPressureRaw\)/);
 assert.match(engine, /Number\.isFinite\(toPressureRaw\)/);
 
-console.log('v0.9.24 stable SDK compatibility checks passed');
+console.log('v0.9.25 stable SDK compatibility checks passed');
