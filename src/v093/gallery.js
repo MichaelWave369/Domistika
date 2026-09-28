@@ -317,6 +317,54 @@ function addLocalSubmission() {
     return null;
   }
 }
+function addMotionClipToGallery(clip) {
+  if (!clip?.id) return null;
+  const id = `motion-gallery-${clip.id}`;
+  const existing = localArtwork.find((item) => item.id === id);
+  if (existing) return existing;
+
+  let image = clip.poster || '';
+  if (!image) {
+    try {
+      image = currentArtworkDataUrl({
+        maxDimension: 960,
+        type: 'image/webp',
+        quality: 0.84,
+        includeBackground: true,
+      });
+    } catch {}
+  }
+  if (!image) return null;
+
+  const duration = Number(clip.durationSeconds) > 0
+    ? `${Number(clip.durationSeconds).toFixed(1)} s`
+    : 'recorded motion';
+
+  const item = {
+    id,
+    title: clip.name || 'Domistika Motion Clip',
+    artist: 'Local studio',
+    category: 'Experimental',
+    description: `Motion clip · ${duration} · ${clip.kind || 'motion'}`,
+    image,
+    motionClipId: clip.id,
+    motionClip: {
+      name: clip.name || 'Motion clip',
+      kind: clip.kind || 'motion',
+      durationSeconds: Number(clip.durationSeconds) || 0,
+      fps: Number(clip.fps) || 0,
+    },
+    createdAt: clip.createdAt || new Date().toISOString(),
+    local: true,
+  };
+
+  localArtwork = [item, ...localArtwork].slice(0, MAX_LOCAL_ARTWORKS);
+  if (!saveLocalArtwork()) return null;
+  render();
+  setStatus(`Motion clip “${item.title}” landed in My Gallery`);
+  return item;
+}
+
 
 async function submitPublicly() {
   const item = addLocalSubmission();
@@ -403,7 +451,9 @@ function bindPage() {
       video.load?.();
     }
   });
-  window.addEventListener('domistika:motion-clip-added', () => render());
+  window.addEventListener('domistika:motion-clip-added', (event) => {
+    addMotionClipToGallery(event.detail?.clip);
+  });
   document.addEventListener('keydown', (event) => {
     if (event.key === 'Escape' && !page.hidden && !page.querySelector('#galleryViewer').open) closeGallery();
   });
@@ -440,7 +490,13 @@ function init() {
   bindPage();
   loadCurated();
   if (location.hash === '#gallery') openGallery(false);
-  window.domistikaGalleryV093 = { open: openGallery, close: closeGallery, render, getAll: allArtwork };
+  window.domistikaGalleryV093 = {
+    open: openGallery,
+    close: closeGallery,
+    render,
+    getAll: allArtwork,
+    addMotionClip: addMotionClipToGallery,
+  };
   return true;
 }
 
