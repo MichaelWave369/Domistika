@@ -1,3 +1,22 @@
+## v0.9.24 — Color Studio
+
+The existing **Colors** room is now a complete color workspace instead of only a favorites bank.
+
+- Native browser color wheel remains available.
+- Exact HEX / HTML color input.
+- Numeric RGB controls.
+- Numeric HSL controls.
+- Curated CSS named-color shelf.
+- Local recent-color history.
+- Existing Favorite Colors preserved.
+- Automatically derived analog, triad, and complementary harmonies.
+- Ten real linear/radial gradient presets.
+- Gradients can paint behind existing pixels or replace the active layer with one undo checkpoint.
+- Stable SDK v0.1.3 exposes `Domistika.colors.*`.
+- Command palette gains **Open Color Studio**.
+
+See [Color Studio v0.9.24](docs/COLOR_STUDIO_V0924.md).
+
 ## v0.9.23 — Command Palette
 
 Domistika now has a searchable command palette backed by the stable SDK command bus.
