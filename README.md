@@ -1,3 +1,36 @@
+## v0.9.25 — Live Contract + Discovery Polish
+
+Domistika now treats the running SDK as the canonical machine-readable contract.
+
+```js
+Domistika.capabilities()
+```
+
+is the **machine-readable source of truth** for what the current build exposes. The README remains explanatory documentation, not a second capability registry.
+
+- `Domistika.tool.list()` now discovers extension tools such as Fill, Select, and Smart selection when installed.
+- `Domistika.tool.set('fill')` and `Domistika.tool.set('select')` route through their owning extension runtimes.
+- `Domistika.commands.search(query)` gives scripts and agents the same search contract used by the Command Palette.
+- Programmatic palette search now updates the visible palette when it is open.
+- Harmony/color swatches have stronger two-tone framing so very dark and very light colors stay visible.
+
+See [Live Contract v0.9.25](docs/LIVE_CONTRACT_V0925.md).
+
+## Live runtime contract
+
+For integrations, do not infer features from README prose or app-version strings.
+
+Use:
+
+```js
+const capabilities = Domistika.capabilities();
+const tools = Domistika.tool.list();
+const commands = Domistika.commands.catalog();
+const portal = Domistika.commands.search('portal');
+```
+
+The stable SDK is designed so humans, agents, scripts, accessibility tools, and future controllers can interrogate the same running contract.
+
 ## v0.9.24 — Color Studio
 
 The existing **Colors** room is now a complete color workspace instead of only a favorites bank.
