@@ -824,7 +824,7 @@ function capabilities() {
       available: Boolean(colorStudioRuntime()?.open),
       version: colorStudioRuntime()?.version || null,
       schema: colorStudioRuntime()?.schema || null,
-      current: requireEngine().settings.color,
+      current: engine?.settings?.color || null,
       gradients: colorStudioGradients().length,
     }),
     motion: Object.freeze({
