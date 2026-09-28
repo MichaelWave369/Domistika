@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.26';
-const SDK_VERSION = '0.1.5';
+const APP_VERSION = '0.9.27';
+const SDK_VERSION = '0.1.6';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -483,23 +483,36 @@ function motionComposer(name) {
   return motionSummary();
 }
 
-function motionRecordStart() {
-  const recorder = window.domistikaVisualPerformanceV0918?.startRecording
-    || window.domistikaKineticComposerV0916?.startRecording
-    || window.domistikaKineticExpansionV0914?.startRecording;
-  if (!recorder) throw new Error('DOMISTIKA_SDK_MOTION_RECORDING_UNAVAILABLE');
-  recorder();
-  emit('sdk-motion', { action: 'record-start' });
+function motionRecorderRuntime(source = 'auto') {
+  const requested = String(source || 'auto').trim().toLowerCase();
+  const runtimes = {
+    visual: window.domistikaVisualPerformanceV0918 || null,
+    composer: window.domistikaKineticComposerV0916 || null,
+    kinetic: window.domistikaKineticExpansionV0914 || null,
+  };
+
+  if (requested === 'auto') {
+    return runtimes.visual || runtimes.composer || runtimes.kinetic;
+  }
+  if (!(requested in runtimes)) throw new Error('DOMISTIKA_SDK_MOTION_RECORDING_SOURCE_INVALID');
+  return runtimes[requested];
+}
+
+function motionRecordStart(options = {}) {
+  const source = typeof options === 'string' ? options : options?.source || 'auto';
+  const runtime = motionRecorderRuntime(source);
+  if (!runtime?.startRecording) throw new Error('DOMISTIKA_SDK_MOTION_RECORDING_UNAVAILABLE');
+  runtime.startRecording();
+  emit('sdk-motion', { action: 'record-start', source: String(source) });
   return true;
 }
 
-function motionRecordStop() {
-  const recorder = window.domistikaVisualPerformanceV0918?.stopRecording
-    || window.domistikaKineticComposerV0916?.stopRecording
-    || window.domistikaKineticExpansionV0914?.stopRecording;
-  if (!recorder) throw new Error('DOMISTIKA_SDK_MOTION_RECORDING_UNAVAILABLE');
-  recorder();
-  emit('sdk-motion', { action: 'record-stop' });
+function motionRecordStop(options = {}) {
+  const source = typeof options === 'string' ? options : options?.source || 'auto';
+  const runtime = motionRecorderRuntime(source);
+  if (!runtime?.stopRecording) throw new Error('DOMISTIKA_SDK_MOTION_RECORDING_UNAVAILABLE');
+  runtime.stopRecording();
+  emit('sdk-motion', { action: 'record-stop', source: String(source) });
   return true;
 }
 
@@ -548,6 +561,44 @@ async function serializeProject({ embedMotion = true } = {}) {
   });
   return project;
 }
+async function restoreProject(project) {
+  if (!project || typeof project !== 'object') throw new Error('DOMISTIKA_SDK_PROJECT_REQUIRED');
+  const engine = requireEngine();
+  await engine.restore(project);
+  const input = document.querySelector('#projectName');
+  if (input) {
+    input.value = String(project.name || 'Restored Domistika');
+    input.dispatchEvent(new Event('input', { bubbles: true }));
+  }
+  window.domistikaNavigation?.fit?.();
+  emit('sdk-project', {
+    action: 'restore',
+    motionClips: Array.isArray(project?.motionClips?.items) ? project.motionClips.items.length : 0,
+  });
+  return canvasInfo();
+}
+
+function playgroundRuntime() {
+  return window.domistikaPlaygroundV0927 || null;
+}
+
+function playgroundRun(options = {}) {
+  const runtime = playgroundRuntime();
+  if (!runtime?.run) throw new Error('DOMISTIKA_SDK_PLAYGROUND_UNAVAILABLE');
+  return runtime.run(options);
+}
+
+function playgroundReturn() {
+  const runtime = playgroundRuntime();
+  if (!runtime?.restorePrevious) throw new Error('DOMISTIKA_SDK_PLAYGROUND_UNAVAILABLE');
+  return runtime.restorePrevious();
+}
+
+function playgroundState() {
+  const runtime = playgroundRuntime();
+  return runtime?.state?.() || Object.freeze({ available: false, running: false, canRestore: false });
+}
+
 
 function colorStudioRuntime() {
   return window.domistikaColorStudioV0924 || null;
@@ -700,6 +751,20 @@ for (const [tool, label, shortcut] of [
     shortcut,
   }, async () => setTool(tool));
 }
+
+registerSdkCommand('playground.run', {
+  label: 'Playground · Demo the Studio',
+  category: 'Rooms',
+  description: 'Build a demo canvas, place a Spiro form, run 3·6·9 Portal, and record a short motion clip.',
+  keywords: ['playground', 'demo', 'tour', 'spiro', 'portal', 'record', 'first run'],
+}, async () => playgroundRun());
+
+registerSdkCommand('playground.return', {
+  label: 'Playground · Return to Previous Artwork',
+  category: 'Rooms',
+  description: 'Restore the artwork that was open before the Playground demo.',
+  keywords: ['playground', 'restore', 'return', 'previous artwork'],
+}, async () => playgroundReturn());
 
 registerSdkCommand('room.colors', {
   label: 'Open Color Studio',
@@ -940,6 +1005,7 @@ function capabilities() {
     commands: commandList(),
     commandCatalog: commandCatalog(),
     layerRoles: Object.freeze(['paint', 'guide', 'type', 'motion-ignore']),
+    playground: playgroundState(),
     spiro: Object.freeze({
       available: Boolean(spiro),
       version: spiro?.version || '0.7',
@@ -1066,6 +1132,13 @@ if (!window[INSTALL_FLAG]) {
 
     project: {
       serialize: serializeProject,
+      restore: restoreProject,
+    },
+
+    playground: {
+      run: playgroundRun,
+      restorePrevious: playgroundReturn,
+      state: playgroundState,
     },
 
     export: {
