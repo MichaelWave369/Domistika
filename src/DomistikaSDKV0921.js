@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.23';
-const SDK_VERSION = '0.1.2';
+const APP_VERSION = '0.9.24';
+const SDK_VERSION = '0.1.3';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -488,6 +488,45 @@ async function serializeProject({ embedMotion = true } = {}) {
   return project;
 }
 
+function colorStudioRuntime() {
+  return window.domistikaColorStudioV0924 || null;
+}
+
+function colorStudioOpen() {
+  const runtime = colorStudioRuntime();
+  if (!runtime?.open) throw new Error('DOMISTIKA_SDK_COLOR_STUDIO_UNAVAILABLE');
+  return runtime.open();
+}
+
+function colorStudioSet(value) {
+  const runtime = colorStudioRuntime();
+  if (!runtime?.set) return setSetting('color', value);
+  if (!runtime.set(value)) throw new Error('DOMISTIKA_SDK_COLOR_INVALID');
+  return runtime.current();
+}
+
+function colorStudioRecent() {
+  return colorStudioRuntime()?.recent?.() || Object.freeze([]);
+}
+
+function colorStudioHarmony() {
+  return colorStudioRuntime()?.harmony?.() || Object.freeze([]);
+}
+
+function colorStudioCssColors() {
+  return colorStudioRuntime()?.cssColors?.() || Object.freeze([]);
+}
+
+function colorStudioGradients() {
+  return colorStudioRuntime()?.gradients?.() || Object.freeze([]);
+}
+
+function colorStudioApplyGradient(id, options = {}) {
+  const runtime = colorStudioRuntime();
+  if (!runtime?.applyGradient) throw new Error('DOMISTIKA_SDK_COLOR_STUDIO_UNAVAILABLE');
+  return runtime.applyGradient(id, options);
+}
+
 function cleanCapture(options = {}) {
   const capture = window.domistikaCleanCaptureV0920;
   if (!capture?.capture) throw new Error('DOMISTIKA_SDK_CLEAN_CAPTURE_UNAVAILABLE');
@@ -579,6 +618,13 @@ for (const [tool, label, shortcut] of [
     shortcut,
   }, async () => setTool(tool));
 }
+
+registerSdkCommand('room.colors', {
+  label: 'Open Color Studio',
+  category: 'Rooms',
+  description: 'Open exact color controls, harmonies, favorites, and gradients.',
+  keywords: ['color', 'colour', 'hex', 'rgb', 'hsl', 'css', 'gradient', 'palette', 'wheel'],
+}, async () => colorStudioOpen());
 
 registerSdkCommand('room.spiro', {
   label: 'Open Spiro Lab',
@@ -774,6 +820,13 @@ function capabilities() {
       version: spiro?.version || '0.7',
       presets: spiroPresets(),
     }),
+    colors: Object.freeze({
+      available: Boolean(colorStudioRuntime()?.open),
+      version: colorStudioRuntime()?.version || null,
+      schema: colorStudioRuntime()?.schema || null,
+      current: engine?.settings?.color || null,
+      gradients: colorStudioGradients().length,
+    }),
     motion: Object.freeze({
       ...motionSummary(),
       presets: Object.freeze([...MOTION_PRESETS]),
@@ -812,7 +865,7 @@ if (!window[INSTALL_FLAG]) {
     capabilities,
 
     setTool,
-    color: (value) => value == null ? requireEngine().settings.color : setSetting('color', value),
+    color: (value) => value == null ? requireEngine().settings.color : colorStudioSet(value),
     stroke,
 
     canvas: {
@@ -830,11 +883,22 @@ if (!window[INSTALL_FLAG]) {
     },
 
     brush: {
-      color: (value) => value == null ? requireEngine().settings.color : setSetting('color', value),
+      color: (value) => value == null ? requireEngine().settings.color : colorStudioSet(value),
       size: (value) => value == null ? requireEngine().settings.size : setSetting('size', value),
       opacity: (value) => value == null ? requireEngine().settings.opacity : setSetting('opacity', value),
       smoothing: (value) => value == null ? requireEngine().settings.smoothing : setSetting('smoothing', value),
       symmetry: (value) => value == null ? requireEngine().settings.symmetry : setSetting('symmetry', value),
+    },
+
+    colors: {
+      open: colorStudioOpen,
+      current: () => requireEngine().settings.color,
+      set: colorStudioSet,
+      recent: colorStudioRecent,
+      harmony: colorStudioHarmony,
+      css: colorStudioCssColors,
+      gradients: colorStudioGradients,
+      applyGradient: colorStudioApplyGradient,
     },
 
     layers: {

@@ -40,6 +40,7 @@ function chooseColor(color) {
   if (!input) return;
   input.value = color;
   input.dispatchEvent(new Event('input', { bubbles: true }));
+  input.dispatchEvent(new Event('change', { bubbles: true }));
   const status = document.querySelector('#statusMessage');
   if (status) status.textContent = `Favorite color selected: ${color}`;
   render();

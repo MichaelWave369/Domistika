@@ -13,8 +13,8 @@ The purpose is to give humans, local scripts, accessibility tools, MIDI controll
 ## Contract
 
 - schema: `domistika.sdk.v1`
-- SDK version: `0.1.2`
-- app version: `0.9.23`
+- SDK version: `0.1.3`
+- app version: `0.9.24`
 - global: `window.Domistika`
 - object: deeply frozen
 - network access: none
@@ -117,6 +117,27 @@ Each point accepts:
 Pressure is optional and defaults to `1`.
 
 A complete SDK stroke creates one history checkpoint and emits `domistika:stroke`.
+
+### Color Studio
+
+The stable SDK shares the same Color Studio state used by the human UI.
+
+```js
+Domistika.colors.open();
+Domistika.colors.current();
+Domistika.colors.set('#ff7a18');
+
+Domistika.colors.recent();
+Domistika.colors.harmony();
+Domistika.colors.css();
+Domistika.colors.gradients();
+
+Domistika.colors.applyGradient('aurora', {
+  mode: 'behind', // or 'replace'
+});
+```
+
+`Domistika.color(value)` and `Domistika.brush.color(value)` remain compatible convenience calls and now route through Color Studio when the v0.9.24 runtime is available.
 
 ### Layers
 
