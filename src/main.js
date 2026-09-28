@@ -217,7 +217,26 @@ $('#fileInput').addEventListener('change', async (event) => {
   } catch (error) { console.error(error); status(`Could not open file: ${error.message}`); }
 });
 function safeFilename(value) { return value.toLowerCase().replace(/[^a-z0-9-_]+/g, '-').replace(/^-+|-+$/g, '') || 'domistika-artwork'; }
-$('#saveProject').addEventListener('click', () => { const project = engine.serialize(); project.name = $('#projectName').value.trim() || 'Untitled'; downloadBlob(new Blob([JSON.stringify(project)], { type: 'application/json' }), `${safeFilename(project.name)}.domistika`); status('Editable Domistika project downloaded'); });
+$('#saveProject').addEventListener('click', async () => {
+  try {
+    let project = engine.serialize();
+    project.name = $('#projectName').value.trim() || 'Untitled';
+    if (window.domistikaMotionClipsV0922?.embedProject) {
+      project = await window.domistikaMotionClipsV0922.embedProject(project);
+    }
+    downloadBlob(
+      new Blob([JSON.stringify(project)], { type: 'application/json' }),
+      `${safeFilename(project.name)}.domistika`,
+    );
+    const clips = Array.isArray(project?.motionClips?.items) ? project.motionClips.items.length : 0;
+    status(clips
+      ? `Editable Domistika project downloaded · ${clips} motion clip${clips === 1 ? '' : 's'} embedded`
+      : 'Editable Domistika project downloaded');
+  } catch (error) {
+    console.error(error);
+    status(`Could not save project: ${error.message}`);
+  }
+});
 $('#exportImage').addEventListener('click', () => { $('#exportName').value = safeFilename($('#projectName').value.trim() || 'domistika-artwork'); $('#exportDialog').showModal(); });
 $('#exportForm').addEventListener('submit', async (event) => {
   if (event.submitter?.value === 'cancel') return;
