@@ -293,7 +293,11 @@ export class CanvasEngine {
     const layer = this.activeLayer;
     if (!layer) return;
     const ctx = layer.ctx;
-    const averagePressure = (from.pressure + to.pressure) / 2;
+    const fromPressureRaw = Number(from?.pressure);
+    const toPressureRaw = Number(to?.pressure);
+    const fromPressure = Number.isFinite(fromPressureRaw) ? clamp(fromPressureRaw, 0.08, 1) : 1;
+    const toPressure = Number.isFinite(toPressureRaw) ? clamp(toPressureRaw, 0.08, 1) : 1;
+    const averagePressure = (fromPressure + toPressure) / 2;
     const width = Math.max(0.5, Number(this.settings.size) * averagePressure);
     const alpha = clamp(Number(this.settings.opacity), 0.01, 1);
     const { r, g, b } = hexToRgba(this.settings.color);
