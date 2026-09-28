@@ -21,7 +21,7 @@ assert.ok(major > 0 || minor > 9 || (minor === 9 && patch >= 23));
 assert.match(index, /DomistikaCommandPaletteV0923\.js/);
 assert.ok(index.indexOf('DomistikaSDKV0921.js') < index.indexOf('DomistikaCommandPaletteV0923.js'));
 
-assert.match(sdk, /SDK_VERSION = '0\.1\.5'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.6'/);
 assert.match(sdk, /commandCatalog/);
 assert.match(sdk, /room\.spiro/);
 assert.match(sdk, /room\.motion/);
