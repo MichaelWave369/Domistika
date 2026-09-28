@@ -7,9 +7,9 @@ const colors=fs.readFileSync(new URL('../src/DomistikaColorStudioV0924.js',impor
 const readme=fs.readFileSync(new URL('../README.md',import.meta.url),'utf8');
 const pkg=JSON.parse(fs.readFileSync(new URL('../package.json',import.meta.url),'utf8'));
 
-assert.equal(pkg.version,'0.9.25');
+assert.equal(pkg.version,'0.9.26');
 assert.match(sdk,/APP_VERSION = '0\.9\.25'/);
-assert.match(sdk,/SDK_VERSION = '0\.1\.4'/);
+assert.match(sdk,/SDK_VERSION = '0\.1\.5'/);
 assert.match(sdk,/function liveToolIds\(\)/);
 assert.match(sdk,/domistikaFillV091/);
 assert.match(sdk,/domistikaSelectionV04/);
