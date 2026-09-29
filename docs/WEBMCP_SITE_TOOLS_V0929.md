@@ -44,6 +44,7 @@ domistika_set_color
 domistika_apply_gradient
 domistika_place_spiro
 domistika_set_layer_role
+domistika_transfer_to_auralith
 domistika_execute_command
 \`\`\`
 
@@ -193,6 +194,24 @@ Creative edits are bounded/reversible application actions and are not marked as 
 
 Tool results containing user-controlled project or command metadata are marked as untrusted where appropriate.
 
+## Auralith transfer
+
+The native action:
+
+```text
+domistika_transfer_to_auralith
+```
+
+calls:
+
+```js
+Domistika.bridge.auralith.transfer()
+```
+
+and therefore emits the same hash-bound Creative Bridge v2 package as the human Auralith button and stable SDK.
+
+The site tool does not create an alternate transfer format.
+
 ## Boundaries
 
 The site-tool module adds no:
@@ -213,9 +232,9 @@ DISCOVERY != MUTATION AUTHORITY
 ## Contracts
 
 \`\`\`text
-Domistika app:    0.9.29
-Stable SDK:       0.1.7
+Domistika app:    0.9.30
+Stable SDK:       0.1.8
 Stable SDK schema domistika.sdk.v1
-Site tools:       0.1.0
+Site tools:       0.1.1
 Site-tool schema: domistika.site-tools.v1
 \`\`\`
