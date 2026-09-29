@@ -273,7 +273,11 @@ if (!window[INSTALL_FLAG]) {
   function refreshSource(announce = true) {
     const active = engine();
     if (!active || !ensureCanvases()) return false;
-    state.source = active.compositeCanvas(false);
+    state.source = active.compositeCanvas(false, null, {
+      excludeLayerIds: active.layers
+        .filter((layer) => layer.motionPolicy === 'ignore')
+        .map((layer) => layer.id),
+    });
     if (state.selection) buildSelectionLayers();
     if (!state.pivot) resetPivot();
     if (announce) status('Kinetic performance source refreshed');
