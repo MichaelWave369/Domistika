@@ -1,3 +1,33 @@
+## v0.9.29 — Native WebMCP Site Tools
+
+Domistika now exposes a thin browser-native WebMCP layer over the frozen `window.Domistika` stable SDK.
+
+Registered native site tools cover:
+
+```text
+capabilities
+command search / execution
+canvas state
+bounded strokes
+Color Studio color + gradients
+Spiro placement
+semantic layer roles
+```
+
+The adapter uses the live stable runtime instead of reaching into raw canvas contexts or versioned labs.
+
+Normal browsers without WebMCP continue to run Domistika unchanged. WebMCP-aware browsers can discover the site tools directly from the live page.
+
+```text
+browser agent
+→ WebMCP
+→ Domistika site tools
+→ window.Domistika
+→ stable semantic runtime
+```
+
+See [Native WebMCP Site Tools v0.9.29](docs/WEBMCP_SITE_TOOLS_V0929.md).
+
 ## v0.9.28 — Playground UX + Capability Hygiene
 
 Playground now makes its return path impossible to miss and keeps capability snapshots lightweight.

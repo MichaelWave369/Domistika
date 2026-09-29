@@ -1,4 +1,4 @@
-const APP_VERSION = '0.9.28';
+const APP_VERSION = '0.9.29';
 const SDK_VERSION = '0.1.7';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';

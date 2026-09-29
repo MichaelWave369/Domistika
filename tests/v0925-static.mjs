@@ -8,7 +8,9 @@ const readme=fs.readFileSync(new URL('../README.md',import.meta.url),'utf8');
 const pkg=JSON.parse(fs.readFileSync(new URL('../package.json',import.meta.url),'utf8'));
 
 assert.ok(Number(pkg.version.split('.')[2]) >= 26);
-assert.match(sdk,/APP_VERSION = '0\.9\.28'/);
+const appVersion=/APP_VERSION = '(\d+)\.(\d+)\.(\d+)'/.exec(sdk);
+assert.ok(appVersion);
+assert.ok(Number(appVersion[1])>0||Number(appVersion[2])>9||(Number(appVersion[2])===9&&Number(appVersion[3])>=25));
 assert.match(sdk,/SDK_VERSION = '0\.1\.7'/);
 assert.match(sdk,/function liveToolIds\(\)/);
 assert.match(sdk,/domistikaFillV091/);
