@@ -1,3 +1,32 @@
+## Parallax Creative Interop v2 Candidate
+
+Domistika now carries the frozen candidate profile for the owned four-app creative chain:
+
+```text
+Domistika
+→ Auralith369
+→ ParaCut
+→ WaveForgeStudio
+```
+
+Profile ID:
+
+```text
+parallax.creative-interop.v2
+```
+
+Frozen spec SHA-256:
+
+```text
+364448afa4997b4fb297a67e1d3cec73ec3bae500855ec21469a24df8ef01be0
+```
+
+Domistika CI independently recomputes this hash.
+
+The optional CineSwarm extension remains explicitly `unratified_receiver` until an authorized receiver repository adopts it.
+
+See [Parallax Creative Interop v2](docs/PARALLAX_CREATIVE_INTEROP_V2.md).
+
 ## v0.9.30 — Creative Bridge v2
 
 Domistika now sends **protected semantic overlays** separately from the raster artwork Auralith is expected to grade.

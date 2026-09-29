@@ -1,0 +1,58 @@
+{
+  "schema": "parallax.creative_interop_profile_manifest.v2",
+  "protocol_id": "parallax.creative-interop.v2",
+  "status": "candidate_pending_repository_ratification",
+  "spec_sha256": "364448afa4997b4fb297a67e1d3cec73ec3bae500855ec21469a24df8ef01be0",
+  "canonical_owned_scope": [
+    "MichaelWave369/Domistika",
+    "MichaelWave369/Auralith369",
+    "MichaelWave369/paracut",
+    "MichaelWave369/WaveForgeStudio"
+  ],
+  "optional_extensions": [
+    {
+      "id": "parallax.creative-interop.v2.cineswarm-reference",
+      "target": "CineSwarm",
+      "status": "unratified_receiver",
+      "receiver_repository": "not_authorized_in_current_github_connection"
+    }
+  ],
+  "bridge_envelopes": {
+    "creative_ingress": "parallax.bridge.v2",
+    "timeline_handoff": "parallax.bridge.v2",
+    "compatibility": [
+      "parallax.bridge.v1"
+    ]
+  },
+  "native_contracts": {
+    "domistika_auralith": "parallax-creative-bridge-v2",
+    "auralith_capture": "auralith.capture.png.v1",
+    "paracut_render_plan": "native RenderPlan",
+    "waveforge_intake": "waveforge.paracut_bridge_intake.v2_alpha",
+    "cineswarm_extension": "waveforge.cineswarm_release_reference.v1_alpha"
+  },
+  "required_invariants": {
+    "local_only": true,
+    "requires_user_action": true,
+    "hash_algorithm": "sha256",
+    "real_rendering_authorized": false,
+    "network_authorized": false,
+    "subprocess_authorized": false,
+    "automatic_import_authorized": false,
+    "publish_authorized": false
+  },
+  "freshness": {
+    "field": "planRevision",
+    "type": "positive_integer",
+    "required_for_v2_timeline_handoff": true,
+    "consumer_owned_state": true,
+    "rules": {
+      "first": "accept_and_record",
+      "higher": "accept_and_advance",
+      "same_same_hash": "idempotent_replay",
+      "lower": "reject_stale",
+      "same_different_hash": "reject_equivocation"
+    }
+  },
+  "canonicality_scope": "owned_four_app_chain_only"
+}
