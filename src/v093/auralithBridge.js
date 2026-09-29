@@ -35,12 +35,7 @@ function storePayload(payload) {
 function protectedOverlayLayers(engine) {
   return (engine?.layers || [])
     .filter((layer) => layer.visible !== false)
-    .filter((layer) => {
-      if (layer.role === 'type') return true;
-      return layer.role === 'motion-ignore'
-        && Array.isArray(layer.semanticOverlays)
-        && layer.semanticOverlays.some((overlay) => overlay?.kind === 'text');
-    })
+    .filter((layer) => layer.role === 'type' || layer.role === 'motion-ignore')
     .slice(0, 16);
 }
 
