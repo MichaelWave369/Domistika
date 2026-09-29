@@ -43,10 +43,11 @@ assert.match(gallery, /Domistika Art Gallery/);
 assert.match(gallery, /Art of the Day/);
 assert.match(gallery, /Submit to Public Gallery/);
 assert.match(gallery, /gallery\/artworks\.json/);
-assert.match(bridge, /parallax-creative-bridge-v1/);
+assert.match(bridge, /parallax-creative-bridge-v2/);
 assert.match(bridge, /Auralith369/);
-assert.match(bridge, /bindCreativeBridgeContentHash/);
+assert.match(bridge, /bindCreativeBridgeV2ContentHash/);
 assert.match(bridge, /contentHash: payload\.contentHash/);
+assert.match(bridge, /overlayCount: payload\.overlays\.length/);
 
 const normalizedBridge = normalizeCreativeBridgeV1({
   protocol: 'parallax-creative-bridge',
