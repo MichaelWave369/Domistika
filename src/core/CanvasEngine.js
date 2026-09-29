@@ -87,6 +87,9 @@ export class CanvasEngine {
       opacity: options.opacity ?? 1,
       blendMode: options.blendMode ?? 'normal',
       role,
+      semanticOverlays: Array.isArray(options.semanticOverlays)
+        ? JSON.parse(JSON.stringify(options.semanticOverlays)).slice(0, 32)
+        : [],
     };
     this.layers.push(layer);
     this.setActiveLayer(layer.id);
@@ -98,7 +101,11 @@ export class CanvasEngine {
     const source = this.activeLayer;
     if (!source) return;
     const copy = this.createLayer(`${source.name} copy`, {
-      opacity: source.opacity, blendMode: source.blendMode, visible: source.visible, role: source.role,
+      opacity: source.opacity,
+      blendMode: source.blendMode,
+      visible: source.visible,
+      role: source.role,
+      semanticOverlays: source.semanticOverlays,
     });
     copy.ctx.drawImage(source.canvas, 0, 0);
     this.markChanged('Layer duplicated');
@@ -185,6 +192,7 @@ export class CanvasEngine {
     if (!layer) return;
     this.captureHistory();
     layer.ctx.clearRect(0, 0, this.width, this.height);
+    layer.semanticOverlays = [];
     this.markChanged('Layer cleared');
   }
 
@@ -484,8 +492,9 @@ export class CanvasEngine {
     const ctx = canvas.getContext('2d');
     if (includeBackground) { ctx.fillStyle = background; ctx.fillRect(0, 0, this.width, this.height); }
     const excludeRoles = new Set(Array.isArray(options?.excludeRoles) ? options.excludeRoles : []);
+    const excludeLayerIds = new Set(Array.isArray(options?.excludeLayerIds) ? options.excludeLayerIds : []);
     for (const layer of this.layers) {
-      if (!layer.visible || excludeRoles.has(layer.role)) continue;
+      if (!layer.visible || excludeRoles.has(layer.role) || excludeLayerIds.has(layer.id)) continue;
       ctx.save();
       ctx.globalAlpha = layer.opacity;
       ctx.globalCompositeOperation = this.mapBlendMode(layer.blendMode);
@@ -525,7 +534,9 @@ export class CanvasEngine {
       settings: this.settings,
       layers: this.layers.map((layer) => ({
         id: layer.id, name: layer.name, visible: layer.visible, opacity: layer.opacity,
-        blendMode: layer.blendMode, role: layer.role || 'paint', image: layer.canvas.toDataURL('image/png'),
+        blendMode: layer.blendMode, role: layer.role || 'paint',
+        semanticOverlays: Array.isArray(layer.semanticOverlays) ? JSON.parse(JSON.stringify(layer.semanticOverlays)) : [],
+        image: layer.canvas.toDataURL('image/png'),
       })),
     };
   }

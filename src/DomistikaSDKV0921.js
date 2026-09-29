@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.29';
-const SDK_VERSION = '0.1.7';
+const APP_VERSION = '0.9.30';
+const SDK_VERSION = '0.1.8';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -652,6 +652,24 @@ async function exportPng({ transparent = false } = {}) {
   return blob;
 }
 
+function auralithBridgeRuntime() {
+  return window.domistikaAuralithBridgeV093 || null;
+}
+
+async function transferToAuralith() {
+  const bridge = auralithBridgeRuntime();
+  if (!bridge?.transfer) throw new Error('DOMISTIKA_SDK_AURALITH_BRIDGE_UNAVAILABLE');
+  const result = await bridge.transfer();
+  emit('sdk-bridge', {
+    action: 'transfer',
+    target: 'auralith369',
+    version: result?.version || bridge.protocolVersion || null,
+    overlayCount: result?.overlayCount || 0,
+    contentHash: result?.contentHash || null,
+  });
+  return result;
+}
+
 function eventName(name) {
   const raw = String(name || '').trim();
   if (!raw) throw new Error('DOMISTIKA_SDK_EVENT_NAME_REQUIRED');
@@ -765,6 +783,13 @@ registerSdkCommand('playground.return', {
   description: 'Restore the artwork that was open before the Playground demo.',
   keywords: ['playground', 'restore', 'return', 'previous artwork'],
 }, async () => playgroundReturn());
+
+registerSdkCommand('bridge.auralith.transfer', {
+  label: 'Send to Auralith',
+  category: 'Bridge',
+  description: 'Create a hash-bound Creative Bridge v2 package with protected semantic overlays and open Auralith369.',
+  keywords: ['auralith', 'bridge', 'transfer', 'finish', 'type', 'semantic overlay'],
+}, async () => transferToAuralith());
 
 registerSdkCommand('room.colors', {
   label: 'Open Color Studio',
@@ -1035,6 +1060,15 @@ function capabilities() {
       version: window.domistikaCleanCaptureV0920?.version || null,
       schema: window.domistikaCleanCaptureV0920?.schema || null,
     }),
+    bridge: Object.freeze({
+      auralith: Object.freeze({
+        available: Boolean(auralithBridgeRuntime()?.transfer),
+        protocol: 'parallax-creative-bridge',
+        version: auralithBridgeRuntime()?.protocolVersion || 2,
+        semanticOverlays: true,
+        maxOverlays: 16,
+      }),
+    }),
   });
 }
 
@@ -1144,6 +1178,12 @@ if (!window[INSTALL_FLAG]) {
     export: {
       png: exportPng,
       capture: cleanCapture,
+    },
+
+    bridge: {
+      auralith: {
+        transfer: transferToAuralith,
+      },
     },
 
     events: {

@@ -128,12 +128,46 @@ export function placeText(engine, options) {
   const text = String(options.text || '').trim();
   if (!text) throw new Error('Enter or capture some text first.');
   engine.captureHistory();
-  const ctx = engine.activeLayer.ctx;
+  const layer = engine.activeLayer;
+  const ctx = layer.ctx;
   ctx.save();
   ctx.globalAlpha = clamp(options.opacity, .01, 1);
   ctx.translate(engine.width * clamp(options.x, 0, 1), engine.height * clamp(options.y, 0, 1));
   ctx.rotate(clamp(options.rotation, -360, 360) * Math.PI / 180);
   paintText(ctx, options);
   ctx.restore();
+
+  if (layer.role === 'paint' && typeof engine.setLayerRole === 'function') {
+    engine.setLayerRole(layer.id, 'type');
+  }
+
+  if (!Array.isArray(layer.semanticOverlays)) layer.semanticOverlays = [];
+  const descriptor = {
+    kind: 'text',
+    schema: 'domistika.semantic-text.v1',
+    text,
+    font: String(options.font || FONT_STACKS[0][1]),
+    mode: options.mode === '3d' ? '3d' : '2d',
+    size: clamp(options.size, 6, 640),
+    weight: String(options.weight || '600'),
+    italic: Boolean(options.italic),
+    tracking: clamp(options.tracking, -10, 80),
+    lineHeight: clamp(options.lineHeight, .6, 3),
+    rotation: clamp(options.rotation, -360, 360),
+    depth: clamp(options.depth, 1, 120),
+    fill: String(options.fill || '#1b1820'),
+    stroke: String(options.stroke || '#ffffff'),
+    strokeWidth: clamp(options.strokeWidth, 0, 40),
+    opacity: clamp(options.opacity, .01, 1),
+    x: clamp(options.x, 0, 1),
+    y: clamp(options.y, 0, 1),
+    align: String(options.align || 'center'),
+    preserveDuringStyle: true,
+    createdAt: new Date().toISOString(),
+  };
+  layer.semanticOverlays.push(descriptor);
+  if (layer.semanticOverlays.length > 32) layer.semanticOverlays.splice(0, layer.semanticOverlays.length - 32);
+
   engine.markChanged(options.mode === '3d' ? 'Extruded text placed' : 'Text placed');
+  return descriptor;
 }

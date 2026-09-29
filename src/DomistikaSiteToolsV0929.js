@@ -1,4 +1,4 @@
-const VERSION = '0.1.0';
+const VERSION = '0.1.1';
 const SCHEMA = 'domistika.site-tools.v1';
 const INSTALL_FLAG = '__domistikaWebMcpSiteToolsV0929Installed';
 const MAX_SEARCH_RESULTS = 20;
@@ -73,6 +73,7 @@ function slimCapabilities(api) {
     motion: caps.motion,
     capture: caps.capture,
     playground: caps.playground,
+    bridge: caps.bridge,
   };
 }
 
@@ -283,6 +284,19 @@ function makeTools(api) {
         requireReady(api);
         const result = api.layers.role(cleanString(layerId, 160), role);
         return ok({ layerId, role: result });
+      },
+    },
+    {
+      name: 'domistika_transfer_to_auralith',
+      title: 'Transfer artwork to Auralith',
+      description: 'Create and store a hash-bound Creative Bridge v2 package for Auralith369. Protected type and semantic overlay layers are separated from the graded base artwork.',
+      inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+      annotations: { readOnlyHint: false, untrustedContentHint: false, consequentialHint: false },
+      execute: async () => {
+        requireReady(api);
+        if (!api.bridge?.auralith?.transfer) throw new Error('DOMISTIKA_SITE_TOOLS_AURALITH_BRIDGE_UNAVAILABLE');
+        const result = await api.bridge.auralith.transfer();
+        return ok({ transfer: result });
       },
     },
     {

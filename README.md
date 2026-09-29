@@ -1,3 +1,40 @@
+## v0.9.30 — Creative Bridge v2
+
+Domistika now sends **protected semantic overlays** separately from the raster artwork Auralith is expected to grade.
+
+```text
+paint          → base raster
+guide          → excluded
+type           → protected overlay
+motion-ignore  → protected overlay
+```
+
+Creative Bridge v2 binds:
+
+```text
+base image SHA-256
+overlay image SHA-256
+canonical manifest SHA-256
+```
+
+so modifying artwork pixels, title pixels, or semantic metadata invalidates the package.
+
+Stable SDK v0.1.8 adds:
+
+```js
+await Domistika.bridge.auralith.transfer()
+```
+
+and native site tools v0.1.1 add:
+
+```text
+domistika_transfer_to_auralith
+```
+
+New Ink + Type placements retain `domistika.semantic-text.v1` metadata, while older `type` and `motion-ignore` layers are still protected through their layer role alone.
+
+See [Creative Bridge v2](docs/CREATIVE_BRIDGE_V2_V0930.md).
+
 ## Native Creative Chain Acceptance 001
 
 The first observed live Domistika → Auralith finishing workflow is preserved as a cross-repo acceptance record.

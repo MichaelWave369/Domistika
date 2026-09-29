@@ -18,8 +18,8 @@ function fakeApi() {
     ready: () => true,
     capabilities: () => ({
       schema: 'domistika.sdk.v1',
-      sdkVersion: '0.1.7',
-      appVersion: '0.9.29',
+      sdkVersion: '0.1.8',
+      appVersion: '0.9.30',
       ready: true,
       tools: ['ink', 'fill'],
       drawTools: ['ink'],
@@ -31,6 +31,7 @@ function fakeApi() {
       motion: { available: true, presets: ['portal-369'], clips: { available: true, count: 1 } },
       capture: { available: true },
       playground: { available: true, running: false, canRestore: true },
+      bridge: { auralith: { available: true, version: 2, semanticOverlays: true, maxOverlays: 16 } },
     }),
     canvas: { info: () => ({ width: 1200, height: 1200 }) },
     colors: {
@@ -49,6 +50,14 @@ function fakeApi() {
     spiro: {
       place: (preset, options) => { calls.push(['spiro', preset, options.x, options.y]); return { preset }; },
     },
+    bridge: {
+      auralith: {
+        transfer: async () => {
+          calls.push(['bridge', 'auralith', 'transfer']);
+          return { ok: true, version: 2, overlayCount: 1, contentHash: 'sha256:test' };
+        },
+      },
+    },
     commands: {
       list: () => commands.map((command) => command.id),
       search: (query, limit) => commands.filter((command) => JSON.stringify(command).toLowerCase().includes(String(query).toLowerCase())).slice(0, limit),
@@ -58,13 +67,13 @@ function fakeApi() {
   };
 }
 
-assert.equal(VERSION, '0.1.0');
+assert.equal(VERSION, '0.1.1');
 assert.equal(SCHEMA, 'domistika.site-tools.v1');
 
 const api = fakeApi();
 const tools = createDomistikaSiteTools(api);
 assert.equal(Object.isFrozen(tools), true);
-assert.equal(tools.length, 9);
+assert.equal(tools.length, 10);
 assert.deepEqual(tools.map((tool) => tool.name), [
   'domistika_get_capabilities',
   'domistika_search_commands',
@@ -74,6 +83,7 @@ assert.deepEqual(tools.map((tool) => tool.name), [
   'domistika_apply_gradient',
   'domistika_place_spiro',
   'domistika_set_layer_role',
+  'domistika_transfer_to_auralith',
   'domistika_execute_command',
 ]);
 
@@ -124,6 +134,12 @@ const role = tools.find((tool) => tool.name === 'domistika_set_layer_role');
 await role.execute({ layerId: 'layer-1', role: 'motion-ignore' });
 assert.deepEqual(api.calls.at(-1), ['role', 'layer-1', 'motion-ignore']);
 
+const transfer = tools.find((tool) => tool.name === 'domistika_transfer_to_auralith');
+const transferResult = JSON.parse(await transfer.execute({}));
+assert.equal(transferResult.transfer.version, 2);
+assert.equal(transferResult.transfer.overlayCount, 1);
+assert.deepEqual(api.calls.at(-1), ['bridge', 'auralith', 'transfer']);
+
 const execute = tools.find((tool) => tool.name === 'domistika_execute_command');
 await execute.execute({ commandId: 'motion.portal', args: {} });
 assert.deepEqual(api.calls.at(-1), ['command', 'motion.portal', {}]);
@@ -142,8 +158,8 @@ const modelContext = {
 };
 const installed = await installDomistikaSiteTools({ api: fakeApi(), modelContext });
 assert.equal(installed.available, true);
-assert.equal(installed.registered.length, 9);
-assert.equal(registered.length, 9);
+assert.equal(installed.registered.length, 10);
+assert.equal(registered.length, 10);
 
 const source = fs.readFileSync(new URL('../src/DomistikaSiteToolsV0929.js', import.meta.url), 'utf8');
 assert.match(source, /document/);
@@ -156,4 +172,4 @@ assert.doesNotMatch(source, /new Function\s*\(/);
 assert.doesNotMatch(source, /\bfetch\s*\(/);
 assert.doesNotMatch(source, /CanvasRenderingContext2D/);
 
-console.log('v0.9.29 WebMCP site-tools checks passed');
+console.log('v0.9.30 WebMCP site-tools compatibility checks passed');
