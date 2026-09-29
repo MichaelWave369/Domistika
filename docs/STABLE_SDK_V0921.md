@@ -13,7 +13,7 @@ The purpose is to give humans, local scripts, accessibility tools, MIDI controll
 ## Contract
 
 - schema: `domistika.sdk.v1`
-- SDK version: `0.1.7`
+- SDK version: `0.1.8`
 - app version: `0.9.28`
 - global: `window.Domistika`
 - object: deeply frozen
@@ -262,6 +262,24 @@ Domistika.motion.record.stop({ source: 'kinetic' });
 ```
 
 Valid sources are `auto`, `kinetic`, `composer`, and `visual`.
+
+### Auralith semantic bridge
+
+Starting in v0.9.30, the stable SDK exposes:
+
+```js
+await Domistika.bridge.auralith.transfer()
+```
+
+The bridge emits `parallax-creative-bridge` v2 and separates protected `type` / `motion-ignore` layers from the gradeable base raster.
+
+The capability snapshot includes:
+
+```js
+Domistika.capabilities().bridge.auralith
+```
+
+See [Creative Bridge v2](CREATIVE_BRIDGE_V2_V0930.md).
 
 ### Export and clean capture
 
