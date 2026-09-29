@@ -62,9 +62,9 @@ const sdk = fs.readFileSync(new URL('../src/DomistikaSDKV0921.js', import.meta.u
 const siteTools = fs.readFileSync(new URL('../src/DomistikaSiteToolsV0929.js', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
-assert.equal(pkg.version, '0.9.30');
-assert.match(sdk, /APP_VERSION = '0\.9\.30'/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.8'/);
+assert.equal(pkg.version, '0.9.31');
+assert.match(sdk, /APP_VERSION = '0\.9\.31'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.9'/);
 
 assert.match(engine, /semanticOverlays:/);
 assert.match(engine, /excludeLayerIds/);
@@ -90,7 +90,7 @@ assert.match(sdk, /bridge: Object\.freeze/);
 assert.match(sdk, /semanticOverlays: true/);
 assert.match(sdk, /transfer: transferToAuralith/);
 
-assert.match(siteTools, /VERSION = '0\.1\.1'/);
+assert.match(siteTools, /VERSION = '0\.1\.2'/);
 assert.match(siteTools, /domistika_transfer_to_auralith/);
 assert.doesNotMatch(siteTools, /\beval\s*\(/);
 assert.doesNotMatch(siteTools, /new Function\s*\(/);
