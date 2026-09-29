@@ -139,13 +139,31 @@ async function transfer() {
             contentHash: payload.contentHash,
           },
         }));
-        return;
+        return {
+          ok: true,
+          protocol: payload.protocol,
+          version: payload.version,
+          key: BRIDGE_KEY,
+          target: 'auralith369',
+          maxDimension: options.maxDimension,
+          overlayCount: payload.overlays.length,
+          baseContentHash: payload.baseContentHash,
+          contentHash: payload.contentHash,
+        };
       }
     } catch (error) {
       console.warn('Domistika bridge attempt failed', error);
     }
   }
   setStatus('The bridge package was too large or could not be integrity-bound. Try a smaller canvas or export the image normally.');
+  return {
+    ok: false,
+    protocol: 'parallax-creative-bridge',
+    version: 2,
+    key: BRIDGE_KEY,
+    target: 'auralith369',
+    reason: 'BRIDGE_STORE_FAILED',
+  };
 }
 
 function init() {
