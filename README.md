@@ -1,3 +1,16 @@
+## v0.9.31 — Semantic Role + Motion Policy
+
+Domistika now separates semantic layer meaning from Kinetic Motion behavior.
+
+```text
+role: paint | guide | type
+motionPolicy: inherit | animate | ignore
+```
+
+Legacy `role: motion-ignore` projects migrate fail-safely, and a title can remain `role: type` while using `motionPolicy: ignore`.
+
+See [Semantic Role + Motion Policy](docs/SEMANTIC_ROLE_MOTION_POLICY_V0931.md).
+
 ## Parallax Creative Interop v2 Candidate
 
 Domistika now carries the frozen candidate profile for the owned four-app creative chain:
