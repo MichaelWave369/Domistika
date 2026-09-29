@@ -9,7 +9,7 @@ const main=fs.readFileSync(new URL('../src/main.js',import.meta.url),'utf8');
 const pkg=JSON.parse(fs.readFileSync(new URL('../package.json',import.meta.url),'utf8'));
 
 assert.ok(Number(pkg.version.split('.')[2]) >= 26);
-assert.match(engine,/LAYER_ROLES = Object\.freeze\(\['paint', 'guide', 'type', 'motion-ignore'\]\)/);
+assert.match(engine,/LAYER_ROLES = Object\.freeze\(\['paint', 'guide', 'type'\]\)/);
 assert.match(engine,/canvas\.dataset\.layerRole = role/);
 assert.match(engine,/setLayerRole\(id, role\)/);
 assert.match(engine,/role: layer\.role \|\| 'paint'/);
@@ -18,17 +18,17 @@ assert.match(engine,/excludeRoles/);
 assert.match(guide,/layer\.role = 'guide'/);
 assert.match(guide,/originalCompositeCanvas\.call\(this, includeBackground, background, options\)/);
 
-assert.match(kinetic,/excludeRoles: \['motion-ignore'\]/);
-assert.match(kinetic,/data-layer-role="motion-ignore"/);
+assert.match(kinetic,/motionPolicy === 'ignore'/);
+assert.match(kinetic,/data-motion-policy="ignore"/);
 
 assert.match(main,/id="layerRole"/);
-assert.match(main,/value="motion-ignore"/);
+assert.match(main,/id="layerMotionPolicy"/);
 assert.match(main,/layer-role-badge/);
 assert.match(main,/engine\.setLayerRole/);
 
-assert.match(sdk,/SDK_VERSION = '0\.1\.8'/);
+assert.match(sdk,/SDK_VERSION = '0\.1\.9'/);
 assert.match(sdk,/role: layerRole/);
 assert.match(sdk,/layer\.role\.motion-ignore/);
-assert.match(sdk,/layerRoles:/);
+assert.match(sdk,/layerRoles:/);\nassert.match(sdk,/motionPolicies:/);
 
 console.log('v0.9.26 layer role checks passed');
