@@ -29,6 +29,7 @@ assert.match(main,/engine\.setLayerRole/);
 assert.match(sdk,/SDK_VERSION = '0\.1\.9'/);
 assert.match(sdk,/role: layerRole/);
 assert.match(sdk,/layer\.role\.motion-ignore/);
-assert.match(sdk,/layerRoles:/);\nassert.match(sdk,/motionPolicies:/);
+assert.match(sdk,/layerRoles:/);
+assert.match(sdk,/motionPolicies:/);
 
 console.log('v0.9.26 layer role checks passed');
