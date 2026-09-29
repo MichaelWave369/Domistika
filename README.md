@@ -1,3 +1,25 @@
+## Native Creative Chain Acceptance 001
+
+The first observed live Domistika → Auralith finishing workflow is preserved as a cross-repo acceptance record.
+
+The run verified:
+
+```text
+Domistika 0.9.29
+→ Harbor for Auralith
+→ hash-bound parallax creative bridge
+→ Auralith v0.7.1-alpha
+→ image.open
+→ Moonlight LUT
+→ Vignette FX
+→ 369 Cinema Style
+→ creative receipt
+```
+
+The current bridge is raster, so type/layer semantics do not remain editable after transfer. That limitation is documented as expected behavior rather than hidden behind optimistic prose.
+
+See [Native Creative Chain Acceptance 001](docs/acceptance/NATIVE_CREATIVE_CHAIN_ACCEPTANCE_001.md).
+
 ## v0.9.29 — Native WebMCP Site Tools
 
 Domistika now exposes a thin browser-native WebMCP layer over the frozen `window.Domistika` stable SDK.
