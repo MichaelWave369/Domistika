@@ -2,13 +2,27 @@ import { canvasToBlob, clamp, hexToRgba, loadImage, rgbaToHex, uid } from './uti
 
 const DRAW_TOOLS = new Set(['pencil', 'ink', 'marker', 'airbrush', 'eraser']);
 const SHAPE_TOOLS = new Set(['line', 'rectangle', 'ellipse']);
-export const LAYER_ROLES = Object.freeze(['paint', 'guide', 'type', 'motion-ignore']);
+export const LAYER_ROLES = Object.freeze(['paint', 'guide', 'type']);
+export const MOTION_POLICIES = Object.freeze(['inherit', 'animate', 'ignore']);
+
+function hasSemanticText(options = {}) {
+  return Array.isArray(options.semanticOverlays)
+    && options.semanticOverlays.some((overlay) => overlay?.kind === 'text');
+}
 
 function normalizeLayerRole(value, options = {}) {
   if (options.kind === 'guide' || options.guide === true || options.exportPolicy === 'exclude-guide') return 'guide';
   const requested = String(value || '').trim().toLowerCase();
+  if (requested === 'motion-ignore') return hasSemanticText(options) ? 'type' : 'paint';
   if (LAYER_ROLES.includes(requested)) return requested;
   return 'paint';
+}
+
+function normalizeMotionPolicy(value, options = {}) {
+  const requested = String(value || '').trim().toLowerCase();
+  if (MOTION_POLICIES.includes(requested)) return requested;
+  if (String(options.role || '').trim().toLowerCase() === 'motion-ignore') return 'ignore';
+  return 'inherit';
 }
 
 export class CanvasEngine {
@@ -76,7 +90,9 @@ export class CanvasEngine {
     canvas.style.opacity = String(options.opacity ?? 1);
     canvas.style.mixBlendMode = options.blendMode ?? 'normal';
     const role = normalizeLayerRole(options.role, options);
+    const motionPolicy = normalizeMotionPolicy(options.motionPolicy, options);
     canvas.dataset.layerRole = role;
+    canvas.dataset.motionPolicy = motionPolicy;
     this.artboard.insertBefore(canvas, this.overlay);
     const layer = {
       id: canvas.dataset.layerId,
@@ -87,6 +103,7 @@ export class CanvasEngine {
       opacity: options.opacity ?? 1,
       blendMode: options.blendMode ?? 'normal',
       role,
+      motionPolicy,
       semanticOverlays: Array.isArray(options.semanticOverlays)
         ? JSON.parse(JSON.stringify(options.semanticOverlays)).slice(0, 32)
         : [],
@@ -105,6 +122,7 @@ export class CanvasEngine {
       blendMode: source.blendMode,
       visible: source.visible,
       role: source.role,
+      motionPolicy: source.motionPolicy,
       semanticOverlays: source.semanticOverlays,
     });
     copy.ctx.drawImage(source.canvas, 0, 0);
@@ -179,11 +197,32 @@ export class CanvasEngine {
   setLayerRole(id, role) {
     const layer = this.layers.find((candidate) => candidate.id === id);
     if (!layer) return null;
+    const requested = String(role || '').trim().toLowerCase();
+    if (requested === 'motion-ignore') {
+      this.setLayerMotionPolicy(id, 'ignore');
+      return layer.role;
+    }
     const normalized = normalizeLayerRole(role, layer);
     layer.role = normalized;
     layer.canvas.dataset.layerRole = normalized;
     this.markChanged(`Layer role · ${normalized}`);
     this.onChange({ reason: 'layer-role', engine: this, layerId: layer.id, role: normalized });
+    return normalized;
+  }
+
+  setLayerMotionPolicy(id, policy) {
+    const layer = this.layers.find((candidate) => candidate.id === id);
+    if (!layer) return null;
+    const normalized = normalizeMotionPolicy(policy, layer);
+    layer.motionPolicy = normalized;
+    layer.canvas.dataset.motionPolicy = normalized;
+    this.markChanged(`Layer motion · ${normalized}`);
+    this.onChange({
+      reason: 'layer-motion-policy',
+      engine: this,
+      layerId: layer.id,
+      motionPolicy: normalized,
+    });
     return normalized;
   }
 
@@ -535,6 +574,7 @@ export class CanvasEngine {
       layers: this.layers.map((layer) => ({
         id: layer.id, name: layer.name, visible: layer.visible, opacity: layer.opacity,
         blendMode: layer.blendMode, role: layer.role || 'paint',
+        motionPolicy: layer.motionPolicy || 'inherit',
         semanticOverlays: Array.isArray(layer.semanticOverlays) ? JSON.parse(JSON.stringify(layer.semanticOverlays)) : [],
         image: layer.canvas.toDataURL('image/png'),
       })),

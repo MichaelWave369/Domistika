@@ -35,7 +35,7 @@ function storePayload(payload) {
 function protectedOverlayLayers(engine) {
   return (engine?.layers || [])
     .filter((layer) => layer.visible !== false)
-    .filter((layer) => layer.role === 'type' || layer.role === 'motion-ignore')
+    .filter((layer) => layer.role === 'type' || layer.motionPolicy === 'ignore')
     .slice(0, 16);
 }
 
@@ -79,7 +79,7 @@ function buildOverlays(protectedLayers, options) {
   return protectedLayers.map((layer, index) => ({
     id: 'overlay-' + (index + 1),
     kind: 'raster-overlay',
-    role: layer.role === 'motion-ignore' ? 'motion-ignore' : 'type',
+    role: layer.role === 'type' ? 'type' : 'motion-ignore',
     name: layer.name || ('Overlay ' + (index + 1)),
     sourceLayerId: layer.id,
     preserveDuringStyle: true,

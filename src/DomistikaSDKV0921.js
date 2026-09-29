@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.30';
-const SDK_VERSION = '0.1.8';
+const APP_VERSION = '0.9.31';
+const SDK_VERSION = '0.1.9';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -50,6 +50,7 @@ function safeLayer(layer) {
     opacity: Number(layer.opacity ?? 1),
     blendMode: String(layer.blendMode || 'normal'),
     role: String(layer.role || (layer.kind === 'guide' ? 'guide' : 'paint')),
+    motionPolicy: String(layer.motionPolicy || 'inherit'),
   });
 }
 
@@ -359,6 +360,16 @@ function layerRole(id, role) {
   if (typeof engine.setLayerRole !== 'function') throw new Error('DOMISTIKA_SDK_LAYER_ROLE_UNAVAILABLE');
   const result = engine.setLayerRole(id, role);
   emit('sdk-layer', { action: 'role', layer: safeLayer(target) });
+  return result;
+}
+
+function layerMotionPolicy(id, policy) {
+  const engine = requireEngine();
+  const target = engine.layers.find((layer) => layer.id === id);
+  if (!target) throw new Error('DOMISTIKA_SDK_LAYER_NOT_FOUND');
+  if (typeof engine.setLayerMotionPolicy !== 'function') throw new Error('DOMISTIKA_SDK_LAYER_MOTION_POLICY_UNAVAILABLE');
+  const result = engine.setLayerMotionPolicy(id, policy);
+  emit('sdk-layer', { action: 'motion-policy', layer: safeLayer(target) });
   return result;
 }
 
@@ -747,11 +758,32 @@ registerSdkCommand('layer.role.type', {
 }, async () => layerRole(requireEngine().activeLayerId, 'type'));
 
 registerSdkCommand('layer.role.motion-ignore', {
-  label: 'Exclude Active Layer from Motion',
+  label: 'Exclude Active Layer from Motion · Legacy Alias',
   category: 'Layers',
-  description: 'Keep the active layer static above Kinetic Motion.',
-  keywords: ['layer', 'role', 'motion', 'ignore', 'static', 'title'],
-}, async () => layerRole(requireEngine().activeLayerId, 'motion-ignore'));
+  description: 'Compatibility alias. Sets motionPolicy=ignore without replacing the semantic layer role.',
+  keywords: ['layer', 'legacy', 'motion', 'ignore', 'static', 'title'],
+}, async () => layerMotionPolicy(requireEngine().activeLayerId, 'ignore'));
+
+registerSdkCommand('layer.motion.ignore', {
+  label: 'Layer Motion · Ignore',
+  category: 'Layers',
+  description: 'Keep the active layer static while preserving its semantic role.',
+  keywords: ['layer', 'motion', 'ignore', 'static', 'title'],
+}, async () => layerMotionPolicy(requireEngine().activeLayerId, 'ignore'));
+
+registerSdkCommand('layer.motion.animate', {
+  label: 'Layer Motion · Animate',
+  category: 'Layers',
+  description: 'Explicitly include the active layer in Kinetic Motion.',
+  keywords: ['layer', 'motion', 'animate', 'include'],
+}, async () => layerMotionPolicy(requireEngine().activeLayerId, 'animate'));
+
+registerSdkCommand('layer.motion.inherit', {
+  label: 'Layer Motion · Inherit',
+  category: 'Layers',
+  description: 'Return the active layer to the default motion policy.',
+  keywords: ['layer', 'motion', 'inherit', 'default'],
+}, async () => layerMotionPolicy(requireEngine().activeLayerId, 'inherit'));
 
 
 for (const [tool, label, shortcut] of [
@@ -1029,7 +1061,8 @@ function capabilities() {
     drawTools: Object.freeze([...DRAW_TOOLS]),
     commands: commandList(),
     commandCatalog: commandCatalog(),
-    layerRoles: Object.freeze(['paint', 'guide', 'type', 'motion-ignore']),
+    layerRoles: Object.freeze(['paint', 'guide', 'type']),
+    motionPolicies: Object.freeze(['inherit', 'animate', 'ignore']),
     playground: playgroundState(),
     spiro: Object.freeze({
       available: Boolean(spiro),
@@ -1135,8 +1168,10 @@ if (!window[INSTALL_FLAG]) {
       opacity: layerOpacity,
       blend: layerBlend,
       role: layerRole,
+      motionPolicy: layerMotionPolicy,
       clear: layerClear,
-      roles: () => Object.freeze(['paint', 'guide', 'type', 'motion-ignore']),
+      roles: () => Object.freeze(['paint', 'guide', 'type']),
+      motionPolicies: () => Object.freeze(['inherit', 'animate', 'ignore']),
     },
 
     spiro: {

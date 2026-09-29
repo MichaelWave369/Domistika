@@ -18,14 +18,15 @@ function fakeApi() {
     ready: () => true,
     capabilities: () => ({
       schema: 'domistika.sdk.v1',
-      sdkVersion: '0.1.8',
-      appVersion: '0.9.30',
+      sdkVersion: '0.1.9',
+      appVersion: '0.9.31',
       ready: true,
       tools: ['ink', 'fill'],
       drawTools: ['ink'],
       commands: commands.map((command) => command.id),
       commandCatalog: commands,
-      layerRoles: ['paint', 'guide', 'type', 'motion-ignore'],
+      layerRoles: ['paint', 'guide', 'type'],
+      motionPolicies: ['inherit', 'animate', 'ignore'],
       spiro: { available: true, presets: ['flower'] },
       colors: { available: true, current: '#112233', gradients: 10 },
       motion: { available: true, presets: ['portal-369'], clips: { available: true, count: 1 } },
@@ -43,6 +44,7 @@ function fakeApi() {
     layers: {
       list: () => [{ id: 'layer-1', name: 'Ink', role: 'paint' }],
       role: (id, role) => { calls.push(['role', id, role]); return role; },
+      motionPolicy: (id, policy) => { calls.push(['motion-policy', id, policy]); return policy; },
     },
     motion: { state: () => ({ playing: false }) },
     playground: { state: () => ({ available: true, running: false, canRestore: true }) },
@@ -67,13 +69,13 @@ function fakeApi() {
   };
 }
 
-assert.equal(VERSION, '0.1.1');
+assert.equal(VERSION, '0.1.2');
 assert.equal(SCHEMA, 'domistika.site-tools.v1');
 
 const api = fakeApi();
 const tools = createDomistikaSiteTools(api);
 assert.equal(Object.isFrozen(tools), true);
-assert.equal(tools.length, 10);
+assert.equal(tools.length, 11);
 assert.deepEqual(tools.map((tool) => tool.name), [
   'domistika_get_capabilities',
   'domistika_search_commands',
@@ -83,6 +85,7 @@ assert.deepEqual(tools.map((tool) => tool.name), [
   'domistika_apply_gradient',
   'domistika_place_spiro',
   'domistika_set_layer_role',
+  'domistika_set_layer_motion_policy',
   'domistika_transfer_to_auralith',
   'domistika_execute_command',
 ]);
@@ -131,8 +134,12 @@ await spiro.execute({ preset: 'flower', x: 0.5, y: 0.5 });
 assert.deepEqual(api.calls.at(-1), ['spiro', 'flower', 0.5, 0.5]);
 
 const role = tools.find((tool) => tool.name === 'domistika_set_layer_role');
-await role.execute({ layerId: 'layer-1', role: 'motion-ignore' });
-assert.deepEqual(api.calls.at(-1), ['role', 'layer-1', 'motion-ignore']);
+await role.execute({ layerId: 'layer-1', role: 'type' });
+assert.deepEqual(api.calls.at(-1), ['role', 'layer-1', 'type']);
+
+const motionPolicy = tools.find((tool) => tool.name === 'domistika_set_layer_motion_policy');
+await motionPolicy.execute({ layerId: 'layer-1', motionPolicy: 'ignore' });
+assert.deepEqual(api.calls.at(-1), ['motion-policy', 'layer-1', 'ignore']);
 
 const transfer = tools.find((tool) => tool.name === 'domistika_transfer_to_auralith');
 const transferResult = JSON.parse(await transfer.execute({}));
@@ -158,8 +165,8 @@ const modelContext = {
 };
 const installed = await installDomistikaSiteTools({ api: fakeApi(), modelContext });
 assert.equal(installed.available, true);
-assert.equal(installed.registered.length, 10);
-assert.equal(registered.length, 10);
+assert.equal(installed.registered.length, 11);
+assert.equal(registered.length, 11);
 
 const source = fs.readFileSync(new URL('../src/DomistikaSiteToolsV0929.js', import.meta.url), 'utf8');
 assert.match(source, /document/);
@@ -172,4 +179,4 @@ assert.doesNotMatch(source, /new Function\s*\(/);
 assert.doesNotMatch(source, /\bfetch\s*\(/);
 assert.doesNotMatch(source, /CanvasRenderingContext2D/);
 
-console.log('v0.9.30 WebMCP site-tools compatibility checks passed');
+console.log('v0.9.31 WebMCP site-tools compatibility checks passed');

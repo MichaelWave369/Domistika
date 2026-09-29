@@ -11,7 +11,7 @@ assert.ok(Number(pkg.version.split('.')[2]) >= 26);
 const appVersion=/APP_VERSION = '(\d+)\.(\d+)\.(\d+)'/.exec(sdk);
 assert.ok(appVersion);
 assert.ok(Number(appVersion[1])>0||Number(appVersion[2])>9||(Number(appVersion[2])===9&&Number(appVersion[3])>=25));
-assert.match(sdk,/SDK_VERSION = '0\.1\.8'/);
+assert.match(sdk,/SDK_VERSION = '0\.1\.9'/);
 assert.match(sdk,/function liveToolIds\(\)/);
 assert.match(sdk,/domistikaFillV091/);
 assert.match(sdk,/domistikaSelectionV04/);

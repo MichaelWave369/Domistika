@@ -49,7 +49,7 @@ if (!window[INSTALL_FLAG]) {
       .kinetic-actions{display:grid;grid-template-columns:1fr 1fr;gap:7px}.kinetic-btn{padding:9px}.kinetic-btn.primary{background:rgba(255,191,105,.15);border-color:rgba(255,191,105,.4)}.kinetic-btn.active{background:rgba(127,90,240,.16)}
       .kinetic-live{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:9px 10px;border:1px solid var(--line);border-radius:12px;background:rgba(127,90,240,.07)}.kinetic-live strong{font-size:11px}.kinetic-live span{font-size:10px;color:var(--muted)}
       .kinetic-note{margin:0;font-size:10px;line-height:1.5;color:var(--muted)}
-      .kinetic-stage{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden;transform-origin:50% 50%}.kinetic-band{position:absolute;inset:0;width:100%;height:100%;transform-origin:50% 50%;will-change:transform}.artboard.kinetic-previewing .paint-layer{visibility:hidden}.artboard.kinetic-previewing .paint-layer[data-layer-role="motion-ignore"]{visibility:visible;z-index:7}
+      .kinetic-stage{position:absolute;inset:0;z-index:6;pointer-events:none;overflow:hidden;transform-origin:50% 50%}.kinetic-band{position:absolute;inset:0;width:100%;height:100%;transform-origin:50% 50%;will-change:transform}.artboard.kinetic-previewing .paint-layer{visibility:hidden}.artboard.kinetic-previewing .paint-layer[data-motion-policy="ignore"]{visibility:visible;z-index:7}
       .artboard.kinetic-previewing .paper-background{z-index:0}.artboard.kinetic-previewing .kinetic-stage{display:block}
       @media(max-width:900px){.kinetic-grid,.kinetic-actions{grid-template-columns:1fr}}
     `;
@@ -126,7 +126,11 @@ if (!window[INSTALL_FLAG]) {
     if (!active) return false;
     ensureStage();
     sizeStage();
-    motion.source = active.compositeCanvas(false, '#ffffff', { excludeRoles: ['motion-ignore'] });
+    motion.source = active.compositeCanvas(false, '#ffffff', {
+      excludeLayerIds: active.layers
+        .filter((layer) => layer.motionPolicy === 'ignore')
+        .map((layer) => layer.id),
+    });
 
     if (motion.mode === 'whole') {
       drawClippedBand(motion.canvases.center, motion.source, 'center');
