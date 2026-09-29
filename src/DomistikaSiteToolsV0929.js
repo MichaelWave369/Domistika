@@ -1,4 +1,4 @@
-const VERSION = '0.1.1';
+const VERSION = '0.1.2';
 const SCHEMA = 'domistika.site-tools.v1';
 const INSTALL_FLAG = '__domistikaWebMcpSiteToolsV0929Installed';
 const MAX_SEARCH_RESULTS = 20;
@@ -269,12 +269,12 @@ function makeTools(api) {
     {
       name: 'domistika_set_layer_role',
       title: 'Set Domistika layer role',
-      description: 'Assign a semantic role to an existing Domistika layer. motion-ignore keeps that layer static above Kinetic Motion.',
+      description: 'Assign a semantic role to an existing Domistika layer. Motion behavior is controlled separately through motionPolicy.',
       inputSchema: {
         type: 'object',
         properties: {
           layerId: { type: 'string', minLength: 1, maxLength: 160 },
-          role: { type: 'string', enum: ['paint', 'guide', 'type', 'motion-ignore'] },
+          role: { type: 'string', enum: ['paint', 'guide', 'type'] },
         },
         required: ['layerId', 'role'],
         additionalProperties: false,
@@ -284,6 +284,27 @@ function makeTools(api) {
         requireReady(api);
         const result = api.layers.role(cleanString(layerId, 160), role);
         return ok({ layerId, role: result });
+      },
+    },
+    {
+      name: 'domistika_set_layer_motion_policy',
+      title: 'Set Domistika layer motion policy',
+      description: 'Control whether an existing layer participates in Kinetic Motion without changing its semantic role.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          layerId: { type: 'string', minLength: 1, maxLength: 160 },
+          motionPolicy: { type: 'string', enum: ['inherit', 'animate', 'ignore'] },
+        },
+        required: ['layerId', 'motionPolicy'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false, consequentialHint: false },
+      execute: async ({ layerId, motionPolicy }) => {
+        requireReady(api);
+        if (!api.layers?.motionPolicy) throw new Error('DOMISTIKA_SITE_TOOLS_MOTION_POLICY_UNAVAILABLE');
+        const result = api.layers.motionPolicy(cleanString(layerId, 160), motionPolicy);
+        return ok({ layerId, motionPolicy: result });
       },
     },
     {
