@@ -179,29 +179,47 @@ function identity(point) {
   return { ...point };
 }
 
+function pointInRect(point, rect) {
+  const x = finite(point?.x);
+  const y = finite(point?.y);
+  return x >= rect.x0 && x <= rect.x1 && y >= rect.y0 && y <= rect.y1;
+}
+
+function cross(a, b, c) {
+  return (finite(b?.x) - finite(a?.x)) * (finite(c?.y) - finite(a?.y))
+    - (finite(b?.y) - finite(a?.y)) * (finite(c?.x) - finite(a?.x));
+}
+
+function between(value, a, b) {
+  return value >= Math.min(a, b) - 1e-9 && value <= Math.max(a, b) + 1e-9;
+}
+
+function onSegment(a, b, point) {
+  return Math.abs(cross(a, b, point)) <= 1e-9
+    && between(finite(point?.x), finite(a?.x), finite(b?.x))
+    && between(finite(point?.y), finite(a?.y), finite(b?.y));
+}
+
+function segmentsIntersect(a, b, c, d) {
+  const abC = cross(a, b, c);
+  const abD = cross(a, b, d);
+  const cdA = cross(c, d, a);
+  const cdB = cross(c, d, b);
+  if (((abC > 0 && abD < 0) || (abC < 0 && abD > 0))
+    && ((cdA > 0 && cdB < 0) || (cdA < 0 && cdB > 0))) return true;
+  return onSegment(a, b, c) || onSegment(a, b, d) || onSegment(c, d, a) || onSegment(c, d, b);
+}
+
 function segmentIntersectsRect(from, to, rect) {
-  const dx = finite(to?.x) - finite(from?.x);
-  const dy = finite(to?.y) - finite(from?.y);
-  const p = [-dx, dx, -dy, dy];
-  const q = [
-    finite(from?.x) - rect.x0,
-    rect.x1 - finite(from?.x),
-    finite(from?.y) - rect.y0,
-    rect.y1 - finite(from?.y),
-  ];
-  let u0 = 0;
-  let u1 = 1;
-  for (let index = 0; index < 4; index += 1) {
-    if (p[index] === 0) {
-      if (q[index] < 0) return false;
-      continue;
-    }
-    const ratio = q[index] / p[index];
-    if (p[index] < 0) u0 = Math.max(u0, ratio);
-    else u1 = Math.min(u1, ratio);
-    if (u0 > u1) return false;
-  }
-  return true;
+  if (pointInRect(from, rect) || pointInRect(to, rect)) return true;
+  const topLeft = { x: rect.x0, y: rect.y0 };
+  const topRight = { x: rect.x1, y: rect.y0 };
+  const bottomRight = { x: rect.x1, y: rect.y1 };
+  const bottomLeft = { x: rect.x0, y: rect.y1 };
+  return segmentsIntersect(from, to, topLeft, topRight)
+    || segmentsIntersect(from, to, topRight, bottomRight)
+    || segmentsIntersect(from, to, bottomRight, bottomLeft)
+    || segmentsIntersect(from, to, bottomLeft, topLeft);
 }
 
 function rectForGeometry(geometry, width, height) {
