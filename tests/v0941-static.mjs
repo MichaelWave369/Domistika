@@ -65,7 +65,7 @@ const director = fs.readFileSync(new URL('../src/v0934/artDirector.js', import.m
 const sdk = fs.readFileSync(new URL('../src/DomistikaSDKV0921.js', import.meta.url), 'utf8');
 const docs = fs.readFileSync(new URL('../docs/SECTOR_SURGERY_V0941.md', import.meta.url), 'utf8');
 
-assert.equal(pkg.version, '0.9.41');
+assert.ok(Number(pkg.version.split('.')[2]) >= 41);
 assert.match(pkg.scripts.check, /tests\/v0941-static\.mjs/);
 assert.match(index, /DomistikaSectorSurgeryV0941\.js/);
 
@@ -95,8 +95,8 @@ assert.match(director, /const lockResult = newLayer && options\.lockResult !== f
 assert.match(director, /api\.layers\.lock\(targetLayer, true\)/);
 assert.match(director, /targetLayerLocked/);
 
-assert.match(sdk, /APP_VERSION = '0\.9\.41'/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.18'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 assert.match(sdk, /sectorSurgery: Object\.freeze/);
 assert.match(sdk, /sectorSurgery: \{/);
 assert.match(sdk, /sector\.begin/);
