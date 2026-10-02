@@ -51,6 +51,8 @@ function safeLayer(layer) {
     blendMode: String(layer.blendMode || 'normal'),
     role: String(layer.role || (layer.kind === 'guide' ? 'guide' : 'paint')),
     motionPolicy: String(layer.motionPolicy || 'inherit'),
+    locked: layer.locked === true,
+    groupId: layer.groupId || null,
   });
 }
 
@@ -214,6 +216,7 @@ function stroke(points, options = {}) {
 
   if (!DRAW_TOOLS.has(engine.tool)) throw new Error('DOMISTIKA_SDK_STROKE_TOOL_NOT_DRAWABLE');
   if (!engine.activeLayer) throw new Error('DOMISTIKA_SDK_ACTIVE_LAYER_REQUIRED');
+  if (engine.activeLayer.locked === true) throw new Error('DOMISTIKA_SDK_LAYER_LOCKED');
 
   const space = options.space || 'canvas';
   const normalized = points.map((point) => normalizePoint(point, engine, space));
@@ -348,6 +351,9 @@ function layerBlend(id, blendMode) {
 
 function layerClear(id = requireEngine().activeLayerId) {
   const engine = requireEngine();
+  const target = engine.layers.find((layer) => layer.id === id);
+  if (!target) throw new Error('DOMISTIKA_SDK_LAYER_NOT_FOUND');
+  if (target.locked === true) throw new Error('DOMISTIKA_SDK_LAYER_LOCKED');
   layerActivate(id);
   engine.clearActiveLayer();
   emit('sdk-layer', { action: 'clear', layerId: id });
@@ -371,6 +377,67 @@ function layerMotionPolicy(id, policy) {
   const result = engine.setLayerMotionPolicy(id, policy);
   emit('sdk-layer', { action: 'motion-policy', layer: safeLayer(target) });
   return result;
+}
+
+
+function layerLock(id, locked = true) {
+  const engine = requireEngine();
+  const target = engine.layers.find((layer) => layer.id === id);
+  if (!target) throw new Error('DOMISTIKA_SDK_LAYER_NOT_FOUND');
+  if (typeof engine.setLayerLocked !== 'function') throw new Error('DOMISTIKA_SDK_LAYER_LOCK_UNAVAILABLE');
+  engine.setLayerLocked(id, Boolean(locked));
+  emit('sdk-layer', { action: locked ? 'lock' : 'unlock', layer: safeLayer(target) });
+  return safeLayer(target);
+}
+
+function layerGroupList() {
+  const engine = requireEngine();
+  return Object.freeze((engine.layerGroups || []).map((group) => Object.freeze({
+    id: String(group.id || ''),
+    name: String(group.name || ''),
+  })));
+}
+
+function layerGroupCreate(name) {
+  const engine = requireEngine();
+  if (typeof engine.createLayerGroup !== 'function') throw new Error('DOMISTIKA_SDK_LAYER_GROUP_UNAVAILABLE');
+  const group = engine.createLayerGroup(String(name || '').trim().slice(0, 120));
+  emit('sdk-layer-group', { action: 'create', group: { id: group.id, name: group.name } });
+  return Object.freeze({ id: group.id, name: group.name });
+}
+
+function layerGroupRename(id, name) {
+  const engine = requireEngine();
+  const group = engine.renameLayerGroup?.(id, String(name || '').trim().slice(0, 120));
+  if (!group) throw new Error('DOMISTIKA_SDK_LAYER_GROUP_NOT_FOUND');
+  emit('sdk-layer-group', { action: 'rename', group: { id: group.id, name: group.name } });
+  return Object.freeze({ id: group.id, name: group.name });
+}
+
+function layerGroupDelete(id) {
+  const engine = requireEngine();
+  if (!engine.deleteLayerGroup?.(id)) throw new Error('DOMISTIKA_SDK_LAYER_GROUP_NOT_FOUND');
+  emit('sdk-layer-group', { action: 'delete', groupId: id });
+  return true;
+}
+
+function layerGroupAssign(layerId, groupId = null) {
+  const engine = requireEngine();
+  const target = engine.layers.find((layer) => layer.id === layerId);
+  if (!target) throw new Error('DOMISTIKA_SDK_LAYER_NOT_FOUND');
+  const result = engine.setLayerGroup?.(layerId, groupId);
+  if (groupId && !result) throw new Error('DOMISTIKA_SDK_LAYER_GROUP_NOT_FOUND');
+  emit('sdk-layer', { action: 'group', layer: safeLayer(target) });
+  return safeLayer(target);
+}
+
+async function layerMergeDown(id = requireEngine().activeLayerId) {
+  const engine = requireEngine();
+  layerActivate(id);
+  const ok = await engine.mergeActiveLayerDown?.();
+  if (!ok) throw new Error('DOMISTIKA_SDK_LAYER_MERGE_DOWN_REJECTED');
+  emit('sdk-layer', { action: 'merge-down', layerId: engine.activeLayerId });
+  return safeLayer(engine.activeLayer);
 }
 
 
@@ -1366,7 +1433,16 @@ if (!window[INSTALL_FLAG]) {
       blend: layerBlend,
       role: layerRole,
       motionPolicy: layerMotionPolicy,
+      lock: layerLock,
       clear: layerClear,
+      mergeDown: layerMergeDown,
+      groups: {
+        list: layerGroupList,
+        create: layerGroupCreate,
+        rename: layerGroupRename,
+        delete: layerGroupDelete,
+        assign: layerGroupAssign,
+      },
       roles: () => Object.freeze(['paint', 'guide', 'type']),
       motionPolicies: () => Object.freeze(['inherit', 'animate', 'ignore']),
     },
