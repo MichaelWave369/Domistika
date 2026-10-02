@@ -251,6 +251,9 @@ export function beginSectorSurgery(point) {
   if (!source || source.kind === 'guide' || source.role !== 'paint') {
     throw new Error('DOMISTIKA_SECTOR_SURGERY_PAINT_SOURCE_REQUIRED');
   }
+  if (source.visible === false) {
+    throw new Error('DOMISTIKA_SECTOR_SURGERY_VISIBLE_SOURCE_REQUIRED');
+  }
 
   const sourceWasLocked = source.locked === true;
   const sourceWasVisible = source.visible !== false;
