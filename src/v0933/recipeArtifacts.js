@@ -172,7 +172,7 @@ export async function drawRecipeArtifact(options = {}, apiInput = null) {
       opacity: stroke.opacity,
       smoothing: stroke.smoothing,
       space: 'normalized',
-      history: !spec.freshCanvas && !spec.clearFirst && index === 0,
+      history: !spec.clearFirst && index === 0,
       message: `Recipe artifact · ${spec.label} · stroke ${index + 1}/${spec.strokes.length}`,
     }));
   }
