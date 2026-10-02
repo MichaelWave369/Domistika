@@ -6,12 +6,14 @@ import {
   SCHEMA,
   describeSectorTarget,
   rotationForSectorCopy,
+  sectorAngles,
 } from './sectorSurgery.js';
 
 const originalDrawSegment = CanvasEngine.prototype.drawSegment;
 const originalCommitShape = CanvasEngine.prototype.commitShape;
 const originalPointerDown = CanvasEngine.prototype.pointerDown;
 const originalRedrawOverlay = CanvasEngine.prototype.redrawOverlay;
+const originalClearActiveLayer = CanvasEngine.prototype.clearActiveLayer;
 
 let lastReceipt = null;
 
@@ -88,15 +90,16 @@ function traceGeometry(ctx, geometry, width, height) {
   return false;
 }
 
-function clipSectorRegion(engine, state, ctx = surgeryLayer(engine, state)?.ctx) {
+function clipSectorRegion(engine, state, ctx = surgeryLayer(engine, state)?.ctx, sectorIndex = state?.sectorIndex) {
   if (!engine || !state || !ctx) return false;
   const cx = engine.width / 2;
   const cy = engine.height / 2;
   const radius = Math.hypot(engine.width, engine.height) * 1.25;
+  const angles = sectorAngles(sectorIndex, state.sectorCount);
 
   ctx.beginPath();
   ctx.moveTo(cx, cy);
-  ctx.arc(cx, cy, radius, state.startAngle, state.endAngle, false);
+  ctx.arc(cx, cy, radius, angles.start, angles.end, false);
   ctx.closePath();
   ctx.clip();
 
@@ -151,6 +154,21 @@ CanvasEngine.prototype.pointerDown = function pointerDownV0941(event) {
     return;
   }
   return originalPointerDown.call(this, event);
+};
+
+CanvasEngine.prototype.clearActiveLayer = function clearActiveLayerV0941() {
+  const state = activeState(this);
+  if (!state || this.activeLayerId !== state.repairLayerId) {
+    return originalClearActiveLayer.call(this);
+  }
+  const layer = surgeryLayer(this, state);
+  if (!layer || layer.locked === true) return false;
+  this.captureHistory();
+  withSurgeryClip(this, state, (_target, ctx) => {
+    ctx.clearRect(0, 0, this.width, this.height);
+  });
+  this.markChanged('Sector repair cleared');
+  return true;
 };
 
 function drawSurgeryOverlay(engine) {
@@ -230,11 +248,12 @@ export function beginSectorSurgery(point) {
   if (!target) throw new Error('DOMISTIKA_SECTOR_SURGERY_RADIAL_REGION_REQUIRED');
 
   const source = engine.activeLayer;
-  if (!source || source.kind === 'guide' || source.role === 'guide') {
+  if (!source || source.kind === 'guide' || source.role !== 'paint') {
     throw new Error('DOMISTIKA_SECTOR_SURGERY_PAINT_SOURCE_REQUIRED');
   }
 
   const sourceWasLocked = source.locked === true;
+  const sourceWasVisible = source.visible !== false;
   if (!sourceWasLocked) engine.setLayerLocked(source.id, true);
 
   const repair = engine.createLayer(
@@ -242,6 +261,9 @@ export function beginSectorSurgery(point) {
     {
       role: 'paint',
       motionPolicy: source.motionPolicy || 'inherit',
+      opacity: Number(source.opacity ?? 1),
+      blendMode: source.blendMode || 'normal',
+      visible: true,
       locked: false,
       groupId: source.groupId || null,
       semanticOverlays: [{
@@ -256,6 +278,8 @@ export function beginSectorSurgery(point) {
       }],
     },
   );
+  repair.ctx.drawImage(source.canvas, 0, 0);
+  engine.setLayerVisibility(source.id, false);
 
   const state = {
     schema: SCHEMA,
@@ -272,6 +296,7 @@ export function beginSectorSurgery(point) {
     endAngle: target.endAngle,
     sourceLayerId: source.id,
     sourceWasLocked,
+    sourceWasVisible,
     repairLayerId: repair.id,
     startedAt: new Date().toISOString(),
   };
@@ -294,18 +319,30 @@ export function refoldSectorSurgery() {
 
   engine.setActiveLayer(repair.id);
   engine.captureHistory();
-  const source = engine.copyCanvas(repair.canvas);
-  repair.ctx.clearRect(0, 0, engine.width, engine.height);
+
+  const sectorSource = document.createElement('canvas');
+  sectorSource.width = engine.width;
+  sectorSource.height = engine.height;
+  const sectorCtx = sectorSource.getContext('2d');
+  sectorCtx.save();
+  clipSectorRegion(engine, state, sectorCtx, state.sectorIndex);
+  sectorCtx.drawImage(repair.canvas, 0, 0);
+  sectorCtx.restore();
 
   const cx = engine.width / 2;
   const cy = engine.height / 2;
   for (let targetIndex = 0; targetIndex < state.sectorCount; targetIndex += 1) {
+    repair.ctx.save();
+    clipSectorRegion(engine, state, repair.ctx, targetIndex);
+    repair.ctx.clearRect(0, 0, engine.width, engine.height);
+    repair.ctx.restore();
+
     const rotation = rotationForSectorCopy(state.sectorIndex, targetIndex, state.sectorCount);
     repair.ctx.save();
     repair.ctx.translate(cx, cy);
     repair.ctx.rotate(rotation);
     repair.ctx.translate(-cx, -cy);
-    repair.ctx.drawImage(source, 0, 0);
+    repair.ctx.drawImage(sectorSource, 0, 0);
     repair.ctx.restore();
   }
 
@@ -356,14 +393,20 @@ export function cancelSectorSurgery() {
     if (index >= 0) engine.layers.splice(index, 1);
     repair.canvas.remove();
   }
-  if (source && !state.sourceWasLocked) engine.setLayerLocked(source.id, false);
+  if (source) {
+    engine.setLayerVisibility(source.id, state.sourceWasVisible !== false);
+    if (!state.sourceWasLocked) engine.setLayerLocked(source.id, false);
+  }
   engine.settings.sectorSurgery = null;
   if (source) engine.setActiveLayer(source.id);
   engine.syncLayerDomOrder();
   engine.redrawOverlay();
   engine.markChanged('Sector surgery cancelled');
 
-  lastReceipt = stateReceipt(state, 'cancel', { sourceLockRestored: !state.sourceWasLocked });
+  lastReceipt = stateReceipt(state, 'cancel', {
+    sourceLockRestored: !state.sourceWasLocked,
+    sourceVisibilityRestored: true,
+  });
   emit('cancel', { receipt: lastReceipt });
   return true;
 }
