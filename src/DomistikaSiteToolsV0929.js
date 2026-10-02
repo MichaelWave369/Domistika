@@ -1,4 +1,4 @@
-const VERSION = '0.1.3';
+const VERSION = '0.1.4';
 const SCHEMA = 'domistika.site-tools.v1';
 const INSTALL_FLAG = '__domistikaWebMcpSiteToolsV0929Installed';
 const MAX_SEARCH_RESULTS = 20;
@@ -287,6 +287,293 @@ function makeTools(api) {
 
         const result = await api.art.drawRecipeArtifact(request);
         return ok({ result });
+      },
+    },
+    {
+      name: 'domistika_direct_art',
+      title: 'Direct a Domistika artwork',
+      description: 'Turn high-level visual intent into a deterministic Domistika art plan, then render it through Symmetry Recipes and Recipe Artifacts. Set previewOnly to inspect the plan without changing the canvas.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string', maxLength: 500 },
+          mood: { type: 'string', maxLength: 160 },
+          symmetry: { type: 'string', enum: ['auto', 'mandala', 'kaleido', 'gear', 'vortex', 'counterspin', 'portal', 'flower', 'fracture'], default: 'auto' },
+          palette: { type: 'string', enum: ['auto', 'electric-dusk', 'solar-forge', 'biolume', 'moon-glass', 'prismatica', 'signal-break', 'orbital'], default: 'auto' },
+          colors: {
+            type: 'array',
+            minItems: 2,
+            maxItems: 8,
+            items: { type: 'string', pattern: '^#[0-9a-fA-F]{6}
+      title: 'Set Domistika drawing color',
+      description: 'Set the live Domistika drawing color using a six-digit HEX value. This changes the active drawing setting but does not paint by itself.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          color: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' },
+        },
+        required: ['color'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false, consequentialHint: false },
+      execute: async ({ color }) => {
+        requireReady(api);
+        const result = api.colors.set(String(color).toLowerCase());
+        return ok({ color: result });
+      },
+    },
+    {
+      name: 'domistika_apply_gradient',
+      title: 'Apply Domistika gradient',
+      description: 'Apply one of Domistika Color Studio’s real gradient presets to the active layer. Mode behind preserves existing painted pixels; replace replaces the active layer.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          gradientId: { type: 'string', minLength: 1, maxLength: 80 },
+          mode: { type: 'string', enum: ['behind', 'replace'], default: 'behind' },
+        },
+        required: ['gradientId'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false, consequentialHint: false },
+      execute: async ({ gradientId, mode = 'behind' }) => {
+        requireReady(api);
+        const result = api.colors.applyGradient(cleanString(gradientId, 80), { mode });
+        return ok({ result });
+      },
+    },
+    {
+      name: 'domistika_place_spiro',
+      title: 'Place Domistika Spiro form',
+      description: 'Place a bounded Spiro preset through Domistika’s stable SDK on the active layer.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          preset: { type: 'string', minLength: 1, maxLength: 80 },
+          x: { type: 'number' },
+          y: { type: 'number' },
+          space: { type: 'string', enum: ['normalized', 'canvas'], default: 'normalized' },
+          lineWidth: { type: 'number', minimum: 1, maximum: 80 },
+          opacity: { type: 'number', minimum: 0.01, maximum: 1 },
+          scale: { type: 'number', minimum: 0.05, maximum: 8 },
+          rotation: { type: 'number', minimum: -3600, maximum: 3600 },
+        },
+        required: ['preset', 'x', 'y'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false, consequentialHint: false },
+      execute: async (input) => {
+        requireReady(api);
+        const options = {
+          x: Number(input.x),
+          y: Number(input.y),
+          space: input.space || 'normalized',
+        };
+        for (const key of ['lineWidth', 'opacity', 'scale', 'rotation']) {
+          if (input[key] != null) options[key] = Number(input[key]);
+        }
+        const result = api.spiro.place(cleanString(input.preset, 80), options);
+        return ok({ result });
+      },
+    },
+    {
+      name: 'domistika_set_layer_role',
+      title: 'Set Domistika layer role',
+      description: 'Assign a semantic role to an existing Domistika layer. Motion behavior is controlled separately through motionPolicy.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          layerId: { type: 'string', minLength: 1, maxLength: 160 },
+          role: { type: 'string', enum: ['paint', 'guide', 'type'] },
+        },
+        required: ['layerId', 'role'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false, consequentialHint: false },
+      execute: async ({ layerId, role }) => {
+        requireReady(api);
+        const result = api.layers.role(cleanString(layerId, 160), role);
+        return ok({ layerId, role: result });
+      },
+    },
+    {
+      name: 'domistika_set_layer_motion_policy',
+      title: 'Set Domistika layer motion policy',
+      description: 'Control whether an existing layer participates in Kinetic Motion without changing its semantic role.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          layerId: { type: 'string', minLength: 1, maxLength: 160 },
+          motionPolicy: { type: 'string', enum: ['inherit', 'animate', 'ignore'] },
+        },
+        required: ['layerId', 'motionPolicy'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false, consequentialHint: false },
+      execute: async ({ layerId, motionPolicy }) => {
+        requireReady(api);
+        if (!api.layers?.motionPolicy) throw new Error('DOMISTIKA_SITE_TOOLS_MOTION_POLICY_UNAVAILABLE');
+        const result = api.layers.motionPolicy(cleanString(layerId, 160), motionPolicy);
+        return ok({ layerId, motionPolicy: result });
+      },
+    },
+    {
+      name: 'domistika_transfer_to_auralith',
+      title: 'Transfer artwork to Auralith',
+      description: 'Create and store a hash-bound Creative Bridge v2 package for Auralith369. Protected type and semantic overlay layers are separated from the graded base artwork.',
+      inputSchema: { type: 'object', properties: {}, additionalProperties: false },
+      annotations: { readOnlyHint: false, untrustedContentHint: false, consequentialHint: false },
+      execute: async () => {
+        requireReady(api);
+        if (!api.bridge?.auralith?.transfer) throw new Error('DOMISTIKA_SITE_TOOLS_AURALITH_BRIDGE_UNAVAILABLE');
+        const result = await api.bridge.auralith.transfer();
+        return ok({ transfer: result });
+      },
+    },
+    {
+      name: 'domistika_execute_command',
+      title: 'Execute Domistika semantic command',
+      description: 'Execute one command from Domistika.commands. Search first when the command ID is unknown. Commands are bounded application actions, not arbitrary JavaScript.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          commandId: { type: 'string', minLength: 1, maxLength: 180 },
+          args: { type: 'object', additionalProperties: true, default: {} },
+        },
+        required: ['commandId'],
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false, consequentialHint: false },
+      execute: async ({ commandId, args = {} }, { signal } = {}) => {
+        requireReady(api);
+        if (signal?.aborted) throw new DOMException('Tool execution cancelled', 'AbortError');
+        const id = cleanString(commandId, 180);
+        if (!api.commands.list().includes(id)) throw new Error('DOMISTIKA_SITE_TOOLS_COMMAND_UNKNOWN');
+        const result = await api.commands.execute(id, args && typeof args === 'object' ? args : {});
+        return ok({ commandId: id, result });
+      },
+    },
+  ];
+}
+
+async function registerTools(modelContext, tools, controller) {
+  const registered = [];
+  for (const tool of tools) {
+    await modelContext.registerTool(tool, { signal: controller.signal });
+    registered.push(tool.name);
+  }
+  return registered;
+}
+
+export function createDomistikaSiteTools(api = globalThis.window?.Domistika) {
+  return freeze(makeTools(requireApi(api)));
+}
+
+export async function installDomistikaSiteTools({
+  api = globalThis.window?.Domistika,
+  modelContext = modelContextFor(),
+} = {}) {
+  const stable = requireApi(api);
+  if (!modelContext?.registerTool) {
+    return freeze({
+      version: VERSION,
+      schema: SCHEMA,
+      available: false,
+      registered: Object.freeze([]),
+      reason: 'WebMCP modelContext unavailable in this browser',
+    });
+  }
+
+  const controller = new AbortController();
+  const tools = makeTools(stable);
+  const registered = await registerTools(modelContext, tools, controller);
+  const state = {
+    version: VERSION,
+    schema: SCHEMA,
+    available: true,
+    registered: Object.freeze([...registered]),
+    stop() {
+      controller.abort();
+      return true;
+    },
+  };
+  return freeze(state);
+}
+
+async function autoInstall() {
+  if (typeof window === 'undefined' || typeof document === 'undefined') return;
+  if (window[INSTALL_FLAG]) return;
+  window[INSTALL_FLAG] = true;
+
+  try {
+    const state = await installDomistikaSiteTools();
+    window.domistikaSiteToolsV0929 = state;
+    window.dispatchEvent(new CustomEvent('domistika:site-tools-ready', {
+      detail: {
+        version: VERSION,
+        schema: SCHEMA,
+        available: state.available,
+        registered: [...state.registered],
+      },
+    }));
+  } catch (error) {
+    window.domistikaSiteToolsV0929 = freeze({
+      version: VERSION,
+      schema: SCHEMA,
+      available: false,
+      registered: Object.freeze([]),
+      reason: String(error?.message || error),
+    });
+    console.warn('Domistika WebMCP site tools unavailable', error);
+  }
+}
+
+autoInstall();
+
+export { VERSION, SCHEMA, MAX_SEARCH_RESULTS, MAX_STROKE_POINTS, MAX_ARTIFACT_STROKES, MAX_ARTIFACT_POINTS, modelContextFor };
+ },
+          },
+          density: { type: 'number', minimum: 0, maximum: 1 },
+          complexity: { type: 'number', minimum: 0, maximum: 1 },
+          surprise: { type: 'number', minimum: 0, maximum: 1 },
+          seed: { type: 'string', maxLength: 240 },
+          name: { type: 'string', maxLength: 120 },
+          width: { type: 'integer', minimum: 256, maximum: 4096 },
+          height: { type: 'integer', minimum: 256, maximum: 4096 },
+          freshCanvas: { type: 'boolean', default: false },
+          clearFirst: { type: 'boolean', default: false },
+          newLayer: { type: 'boolean', default: true },
+          previewOnly: { type: 'boolean', default: false },
+        },
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false, consequentialHint: false },
+      execute: async (input = {}, { signal } = {}) => {
+        requireReady(api);
+        if (signal?.aborted) throw new DOMException('Tool execution cancelled', 'AbortError');
+        if (!api.art?.direct || !api.art?.plan) throw new Error('DOMISTIKA_SITE_TOOLS_ART_DIRECTOR_UNAVAILABLE');
+
+        const request = {};
+        for (const key of ['prompt', 'mood', 'symmetry', 'palette', 'seed', 'name']) {
+          if (input[key] != null) request[key] = cleanString(input[key], key === 'prompt' ? 500 : key === 'seed' ? 240 : 160);
+        }
+        if (Array.isArray(input.colors)) request.colors = input.colors.map((color) => String(color).toLowerCase());
+        for (const key of ['density', 'complexity', 'surprise']) {
+          if (input[key] != null) request[key] = clamp(input[key], 0, 1);
+        }
+        for (const key of ['width', 'height']) {
+          if (input[key] != null) request[key] = Math.round(clamp(input[key], 256, 4096));
+        }
+        for (const key of ['freshCanvas', 'clearFirst', 'newLayer']) {
+          if (input[key] != null) request[key] = Boolean(input[key]);
+        }
+
+        if (input.previewOnly === true) {
+          return ok({ preview: true, plan: api.art.plan(request) });
+        }
+
+        const result = await api.art.direct(request);
+        return ok({ preview: false, result });
       },
     },
     {
