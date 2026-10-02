@@ -216,6 +216,14 @@ export function setDraftingGuideVisible(visible) {
   return state.visible;
 }
 
+export function snapDraftingPoints(points, engineInput = null) {
+  const engine = engineInput || getEngine();
+  const state = stateFor(engine);
+  if (!engine || !state?.snap || !Array.isArray(points) || !points.length) return points;
+  const session = beginDraftingSnap(state.guide, points[0], engine.width, engine.height);
+  return points.map((point) => snapDraftingPoint(state.guide, point, engine.width, engine.height, session));
+}
+
 export function activeDraftingGuide() {
   const engine = getEngine();
   const state = stateFor(engine);
@@ -240,6 +248,7 @@ if (typeof window !== 'undefined') {
     apply: applyDraftingGuide,
     clear: clearDraftingGuide,
     active: activeDraftingGuide,
+    snapPoints: snapDraftingPoints,
     snap: setDraftingGuideSnap,
     visible: setDraftingGuideVisible,
   });
