@@ -122,7 +122,7 @@ export async function runFieldQualification(apiInput = null) {
   setStatus('Field Qualification running · disposable project');
 
   try {
-    originalProject = await api.project.serialize({ embedMotion: false });
+    originalProject = await api.project.serialize({ embedMotion: true });
     record(checks, 'transaction.snapshot', Boolean(originalProject?.layers?.length), {
       layerCount: originalProject?.layers?.length || 0,
       name: originalProject?.name || null,
