@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.32';
-const SDK_VERSION = '0.1.9';
+const APP_VERSION = '0.9.33';
+const SDK_VERSION = '0.1.10';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -635,6 +635,20 @@ function symmetryRecipeActive() {
   return symmetryRecipeRuntime()?.active?.() || null;
 }
 
+function recipeArtifactRuntime() {
+  return window.domistikaRecipeArtifactsV0933 || null;
+}
+
+function recipeArtifactPresets() {
+  return recipeArtifactRuntime()?.presets?.() || Object.freeze([]);
+}
+
+async function drawRecipeArtifact(options = {}) {
+  const runtime = recipeArtifactRuntime();
+  if (!runtime?.draw) throw new Error('DOMISTIKA_SDK_RECIPE_ARTIFACTS_UNAVAILABLE');
+  return runtime.draw(options, window.Domistika);
+}
+
 function colorStudioRuntime() {
   return window.domistikaColorStudioV0924 || null;
 }
@@ -824,6 +838,24 @@ for (const [tool, label, shortcut] of [
     keywords: ['brush', 'draw', tool],
     shortcut,
   }, async () => setTool(tool));
+}
+
+for (const [preset, label] of [
+  ['portal-bloom', 'Portal Bloom'],
+  ['counterspin-flower', 'Counterspin Flower'],
+  ['gear-halo', 'Gear Halo'],
+  ['fracture-iris', 'Fracture Iris'],
+]) {
+  registerSdkCommand(`art.recipe.${preset}`, {
+    label: `Create Recipe Artifact · ${label}`,
+    category: 'Art',
+    description: `Create the ${label} recipe artifact on a fresh canvas.`,
+    keywords: ['art', 'recipe', 'symmetry', 'artifact', preset],
+  }, async ({ name = label, freshCanvas = true } = {}) => drawRecipeArtifact({
+    preset,
+    name,
+    freshCanvas: freshCanvas !== false,
+  }));
 }
 
 registerSdkCommand('playground.run', {
@@ -1095,6 +1127,13 @@ function capabilities() {
       presets: Object.freeze(symmetryRecipeList().map((recipe) => recipe.id)),
       active: symmetryRecipeActive(),
     }),
+    art: Object.freeze({
+      available: Boolean(recipeArtifactRuntime()?.draw),
+      version: recipeArtifactRuntime()?.version || null,
+      schema: recipeArtifactRuntime()?.schema || null,
+      recipeArtifact: Boolean(recipeArtifactRuntime()?.draw),
+      presets: Object.freeze(recipeArtifactPresets().map((preset) => preset.id)),
+    }),
     spiro: Object.freeze({
       available: Boolean(spiro),
       version: spiro?.version || '0.7',
@@ -1184,6 +1223,11 @@ if (!window[INSTALL_FLAG]) {
       apply: symmetryRecipeApply,
       applyFormula: symmetryRecipeApplyFormula,
       active: symmetryRecipeActive,
+    },
+
+    art: {
+      presets: recipeArtifactPresets,
+      drawRecipeArtifact,
     },
 
     colors: {
