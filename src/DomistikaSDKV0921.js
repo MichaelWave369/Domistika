@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.41';
-const SDK_VERSION = '0.1.18';
+const APP_VERSION = '0.9.42';
+const SDK_VERSION = '0.1.19';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -752,6 +752,24 @@ async function selectionStrokeOutline() {
   return runtime.strokeOutline();
 }
 
+function fieldQualificationRuntime() {
+  return window.domistikaFieldQualificationV0942 || null;
+}
+
+async function fieldQualificationRun() {
+  const runtime = fieldQualificationRuntime();
+  if (!runtime?.run) throw new Error('DOMISTIKA_SDK_FIELD_QUALIFICATION_UNAVAILABLE');
+  return runtime.run(window.Domistika);
+}
+
+function fieldQualificationLast() {
+  return fieldQualificationRuntime()?.last?.() || null;
+}
+
+function fieldQualificationRunning() {
+  return Boolean(fieldQualificationRuntime()?.running?.());
+}
+
 function sectorSurgeryRuntime() {
   return window.domistikaSectorSurgeryV0941 || null;
 }
@@ -1145,6 +1163,13 @@ registerSdkCommand('sector.cancel', {
   description: 'Discard the repair copy and restore the original source layer state.',
   keywords: ['sector', 'surgery', 'cancel', 'restore'],
 }, async () => sectorSurgeryCancel());
+
+registerSdkCommand('qualification.run', {
+  label: 'Run Field Qualification',
+  category: 'System',
+  description: 'Run the transactional end-to-end creative-authority acceptance protocol and return a hashed receipt.',
+  keywords: ['qualification', 'acceptance', 'test', 'authority', 'receipt', 'field'],
+}, async () => fieldQualificationRun());
 
 registerSdkCommand('export.psd', {
   label: 'Export Layered PSD',
@@ -1563,6 +1588,16 @@ function capabilities() {
       sourceLocked: true,
       repairLayerBounded: true,
     }),
+    fieldQualification: Object.freeze({
+      available: Boolean(fieldQualificationRuntime()?.run),
+      version: fieldQualificationRuntime()?.version || null,
+      schema: fieldQualificationRuntime()?.schema || null,
+      running: fieldQualificationRunning(),
+      lastStatus: fieldQualificationLast()?.status || null,
+      transactional: true,
+      pixelHashEvidence: 'sha256',
+      restoresOriginalProject: true,
+    }),
     art: Object.freeze({
       available: Boolean(recipeArtifactRuntime()?.draw),
       version: recipeArtifactRuntime()?.version || null,
@@ -1707,6 +1742,12 @@ if (!window[INSTALL_FLAG]) {
       seal: sectorSurgerySeal,
       cancel: sectorSurgeryCancel,
       receipt: sectorSurgeryReceipt,
+    },
+
+    qualification: {
+      run: fieldQualificationRun,
+      last: fieldQualificationLast,
+      running: fieldQualificationRunning,
     },
 
     art: {
