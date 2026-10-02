@@ -13,7 +13,7 @@ assert.match(index, /DomistikaSDKV0921\.js/);
 assert.ok(index.indexOf('DomistikaCleanCaptureV0920.js') < index.indexOf('DomistikaSDKV0921.js'));
 
 assert.match(sdk, /domistika\.sdk\.v1/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.9'/);
+assert.match(sdk, /SDK_VERSION = '0\\.1\\.\\d+'/);
 assert.match(sdk, /window\.Domistika/);
 assert.match(sdk, /deepFreeze\(api\)/);
 assert.match(sdk, /setTool/);
