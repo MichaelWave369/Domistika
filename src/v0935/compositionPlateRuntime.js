@@ -40,7 +40,7 @@ CanvasEngine.prototype.commitShape = function commitShapeV0935(tool, start, end)
   const plate = enginePlate(this);
   if (!plate) return originalCommitShape.call(this, tool, start, end);
   const layer = this.activeLayer;
-  if (!layer) return;
+  if (!layer || !this.layerWritable?.(layer)) return;
   for (const transform of transformsForSegment(plate, start, end, this.width, this.height)) {
     this.drawShape(layer.ctx, tool, transform(start), transform(end), false);
   }

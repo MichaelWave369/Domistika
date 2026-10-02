@@ -1,3 +1,20 @@
+## v0.9.37 — Layer Housekeeping
+
+Domistika now has persistent **layer locks, organizational groups, and one-step merge down**.
+
+Locked layers reject pixel writes from human drawing, symmetry, Composition Plates, SDK strokes, Recipe Artifacts, and Art Director targeting. Groups remain organization-only folders with no compositing semantics.
+
+Stable SDK v0.1.14 adds:
+
+```js
+Domistika.layers.lock(layerId, true)
+await Domistika.layers.mergeDown(layerId)
+Domistika.layers.groups.create('Guardians')
+Domistika.layers.groups.assign(layerId, groupId)
+```
+
+See [Layer Housekeeping](docs/LAYER_HOUSEKEEPING_V0937.md).
+
 ## v0.9.36 — Symmetry Receipts
 
 Domistika now exports the generative grammar with the artwork instead of letting the pixels leave home without identification.

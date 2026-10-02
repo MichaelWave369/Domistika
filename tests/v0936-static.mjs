@@ -152,14 +152,14 @@ const entry = fs.readFileSync(new URL('../src/DomistikaSymmetryReceiptsV0936.js'
 const runtime = fs.readFileSync(new URL('../src/v0936/symmetryReceiptRuntime.js', import.meta.url), 'utf8');
 const docs = fs.readFileSync(new URL('../docs/SYMMETRY_RECEIPTS_V0936.md', import.meta.url), 'utf8');
 
-assert.equal(pkg.version, '0.9.36');
+assert.ok(Number(pkg.version.split('.')[2]) >= 36);
 assert.match(pkg.scripts.check, /tests\/v0936-static\.mjs/);
 assert.match(index, /DomistikaSymmetryReceiptsV0936\.js/);
 assert.match(entry, /symmetryReceiptRuntime\.js/);
 assert.match(runtime, /domistikaSymmetryReceiptsV0936/);
 assert.match(runtime, /domistika:art-directed/);
-assert.match(sdk, /APP_VERSION = '0\.9\.36'/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.13'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 assert.match(sdk, /symmetryReceipts: Object\.freeze/);
 assert.match(sdk, /symmetryReceipts: \{/);
 assert.match(bridge, /symmetryReceipt/);
