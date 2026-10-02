@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.33';
-const SDK_VERSION = '0.1.10';
+const APP_VERSION = '0.9.34';
+const SDK_VERSION = '0.1.11';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -649,6 +649,30 @@ async function drawRecipeArtifact(options = {}) {
   return runtime.draw(options, window.Domistika);
 }
 
+function artDirectorRuntime() {
+  return window.domistikaArtDirectorV0934 || null;
+}
+
+function artDirectorProfiles() {
+  return artDirectorRuntime()?.profiles?.() || Object.freeze([]);
+}
+
+function artDirectorPalettes() {
+  return artDirectorRuntime()?.palettes?.() || Object.freeze([]);
+}
+
+function planArtDirection(options = {}) {
+  const runtime = artDirectorRuntime();
+  if (!runtime?.plan) throw new Error('DOMISTIKA_SDK_ART_DIRECTOR_UNAVAILABLE');
+  return runtime.plan(options);
+}
+
+async function directArt(options = {}) {
+  const runtime = artDirectorRuntime();
+  if (!runtime?.direct) throw new Error('DOMISTIKA_SDK_ART_DIRECTOR_UNAVAILABLE');
+  return runtime.direct(options, window.Domistika);
+}
+
 function colorStudioRuntime() {
   return window.domistikaColorStudioV0924 || null;
 }
@@ -857,6 +881,13 @@ for (const [preset, label] of [
     freshCanvas: freshCanvas !== false,
   }));
 }
+
+registerSdkCommand('art.direct', {
+  label: 'Direct an Artwork',
+  category: 'Art',
+  description: 'Compile a high-level visual intent into a symmetry recipe, palette, and bounded stroke program, then render it.',
+  keywords: ['art', 'director', 'intent', 'mood', 'symmetry', 'palette', 'agent'],
+}, async (options = {}) => directArt(options));
 
 registerSdkCommand('playground.run', {
   label: 'Playground · Demo the Studio',
@@ -1133,6 +1164,13 @@ function capabilities() {
       schema: recipeArtifactRuntime()?.schema || null,
       recipeArtifact: Boolean(recipeArtifactRuntime()?.draw),
       presets: Object.freeze(recipeArtifactPresets().map((preset) => preset.id)),
+      director: Object.freeze({
+        available: Boolean(artDirectorRuntime()?.direct),
+        version: artDirectorRuntime()?.version || null,
+        schema: artDirectorRuntime()?.schema || null,
+        profiles: Object.freeze(artDirectorProfiles().map((profile) => profile.id)),
+        palettes: Object.freeze(artDirectorPalettes().map((palette) => palette.id)),
+      }),
     }),
     spiro: Object.freeze({
       available: Boolean(spiro),
@@ -1228,6 +1266,10 @@ if (!window[INSTALL_FLAG]) {
     art: {
       presets: recipeArtifactPresets,
       drawRecipeArtifact,
+      profiles: artDirectorProfiles,
+      palettes: artDirectorPalettes,
+      plan: planArtDirection,
+      direct: directArt,
     },
 
     colors: {
