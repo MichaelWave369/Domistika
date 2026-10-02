@@ -64,7 +64,7 @@ const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.ur
 
 assert.ok(Number(pkg.version.split('.')[2]) >= 31);
 assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
-assert.match(sdk, /SDK_VERSION = '0\\.1\\.\\d+'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 
 assert.match(engine, /semanticOverlays:/);
 assert.match(engine, /excludeLayerIds/);
