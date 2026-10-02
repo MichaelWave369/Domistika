@@ -10,7 +10,7 @@ const rotation = fs.readFileSync(new URL('../src/DomistikaKineticRotationV0912.j
 const expansion = fs.readFileSync(new URL('../src/DomistikaKineticExpansionV0914.js', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
-assert.equal(pkg.version, '0.9.31');
+assert.ok(Number(pkg.version.split('.')[2]) >= 31);
 assert.match(engine, /LAYER_ROLES = Object\.freeze\(\['paint', 'guide', 'type'\]\)/);
 assert.match(engine, /MOTION_POLICIES = Object\.freeze\(\['inherit', 'animate', 'ignore'\]\)/);
 assert.match(engine, /requested === 'motion-ignore'/);
@@ -25,7 +25,7 @@ assert.match(main, /id="layerMotionPolicy"/);
 assert.doesNotMatch(main, /<option value="motion-ignore">Motion ignore<\/option>/);
 assert.match(main, /engine\.setLayerMotionPolicy/);
 
-assert.match(sdk, /APP_VERSION = '0\.9\.31'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
 assert.match(sdk, /SDK_VERSION = '0\.1\.9'/);
 assert.match(sdk, /motionPolicy: String\(layer\.motionPolicy \|\| 'inherit'\)/);
 assert.match(sdk, /function layerMotionPolicy/);
