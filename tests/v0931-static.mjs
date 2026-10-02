@@ -26,7 +26,7 @@ assert.doesNotMatch(main, /<option value="motion-ignore">Motion ignore<\/option>
 assert.match(main, /engine\.setLayerMotionPolicy/);
 
 assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
-assert.match(sdk, /SDK_VERSION = '0\\.1\\.\\d+'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 assert.match(sdk, /motionPolicy: String\(layer\.motionPolicy \|\| 'inherit'\)/);
 assert.match(sdk, /function layerMotionPolicy/);
 assert.match(sdk, /layer\.motion\.ignore/);
