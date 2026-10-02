@@ -15,6 +15,7 @@ const main = fs.readFileSync(new URL('../src/main.js', import.meta.url), 'utf8')
 const sdk = fs.readFileSync(new URL('../src/DomistikaSDKV0921.js', import.meta.url), 'utf8');
 const plates = fs.readFileSync(new URL('../src/v0935/compositionPlateRuntime.js', import.meta.url), 'utf8');
 const artDirector = fs.readFileSync(new URL('../src/v0934/artDirector.js', import.meta.url), 'utf8');
+const recipeArtifacts = fs.readFileSync(new URL('../src/v0933/recipeArtifacts.js', import.meta.url), 'utf8');
 const docs = fs.readFileSync(new URL('../docs/LAYER_HOUSEKEEPING_V0937.md', import.meta.url), 'utf8');
 
 assert.equal(pkg.version, '0.9.37');
@@ -62,7 +63,8 @@ assert.match(main, /engine\.mergeActiveLayerDown/);
 assert.match(main, /engine\.setLayerLocked/);
 assert.match(main, /engine\.setLayerGroup/);
 
-assert.match(artDirector, /api\.stroke/, 'Art Director must still route writes through the stable SDK');
+assert.match(artDirector, /api\.art\.drawRecipeArtifact/, 'Art Director must delegate rendering through Recipe Artifacts');
+assert.match(recipeArtifacts, /api\.stroke/, 'Recipe Artifacts must route final writes through the stable SDK stroke boundary');
 assert.match(docs, /organizational folders only/i);
 assert.match(docs, /one structural undo entry/i);
 assert.match(docs, /Composition Plates determine/);
