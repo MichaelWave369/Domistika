@@ -255,9 +255,48 @@ function initBrushLibrary() {
     document.querySelector('#selectedBrushDescription').textContent = brush.description;
     const status = document.querySelector('#statusMessage');
     if (status) status.textContent = `${brush.name} brush selected`;
+    window.dispatchEvent(new CustomEvent('domistika:brush-selected', {
+      detail: {
+        id: brush.id,
+        name: brush.name,
+        tool: brush.tool,
+        size: Number(brush.size),
+        opacity: Number(brush.opacity),
+      },
+    }));
     render();
     if (window.matchMedia('(max-width: 680px)').matches) closeDrawer();
   }
+
+  window.domistikaBrushLibraryV0939 = Object.freeze({
+    version: '0.9.39',
+    list: () => Object.freeze(allBrushes().map((brush) => Object.freeze({
+      id: brush.id,
+      name: brush.name,
+      tool: brush.tool,
+      size: Number(brush.size),
+      opacity: Number(brush.opacity),
+      smoothing: Number(brush.smoothing),
+      pressure: brush.pressure !== false,
+      custom: Boolean(brush.custom),
+    }))),
+    active: () => {
+      const brush = allBrushes().find((candidate) => candidate.id === state.activeId) || null;
+      return brush ? Object.freeze({
+        id: brush.id,
+        name: brush.name,
+        tool: brush.tool,
+        size: Number(brush.size),
+        opacity: Number(brush.opacity),
+      }) : null;
+    },
+    apply: (id) => {
+      const brush = allBrushes().find((candidate) => candidate.id === String(id || ''));
+      if (!brush) return false;
+      applyBrush(brush);
+      return true;
+    },
+  });
 
   function toggleFavorite(id) {
     if (state.favorites.has(id)) state.favorites.delete(id);

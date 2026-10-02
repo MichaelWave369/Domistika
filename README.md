@@ -1,3 +1,29 @@
+## v0.9.39 — Selection Acts
+
+Domistika's existing rectangle/lasso Selection & Transform system now supports two bounded, one-step operations:
+
+```text
+Fill selection
+Stroke selection outline
+```
+
+Fill uses the current color + opacity. Outline uses the current brush size + opacity + color. Both close the active selection and create exactly one undo entry.
+
+The selection panel also carries a compact **five-brush recent strip** backed by the real brush library. Layer locks now block pixel selection itself as well as both acts, closing the old selection-overlay lock bypass.
+
+Stable SDK v0.1.16 adds:
+
+```js
+await Domistika.selection.fill()
+await Domistika.selection.strokeOutline()
+Domistika.selection.boundary()
+
+Domistika.brush.recent()
+Domistika.brush.recall(brushId)
+```
+
+See [Selection Acts](docs/SELECTION_ACTS_V0939.md).
+
 ## v0.9.38 — Drafting Guides
 
 Domistika now turns its existing export-excluded `guide` layers into precision constraints.

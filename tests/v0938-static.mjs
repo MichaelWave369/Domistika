@@ -54,7 +54,7 @@ const sdk = fs.readFileSync(new URL('../src/DomistikaSDKV0921.js', import.meta.u
 const guideLayer = fs.readFileSync(new URL('../src/v090/guideLayer.js', import.meta.url), 'utf8');
 const docs = fs.readFileSync(new URL('../docs/DRAFTING_GUIDES_V0938.md', import.meta.url), 'utf8');
 
-assert.equal(pkg.version, '0.9.38');
+assert.ok(Number(pkg.version.split('.')[2]) >= 38);
 assert.match(pkg.scripts.check, /tests\/v0938-static\.mjs/);
 assert.match(index, /DomistikaDraftingGuidesV0938\.js/);
 
@@ -79,8 +79,8 @@ assert.match(guideLayer, /layer\.role = 'guide'/);
 assert.match(guideLayer, /layer\.locked = true/);
 assert.match(guideLayer, /exclude-guide/);
 
-assert.match(sdk, /APP_VERSION = '0\.9\.38'/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.15'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 assert.match(sdk, /draftingGuides: Object\.freeze/);
 assert.match(sdk, /draftingGuides: \{/);
 assert.match(sdk, /drafting\?\.snapPoints/);

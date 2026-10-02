@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.38';
-const SDK_VERSION = '0.1.15';
+const APP_VERSION = '0.9.39';
+const SDK_VERSION = '0.1.16';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -734,6 +734,46 @@ function compositionPlateRegionAt(point) {
   return runtime.regionAt(point);
 }
 
+function selectionRuntime() {
+  return window.domistikaSelectionV04 || null;
+}
+
+async function selectionFill() {
+  const runtime = selectionRuntime();
+  if (!runtime?.fill) throw new Error('DOMISTIKA_SDK_SELECTION_ACTS_UNAVAILABLE');
+  if (!runtime.active) throw new Error('DOMISTIKA_SDK_SELECTION_REQUIRED');
+  return runtime.fill();
+}
+
+async function selectionStrokeOutline() {
+  const runtime = selectionRuntime();
+  if (!runtime?.strokeOutline) throw new Error('DOMISTIKA_SDK_SELECTION_ACTS_UNAVAILABLE');
+  if (!runtime.active) throw new Error('DOMISTIKA_SDK_SELECTION_REQUIRED');
+  return runtime.strokeOutline();
+}
+
+function recentBrushRuntime() {
+  return window.domistikaRecentBrushesV0939 || null;
+}
+
+function brushLibraryRuntime() {
+  return window.domistikaBrushLibraryV0939 || null;
+}
+
+function recentBrushList() {
+  const recent = recentBrushRuntime()?.list?.() || [];
+  const brushes = brushLibraryRuntime()?.list?.() || [];
+  const byId = new Map(brushes.map((brush) => [brush.id, brush]));
+  return Object.freeze(recent.map((id) => byId.get(id)).filter(Boolean).map((brush) => Object.freeze({ ...brush })));
+}
+
+function recentBrushRecall(id) {
+  const library = brushLibraryRuntime();
+  if (!library?.apply) throw new Error('DOMISTIKA_SDK_BRUSH_LIBRARY_UNAVAILABLE');
+  if (!library.apply(id)) throw new Error('DOMISTIKA_SDK_BRUSH_NOT_FOUND');
+  return library.active?.() || null;
+}
+
 function draftingGuideRuntime() {
   return window.domistikaDraftingGuidesV0938 || null;
 }
@@ -1000,6 +1040,20 @@ registerSdkCommand('guide.drafting.one-point', {
   description: 'Create one horizon and one vanishing point with perspective-ray snapping.',
   keywords: ['guide', 'drafting', 'perspective', 'horizon', 'vanishing point', 'snap'],
 }, async (options = {}) => draftingGuideApply('one-point', options));
+
+registerSdkCommand('selection.fill', {
+  label: 'Fill Selection',
+  category: 'Selection',
+  description: 'Fill the active selection using the current color and opacity as one undo step.',
+  keywords: ['selection', 'lasso', 'fill', 'color', 'undo'],
+}, async () => selectionFill());
+
+registerSdkCommand('selection.stroke-outline', {
+  label: 'Stroke Selection Outline',
+  category: 'Selection',
+  description: 'Stroke the active selection boundary with the current brush size, opacity, and color as one undo step.',
+  keywords: ['selection', 'lasso', 'stroke', 'outline', 'brush', 'undo'],
+}, async () => selectionStrokeOutline());
 
 registerSdkCommand('layer.role.paint', {
   label: 'Layer Role · Paint',
@@ -1381,6 +1435,16 @@ function capabilities() {
       active: draftingGuideActive(),
       sharedSnapBoundary: Boolean(draftingGuideRuntime()?.snapPoints),
     }),
+    selectionActs: Object.freeze({
+      available: Boolean(selectionRuntime()?.fill && selectionRuntime()?.strokeOutline),
+      version: window.domistikaSelectionActsV0939?.version || null,
+      schema: window.domistikaSelectionActsV0939?.schema || null,
+      active: Boolean(selectionRuntime()?.active),
+      fill: Boolean(selectionRuntime()?.fill),
+      strokeOutline: Boolean(selectionRuntime()?.strokeOutline),
+      oneUndoPerAct: true,
+      recentBrushes: recentBrushList().length,
+    }),
     art: Object.freeze({
       available: Boolean(recipeArtifactRuntime()?.draw),
       version: recipeArtifactRuntime()?.version || null,
@@ -1478,6 +1542,8 @@ if (!window[INSTALL_FLAG]) {
       opacity: (value) => value == null ? requireEngine().settings.opacity : setSetting('opacity', value),
       smoothing: (value) => value == null ? requireEngine().settings.smoothing : setSetting('smoothing', value),
       symmetry: (value) => value == null ? requireEngine().settings.symmetry : setSetting('symmetry', value),
+      recent: recentBrushList,
+      recall: recentBrushRecall,
     },
 
     symmetryRecipes: {
@@ -1507,6 +1573,13 @@ if (!window[INSTALL_FLAG]) {
       snap: draftingGuideSnap,
       visible: draftingGuideVisible,
       kinds: () => Object.freeze([...(draftingGuideRuntime()?.kinds || [])]),
+    },
+
+    selection: {
+      active: () => Boolean(selectionRuntime()?.active),
+      fill: selectionFill,
+      strokeOutline: selectionStrokeOutline,
+      boundary: () => Object.freeze((selectionRuntime()?.boundary?.() || []).map((point) => Object.freeze({ ...point }))),
     },
 
     art: {
