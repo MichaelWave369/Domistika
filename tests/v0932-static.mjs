@@ -37,7 +37,7 @@ assert.ok(SYMMETRY_RECIPE_PRESETS.some((recipe) => recipe.id === 'counterspin'))
 assert.throws(() => parseFormula('ALIEN_TEETH(12)'), /DOMISTIKA_RECIPE_OPERATOR/);
 assert.throws(() => parseFormula('RADIAL('), /DOMISTIKA_RECIPE_SYNTAX/);
 
-const [index, pkgText, entry, runtime, panel, docs] = await Promise.all([
+const [index, pkgText, entry, runtime, panel, docs, sdk] = await Promise.all([
   read('index.html'),
   read('package.json'),
   read('src/DomistikaSymmetryRecipesV0932.js'),
@@ -52,7 +52,7 @@ assert.match(index, /DomistikaSymmetryRecipesV0932\.js/);
 assert.match(entry, /symmetryRecipeRuntime\.js/);
 assert.match(entry, /symmetryRecipePanel\.js/);
 assert.match(runtime, /CanvasEngine\.prototype\.symmetryTransforms/);
-assert.match(runtime, /domistikaSymmetryRecipesV0932/);
+assert.match(runtime, /domistikaSymmetryRecipesV0932/);\nassert.match(sdk, /APP_VERSION = '0\\.9\\.32'/);\nassert.match(sdk, /symmetryRecipes: Object\\.freeze/);\nassert.match(sdk, /applyFormula: symmetryRecipeApplyFormula/);
 assert.match(panel, /Symmetry Recipes/);
 assert.match(panel, /Run formula/);
 for (const primitive of ['RADIAL', 'MIRROR', 'NEST', 'SPIRAL', 'COUNTERSPIN', 'PERTURB']) assert.match(panel, new RegExp(primitive));
