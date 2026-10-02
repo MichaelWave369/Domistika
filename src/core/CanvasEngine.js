@@ -94,6 +94,7 @@ export class CanvasEngine {
     const motionPolicy = normalizeMotionPolicy(options.motionPolicy, options);
     canvas.dataset.layerRole = role;
     canvas.dataset.motionPolicy = motionPolicy;
+    canvas.dataset.locked = String(options.locked === true);
     this.artboard.insertBefore(canvas, this.overlay);
     const layer = {
       id: canvas.dataset.layerId,
@@ -126,6 +127,8 @@ export class CanvasEngine {
       visible: source.visible,
       role: source.role,
       motionPolicy: source.motionPolicy,
+      locked: source.locked === true,
+      groupId: source.groupId || null,
       semanticOverlays: source.semanticOverlays,
     });
     copy.ctx.drawImage(source.canvas, 0, 0);
