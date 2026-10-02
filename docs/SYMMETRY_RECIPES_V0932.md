@@ -44,3 +44,17 @@ window.domistikaSymmetryRecipesV0932.active()
 ```
 
 This is intentionally additive. Existing symmetry modes, Sacred Geometry, Phi/Fibonacci modes, symmetry fill, and project files continue to use their current paths unless a recipe mode is selected.
+
+
+## Stable SDK
+
+The same recipe surface is available through the stable Domistika SDK for agents and integrations:
+
+```js
+window.Domistika.symmetryRecipes.list()
+window.Domistika.symmetryRecipes.apply('portal')
+window.Domistika.symmetryRecipes.applyFormula('RADIAL(18) | PERTURB(.03)', 'Broken Halo')
+window.Domistika.symmetryRecipes.active()
+```
+
+`window.Domistika.capabilities().symmetryRecipes` reports availability, schema, version, preset ids, and the active recipe.
