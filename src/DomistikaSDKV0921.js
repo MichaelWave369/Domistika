@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.39';
-const SDK_VERSION = '0.1.16';
+const APP_VERSION = '0.9.40';
+const SDK_VERSION = '0.1.17';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -912,6 +912,30 @@ async function exportPng({ transparent = false } = {}) {
   return blob;
 }
 
+function layeredExitRuntime() {
+  return window.domistikaLayeredExitV0940 || null;
+}
+
+function inspectLayeredExit() {
+  const runtime = layeredExitRuntime();
+  if (!runtime?.inspect) throw new Error('DOMISTIKA_SDK_LAYERED_EXIT_UNAVAILABLE');
+  return runtime.inspect();
+}
+
+function exportPsd() {
+  const runtime = layeredExitRuntime();
+  if (!runtime?.exportPsd) throw new Error('DOMISTIKA_SDK_LAYERED_EXIT_UNAVAILABLE');
+  const result = runtime.exportPsd();
+  emit('sdk-export', {
+    kind: 'psd',
+    bytes: result?.bytes || result?.blob?.size || null,
+    includedLayers: result?.manifest?.included?.length || 0,
+    excludedLayers: result?.manifest?.excluded?.length || 0,
+    canonicalSourceOfTruth: 'domistika-project',
+  });
+  return result;
+}
+
 function auralithBridgeRuntime() {
   return window.domistikaAuralithBridgeV093 || null;
 }
@@ -1054,6 +1078,13 @@ registerSdkCommand('selection.stroke-outline', {
   description: 'Stroke the active selection boundary with the current brush size, opacity, and color as one undo step.',
   keywords: ['selection', 'lasso', 'stroke', 'outline', 'brush', 'undo'],
 }, async () => selectionStrokeOutline());
+
+registerSdkCommand('export.psd', {
+  label: 'Export Layered PSD',
+  category: 'Export',
+  description: 'Export paint layers as PSD interchange while keeping .domistika as the canonical project format.',
+  keywords: ['export', 'psd', 'photoshop', 'layers', 'interchange', 'paint'],
+}, async () => exportPsd());
 
 registerSdkCommand('layer.role.paint', {
   label: 'Layer Role · Paint',
@@ -1445,6 +1476,16 @@ function capabilities() {
       oneUndoPerAct: true,
       recentBrushes: recentBrushList().length,
     }),
+    layeredExit: Object.freeze({
+      available: Boolean(layeredExitRuntime()?.exportPsd),
+      version: layeredExitRuntime()?.version || null,
+      schema: layeredExitRuntime()?.schema || null,
+      format: 'psd',
+      paintLayersOnly: true,
+      omitsGuides: true,
+      omitsMotionIgnore: true,
+      canonicalSourceOfTruth: 'domistika-project',
+    }),
     art: Object.freeze({
       available: Boolean(recipeArtifactRuntime()?.draw),
       version: recipeArtifactRuntime()?.version || null,
@@ -1664,6 +1705,8 @@ if (!window[INSTALL_FLAG]) {
 
     export: {
       png: exportPng,
+      psd: exportPsd,
+      inspectLayered: inspectLayeredExit,
       capture: cleanCapture,
     },
 

@@ -1,3 +1,32 @@
+## v0.9.40 — Layered Exit
+
+Domistika now exports **layered PSD paint interchange** while keeping `.domistika` as the canonical project format.
+
+PSD export includes only semantic paint layers. Guide layers, type layers, motion-ignore layers, and export-excluded scaffolding are omitted. Hidden paint layers remain present as hidden PSD layers.
+
+Preserved at the interchange boundary:
+
+```text
+paint pixels
+layer names
+visibility
+opacity
+supported blend modes
+stacking order
+write-lock state
+```
+
+The export dialog now offers **PSD · paint layers** alongside PNG and JPEG.
+
+Stable SDK v0.1.17 adds:
+
+```js
+Domistika.export.inspectLayered()
+Domistika.export.psd()
+```
+
+See [Layered Exit](docs/LAYERED_EXIT_V0940.md).
+
 ## v0.9.39 — Selection Acts
 
 Domistika's existing rectangle/lasso Selection & Transform system now supports two bounded, one-step operations:

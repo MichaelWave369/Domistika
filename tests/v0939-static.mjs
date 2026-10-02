@@ -36,7 +36,7 @@ const recent = fs.readFileSync(new URL('../src/v0939/recentBrushes.js', import.m
 const sdk = fs.readFileSync(new URL('../src/DomistikaSDKV0921.js', import.meta.url), 'utf8');
 const docs = fs.readFileSync(new URL('../docs/SELECTION_ACTS_V0939.md', import.meta.url), 'utf8');
 
-assert.equal(pkg.version, '0.9.39');
+assert.ok(Number(pkg.version.split('.')[2]) >= 39);
 assert.match(pkg.scripts.check, /tests\/v0939-static\.mjs/);
 assert.match(index, /DomistikaSelectionActsV0939\.js/);
 
@@ -66,8 +66,8 @@ assert.match(recent, /domistika-recent-brushes-v1/);
 assert.match(recent, /v0939-recent-brush-strip/);
 assert.match(recent, /domistika:brush-selected/);
 
-assert.match(sdk, /APP_VERSION = '0\.9\.39'/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.16'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 assert.match(sdk, /selectionActs: Object\.freeze/);
 assert.match(sdk, /selection: \{/);
 assert.match(sdk, /fill: selectionFill/);

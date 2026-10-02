@@ -53,7 +53,7 @@ app.innerHTML = `
 </div>
 <input id="fileInput" type="file" accept="image/*,.domistika,.json" hidden>
 <dialog id="newDialog" class="studio-dialog"><form method="dialog" id="newForm"><div class="dialog-head"><div><h2>New canvas</h2><p>Pick a starting surface. You can resize later.</p></div><button value="cancel">×</button></div><div class="preset-grid"><button type="button" data-size="1600x1200">Landscape<br><small>1600 × 1200</small></button><button type="button" data-size="1200x1600">Portrait<br><small>1200 × 1600</small></button><button type="button" data-size="2048x2048">Square<br><small>2048 × 2048</small></button><button type="button" data-size="1920x1080">Screen<br><small>1920 × 1080</small></button></div><div class="size-fields"><label>Width<input id="newWidth" type="number" min="64" max="8192" value="1600"></label><label>Height<input id="newHeight" type="number" min="64" max="8192" value="1200"></label></div><div class="dialog-actions"><button value="cancel">Cancel</button><button class="primary-button" id="createProject" value="default">Create canvas</button></div></form></dialog>
-<dialog id="exportDialog" class="studio-dialog"><form method="dialog" id="exportForm"><div class="dialog-head"><div><h2>Export artwork</h2><p>Flatten visible layers into an image.</p></div><button value="cancel">×</button></div><label>File name<input id="exportName" value="domistika-artwork"></label><label>Format<select id="exportFormat"><option value="image/png">PNG</option><option value="image/jpeg">JPEG</option></select></label><label class="check-row"><input id="transparentExport" type="checkbox"> Transparent background (PNG)</label><div class="dialog-actions"><button value="cancel">Cancel</button><button class="primary-button" id="confirmExport" value="default">Export image</button></div></form></dialog>
+<dialog id="exportDialog" class="studio-dialog"><form method="dialog" id="exportForm"><div class="dialog-head"><div><h2>Export artwork</h2><p>Flatten visible layers into an image.</p></div><button value="cancel">×</button></div><label>File name<input id="exportName" value="domistika-artwork"></label><label>Format<select id="exportFormat"><option value="image/png">PNG</option><option value="image/jpeg">JPEG</option><option value="image/vnd.adobe.photoshop">PSD · paint layers</option></select></label><label class="check-row"><input id="transparentExport" type="checkbox"> Transparent background (PNG)</label><div class="dialog-actions"><button value="cancel">Cancel</button><button class="primary-button" id="confirmExport" value="default">Export image</button></div></form></dialog>
 <dialog id="shortcutsDialog" class="studio-dialog"><form method="dialog"><div class="dialog-head"><div><h2>Keyboard shortcuts</h2><p>Keep your drawing hand moving.</p></div><button value="cancel">×</button></div><div class="shortcut-grid"><span><kbd>B</kbd> Pencil</span><span><kbd>I</kbd> Ink</span><span><kbd>M</kbd> Marker</span><span><kbd>A</kbd> Airbrush</span><span><kbd>E</kbd> Eraser</span><span><kbd>L</kbd> Line</span><span><kbd>R</kbd> Rectangle</span><span><kbd>O</kbd> Ellipse</span><span><kbd>H</kbd> Pan</span><span><kbd>Space</kbd> Temporary pan</span><span><kbd>Alt</kbd> Pick color</span><span><kbd>Ctrl Z</kbd> Undo</span><span><kbd>[</kbd> Smaller</span><span><kbd>]</kbd> Larger</span><span><kbd>0</kbd> Fit canvas</span><span><kbd>G</kbd> Toggle grid</span></div></form></dialog>`;
 
 const $ = (selector) => document.querySelector(selector);
@@ -290,10 +290,28 @@ $('#exportForm').addEventListener('submit', async (event) => {
   if (event.submitter?.value === 'cancel') return;
   event.preventDefault();
   const type = $('#exportFormat').value;
-  const blob = await engine.exportImage(type, 0.94, type === 'image/png' && $('#transparentExport').checked);
-  const extension = type === 'image/jpeg' ? 'jpg' : 'png';
-  downloadBlob(blob, `${safeFilename($('#exportName').value || 'domistika-artwork')}.${extension}`);
-  $('#exportDialog').close(); status(`Artwork exported as ${extension.toUpperCase()}`);
+  const name = safeFilename($('#exportName').value || 'domistika-artwork');
+
+  try {
+    if (type === 'image/vnd.adobe.photoshop') {
+      const runtime = window.domistikaLayeredExitV0940;
+      if (!runtime?.exportPsd) throw new Error('Layered PSD exporter is not ready');
+      const result = runtime.exportPsd();
+      downloadBlob(result.blob, `${name}.psd`);
+      $('#exportDialog').close();
+      status(`Layered PSD exported · ${result.manifest.included.length} paint layer${result.manifest.included.length === 1 ? '' : 's'}`);
+      return;
+    }
+
+    const blob = await engine.exportImage(type, 0.94, type === 'image/png' && $('#transparentExport').checked);
+    const extension = type === 'image/jpeg' ? 'jpg' : 'png';
+    downloadBlob(blob, `${name}.${extension}`);
+    $('#exportDialog').close();
+    status(`Artwork exported as ${extension.toUpperCase()}`);
+  } catch (error) {
+    console.error(error);
+    status(`Could not export artwork: ${error.message}`);
+  }
 });
 $('#newProject').addEventListener('click', () => $('#newDialog').showModal());
 document.querySelectorAll('[data-size]').forEach((button) => button.addEventListener('click', () => { const [width, height] = button.dataset.size.split('x'); $('#newWidth').value = width; $('#newHeight').value = height; }));
