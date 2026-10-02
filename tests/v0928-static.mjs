@@ -9,7 +9,7 @@ const pkg=JSON.parse(fs.readFileSync(new URL('../package.json',import.meta.url),
 assert.ok(Number(pkg.version.split('.')[2]) >= 28);
 assert.match(playground,/const VERSION='0\.9\.28'/);
 assert.match(sdk,/APP_VERSION = '0\.9\.\d+'/);
-assert.match(sdk,/SDK_VERSION = '0\.1\.9'/);
+assert.match(sdk,/SDK_VERSION = '0\\.1\\.\\d+'/);
 
 assert.match(playground,/function clipSummary\(clip\)/);
 assert.match(playground,/lastClip:clipSummary\(lastClip\)/);
