@@ -33,7 +33,7 @@ function fakeApi() {
       capture: { available: true },
       playground: { available: true, running: false, canRestore: true },
       symmetryRecipes: { available: true, presets: ['portal'] },
-      art: { available: true, recipeArtifact: true, presets: ['portal-bloom'] },
+      art: { available: true, recipeArtifact: true, presets: ['portal-bloom'], director: { available: true, profiles: ['cosmic'], palettes: ['electric-dusk'] } },
       bridge: { auralith: { available: true, version: 2, semanticOverlays: true, maxOverlays: 16 } },
     }),
     canvas: { info: () => ({ width: 1200, height: 1200 }) },
@@ -52,6 +52,8 @@ function fakeApi() {
     playground: { state: () => ({ available: true, running: false, canRestore: true }) },
     art: {
       drawRecipeArtifact: async (input) => { calls.push(['recipe-artifact', input.preset, input.freshCanvas]); return { ok: true, preset: input.preset, strokeCount: 4 }; },
+      plan: (input) => { calls.push(['art-plan', input.prompt, input.symmetry]); return { symmetry: input.symmetry === 'auto' ? 'portal' : input.symmetry || 'portal', strokeCount: 6 }; },
+      direct: async (input) => { calls.push(['art-direct', input.prompt, input.newLayer]); return { ok: true, placement: input.newLayer === false ? 'active-layer' : 'new-layer' }; },
     },
     stroke: (points, options) => { calls.push(['stroke', points.length, options.tool]); return { ok: true, pointCount: points.length }; },
     spiro: {
@@ -74,19 +76,20 @@ function fakeApi() {
   };
 }
 
-assert.equal(VERSION, '0.1.3');
+assert.equal(VERSION, '0.1.4');
 assert.equal(SCHEMA, 'domistika.site-tools.v1');
 
 const api = fakeApi();
 const tools = createDomistikaSiteTools(api);
 assert.equal(Object.isFrozen(tools), true);
-assert.equal(tools.length, 12);
+assert.equal(tools.length, 13);
 assert.deepEqual(tools.map((tool) => tool.name), [
   'domistika_get_capabilities',
   'domistika_search_commands',
   'domistika_get_state',
   'domistika_draw_stroke',
   'domistika_draw_recipe_artifact',
+  'domistika_direct_art',
   'domistika_set_color',
   'domistika_apply_gradient',
   'domistika_place_spiro',
@@ -132,6 +135,24 @@ const recipeResult = JSON.parse(await recipeArtifact.execute({ preset: 'portal-b
 assert.equal(recipeResult.result.preset, 'portal-bloom');
 assert.deepEqual(api.calls.at(-1), ['recipe-artifact', 'portal-bloom', true]);
 
+const director = tools.find((tool) => tool.name === 'domistika_direct_art');
+const previewResult = JSON.parse(await director.execute({
+  prompt: 'cosmic mechanical portal',
+  symmetry: 'auto',
+  previewOnly: true,
+}));
+assert.equal(previewResult.preview, true);
+assert.equal(previewResult.plan.symmetry, 'portal');
+assert.deepEqual(api.calls.at(-1), ['art-plan', 'cosmic mechanical portal', 'auto']);
+
+const directResult = JSON.parse(await director.execute({
+  prompt: 'cosmic mechanical portal',
+  newLayer: true,
+}));
+assert.equal(directResult.preview, false);
+assert.equal(directResult.result.placement, 'new-layer');
+assert.deepEqual(api.calls.at(-1), ['art-direct', 'cosmic mechanical portal', true]);
+
 const setColor = tools.find((tool) => tool.name === 'domistika_set_color');
 await setColor.execute({ color: '#AABBCC' });
 assert.deepEqual(api.calls.at(-1), ['color', '#aabbcc']);
@@ -176,8 +197,8 @@ const modelContext = {
 };
 const installed = await installDomistikaSiteTools({ api: fakeApi(), modelContext });
 assert.equal(installed.available, true);
-assert.equal(installed.registered.length, 12);
-assert.equal(registered.length, 12);
+assert.equal(installed.registered.length, 13);
+assert.equal(registered.length, 13);
 
 const source = fs.readFileSync(new URL('../src/DomistikaSiteToolsV0929.js', import.meta.url), 'utf8');
 assert.match(source, /document/);

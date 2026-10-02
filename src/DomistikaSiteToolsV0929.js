@@ -1,4 +1,4 @@
-const VERSION = '0.1.3';
+const VERSION = '0.1.4';
 const SCHEMA = 'domistika.site-tools.v1';
 const INSTALL_FLAG = '__domistikaWebMcpSiteToolsV0929Installed';
 const MAX_SEARCH_RESULTS = 20;
@@ -287,6 +287,66 @@ function makeTools(api) {
 
         const result = await api.art.drawRecipeArtifact(request);
         return ok({ result });
+      },
+    },
+    {
+      name: 'domistika_direct_art',
+      title: 'Direct a Domistika artwork',
+      description: 'Turn high-level visual intent into a deterministic Domistika art plan, then render it through Symmetry Recipes and Recipe Artifacts. Set previewOnly to inspect the plan without changing the canvas.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          prompt: { type: 'string', maxLength: 500 },
+          mood: { type: 'string', maxLength: 160 },
+          symmetry: { type: 'string', enum: ['auto', 'mandala', 'kaleido', 'gear', 'vortex', 'counterspin', 'portal', 'flower', 'fracture'], default: 'auto' },
+          palette: { type: 'string', enum: ['auto', 'electric-dusk', 'solar-forge', 'biolume', 'moon-glass', 'prismatica', 'signal-break', 'orbital'], default: 'auto' },
+          colors: {
+            type: 'array',
+            minItems: 2,
+            maxItems: 8,
+            items: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' },
+          },
+          density: { type: 'number', minimum: 0, maximum: 1 },
+          complexity: { type: 'number', minimum: 0, maximum: 1 },
+          surprise: { type: 'number', minimum: 0, maximum: 1 },
+          seed: { type: 'string', maxLength: 240 },
+          name: { type: 'string', maxLength: 120 },
+          width: { type: 'integer', minimum: 256, maximum: 4096 },
+          height: { type: 'integer', minimum: 256, maximum: 4096 },
+          freshCanvas: { type: 'boolean', default: false },
+          clearFirst: { type: 'boolean', default: false },
+          newLayer: { type: 'boolean', default: true },
+          previewOnly: { type: 'boolean', default: false },
+        },
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false, consequentialHint: false },
+      execute: async (input = {}, { signal } = {}) => {
+        requireReady(api);
+        if (signal?.aborted) throw new DOMException('Tool execution cancelled', 'AbortError');
+        if (!api.art?.direct || !api.art?.plan) throw new Error('DOMISTIKA_SITE_TOOLS_ART_DIRECTOR_UNAVAILABLE');
+
+        const request = {};
+        for (const key of ['prompt', 'mood', 'symmetry', 'palette', 'seed', 'name']) {
+          if (input[key] != null) request[key] = cleanString(input[key], key === 'prompt' ? 500 : key === 'seed' ? 240 : 160);
+        }
+        if (Array.isArray(input.colors)) request.colors = input.colors.map((color) => String(color).toLowerCase());
+        for (const key of ['density', 'complexity', 'surprise']) {
+          if (input[key] != null) request[key] = clamp(input[key], 0, 1);
+        }
+        for (const key of ['width', 'height']) {
+          if (input[key] != null) request[key] = Math.round(clamp(input[key], 256, 4096));
+        }
+        for (const key of ['freshCanvas', 'clearFirst', 'newLayer']) {
+          if (input[key] != null) request[key] = Boolean(input[key]);
+        }
+
+        if (input.previewOnly === true) {
+          return ok({ preview: true, plan: api.art.plan(request) });
+        }
+
+        const result = await api.art.direct(request);
+        return ok({ preview: false, result });
       },
     },
     {

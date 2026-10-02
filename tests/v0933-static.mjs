@@ -85,15 +85,15 @@ const site = fs.readFileSync(new URL('../src/DomistikaSiteToolsV0929.js', import
 const entry = fs.readFileSync(new URL('../src/DomistikaRecipeArtifactsV0933.js', import.meta.url), 'utf8');
 const docs = fs.readFileSync(new URL('../docs/RECIPE_ARTIFACTS_V0933.md', import.meta.url), 'utf8');
 
-assert.equal(pkg.version, '0.9.33');
+assert.ok(Number(pkg.version.split('.')[2]) >= 33);
 assert.match(pkg.scripts.check, /tests\/v0933-static\.mjs/);
 assert.match(index, /DomistikaRecipeArtifactsV0933\.js/);
 assert.match(entry, /v0933\/recipeArtifacts\.js/);
-assert.match(sdk, /APP_VERSION = '0\.9\.33'/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.10'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 assert.match(sdk, /drawRecipeArtifact/);
 assert.match(sdk, /art: Object\.freeze/);
-assert.match(site, /VERSION = '0\.1\.3'/);
+assert.match(site, /VERSION = '0\.1\.\d+'/);
 assert.match(site, /domistika_draw_recipe_artifact/);
 assert.match(site, /portal-bloom/);
 assert.match(docs, /domistika_draw_recipe_artifact/);
