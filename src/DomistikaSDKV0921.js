@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.36';
-const SDK_VERSION = '0.1.13';
+const APP_VERSION = '0.9.37';
+const SDK_VERSION = '0.1.14';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -918,6 +918,27 @@ registerSdkCommand('layer.clear', {
   description: 'Clear the active paint layer.',
   keywords: ['erase', 'empty', 'layer'],
 }, async ({ id } = {}) => layerClear(id || requireEngine().activeLayerId));
+registerSdkCommand('layer.lock', {
+  label: 'Lock Active Layer',
+  category: 'Layers',
+  description: 'Protect the active layer from content writes, including symmetry and agent strokes.',
+  keywords: ['layer', 'lock', 'protect', 'authority'],
+}, async () => layerLock(requireEngine().activeLayerId, true));
+
+registerSdkCommand('layer.unlock', {
+  label: 'Unlock Active Layer',
+  category: 'Layers',
+  description: 'Allow content writes to the active layer.',
+  keywords: ['layer', 'unlock', 'write'],
+}, async () => layerLock(requireEngine().activeLayerId, false));
+
+registerSdkCommand('layer.merge-down', {
+  label: 'Merge Active Layer Down',
+  category: 'Layers',
+  description: 'Flatten the active layer into the layer directly below as one undoable operation.',
+  keywords: ['layer', 'merge', 'flatten', 'down'],
+}, async () => layerMergeDown(requireEngine().activeLayerId));
+
 registerSdkCommand('layer.role.paint', {
   label: 'Layer Role · Paint',
   category: 'Layers',
@@ -1263,6 +1284,12 @@ function capabilities() {
     commandCatalog: commandCatalog(),
     layerRoles: Object.freeze(['paint', 'guide', 'type']),
     motionPolicies: Object.freeze(['inherit', 'animate', 'ignore']),
+    layerHousekeeping: Object.freeze({
+      lock: typeof engine?.setLayerLocked === 'function',
+      groups: typeof engine?.createLayerGroup === 'function',
+      mergeDown: typeof engine?.mergeActiveLayerDown === 'function',
+      groupCount: Array.isArray(engine?.layerGroups) ? engine.layerGroups.length : 0,
+    }),
     playground: playgroundState(),
     symmetryRecipes: Object.freeze({
       available: Boolean(symmetryRecipeRuntime()?.apply),
