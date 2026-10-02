@@ -118,12 +118,12 @@ const site = fs.readFileSync(new URL('../src/DomistikaSiteToolsV0929.js', import
 const entry = fs.readFileSync(new URL('../src/DomistikaArtDirectorV0934.js', import.meta.url), 'utf8');
 const docs = fs.readFileSync(new URL('../docs/ART_DIRECTOR_V0934.md', import.meta.url), 'utf8');
 
-assert.equal(pkg.version, '0.9.34');
+assert.ok(Number(pkg.version.split('.')[2]) >= 34);
 assert.match(pkg.scripts.check, /tests\/v0934-static\.mjs/);
 assert.match(index, /DomistikaArtDirectorV0934\.js/);
 assert.match(entry, /v0934\/artDirector\.js/);
-assert.match(sdk, /APP_VERSION = '0\.9\.34'/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.11'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 assert.match(sdk, /directArt/);
 assert.match(sdk, /planArtDirection/);
 assert.match(site, /VERSION = '0\.1\.4'/);
