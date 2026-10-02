@@ -1,3 +1,23 @@
+## v0.9.35 — Composition Plates
+
+Domistika symmetry can now obey different laws in different canvas regions.
+
+The built-in plates are **Mandala**, **Harvest Wheel**, **Portal Gate**, and **Square Guardians**. Plate regions may carry their own Symmetry Recipe, constrain copies to the same region, or be protected from generated symmetry entirely. Protected regions still accept direct human drawing.
+
+The Square Guardians plate is the acceptance target: the fold may shape the core, veil, body, gates, and flanks, but it is not allowed to enter the four guardian corners.
+
+Stable SDK v0.1.12 adds:
+
+```js
+Domistika.compositionPlates.list()
+Domistika.compositionPlates.apply('square-guardians')
+Domistika.compositionPlates.active()
+Domistika.compositionPlates.regionAt({ x: 120, y: 120 })
+Domistika.compositionPlates.clear()
+```
+
+See [Composition Plates](docs/COMPOSITION_PLATES_V0935.md).
+
 ## v0.9.31 — Semantic Role + Motion Policy
 
 Domistika now separates semantic layer meaning from Kinetic Motion behavior.

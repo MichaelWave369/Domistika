@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.34';
-const SDK_VERSION = '0.1.11';
+const APP_VERSION = '0.9.35';
+const SDK_VERSION = '0.1.12';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -635,6 +635,36 @@ function symmetryRecipeActive() {
   return symmetryRecipeRuntime()?.active?.() || null;
 }
 
+function compositionPlateRuntime() {
+  return window.domistikaCompositionPlatesV0935 || null;
+}
+
+function compositionPlateList() {
+  return compositionPlateRuntime()?.list?.() || Object.freeze([]);
+}
+
+function compositionPlateApply(id) {
+  const runtime = compositionPlateRuntime();
+  if (!runtime?.apply) throw new Error('DOMISTIKA_SDK_COMPOSITION_PLATES_UNAVAILABLE');
+  return runtime.apply(id);
+}
+
+function compositionPlateClear() {
+  const runtime = compositionPlateRuntime();
+  if (!runtime?.clear) throw new Error('DOMISTIKA_SDK_COMPOSITION_PLATES_UNAVAILABLE');
+  return runtime.clear();
+}
+
+function compositionPlateActive() {
+  return compositionPlateRuntime()?.active?.() || null;
+}
+
+function compositionPlateRegionAt(point) {
+  const runtime = compositionPlateRuntime();
+  if (!runtime?.regionAt) throw new Error('DOMISTIKA_SDK_COMPOSITION_PLATES_UNAVAILABLE');
+  return runtime.regionAt(point);
+}
+
 function recipeArtifactRuntime() {
   return window.domistikaRecipeArtifactsV0933 || null;
 }
@@ -1158,6 +1188,13 @@ function capabilities() {
       presets: Object.freeze(symmetryRecipeList().map((recipe) => recipe.id)),
       active: symmetryRecipeActive(),
     }),
+    compositionPlates: Object.freeze({
+      available: Boolean(compositionPlateRuntime()?.apply),
+      version: compositionPlateRuntime()?.version || null,
+      schema: compositionPlateRuntime()?.schema || null,
+      plates: Object.freeze(compositionPlateList().map((plate) => plate.id)),
+      active: compositionPlateActive(),
+    }),
     art: Object.freeze({
       available: Boolean(recipeArtifactRuntime()?.draw),
       version: recipeArtifactRuntime()?.version || null,
@@ -1261,6 +1298,14 @@ if (!window[INSTALL_FLAG]) {
       apply: symmetryRecipeApply,
       applyFormula: symmetryRecipeApplyFormula,
       active: symmetryRecipeActive,
+    },
+
+    compositionPlates: {
+      list: compositionPlateList,
+      apply: compositionPlateApply,
+      clear: compositionPlateClear,
+      active: compositionPlateActive,
+      regionAt: compositionPlateRegionAt,
     },
 
     art: {
