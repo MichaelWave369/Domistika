@@ -6,6 +6,7 @@ import {
   setStatus,
 } from './runtime.js';
 import { bindCreativeBridgeV2ContentHash } from './parallaxBridgeAdapter.js';
+import { buildSymmetryReceipt, receiptHashAnchor } from '../v0936/symmetryReceipts.js';
 
 const BRIDGE_KEY = 'parallax-creative-bridge-v2';
 const AURALITH_URL = 'https://michaelwave369.github.io/Auralith369/#domistika-import';
@@ -97,6 +98,11 @@ async function buildPayload(options) {
   const protectedLayers = protectedOverlayLayers(engine);
   const image = buildRaster(engine, protectedLayers, options);
   const overlays = buildOverlays(protectedLayers, options);
+  const symmetryReceipt = await buildSymmetryReceipt({
+    engine,
+    palette: readFavoriteColors(),
+  });
+  const receiptAnchor = receiptHashAnchor(symmetryReceipt);
   return bindCreativeBridgeV2ContentHash({
     protocol: 'parallax-creative-bridge',
     version: 2,
@@ -109,7 +115,8 @@ async function buildPayload(options) {
     canvas: { width: engine.width, height: engine.height },
     palette: readFavoriteColors(),
     symmetry: engine.settings?.symmetry || 'none',
-    note: 'Transferred locally by the user from Domistika to Auralith369 with protected semantic overlays.',
+    symmetryReceipt,
+    note: 'Transferred locally by the user from Domistika to Auralith369 with protected semantic overlays. ' + receiptAnchor + '.',
   });
 }
 
@@ -132,6 +139,7 @@ async function transfer() {
             maxDimension: options.maxDimension,
             overlayCount: payload.overlays.length,
             contentHash: payload.contentHash,
+            symmetryReceiptHash: payload.symmetryReceipt?.contentHash || null,
           },
         }));
         return {
@@ -144,6 +152,7 @@ async function transfer() {
           overlayCount: payload.overlays.length,
           baseContentHash: payload.baseContentHash,
           contentHash: payload.contentHash,
+          symmetryReceiptHash: payload.symmetryReceipt?.contentHash || null,
         };
       }
     } catch (error) {

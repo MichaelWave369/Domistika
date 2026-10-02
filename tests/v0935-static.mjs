@@ -85,7 +85,7 @@ const runtime = fs.readFileSync(new URL('../src/v0935/compositionPlateRuntime.js
 const panel = fs.readFileSync(new URL('../src/v0935/compositionPlatePanel.js', import.meta.url), 'utf8');
 const docs = fs.readFileSync(new URL('../docs/COMPOSITION_PLATES_V0935.md', import.meta.url), 'utf8');
 
-assert.equal(pkg.version, '0.9.35');
+assert.ok(Number(pkg.version.split('.')[2]) >= 35);
 assert.match(pkg.scripts.check, /tests\/v0935-static\.mjs/);
 assert.match(index, /DomistikaCompositionPlatesV0935\.js/);
 assert.match(entry, /compositionPlateRuntime\.js/);
@@ -95,8 +95,8 @@ assert.match(runtime, /CanvasEngine\.prototype\.commitShape/);
 assert.match(runtime, /domistikaCompositionPlatesV0935/);
 assert.match(panel, /Composition plates/);
 assert.match(panel, /Clear plate/);
-assert.match(sdk, /APP_VERSION = '0\.9\.35'/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.12'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 assert.match(sdk, /compositionPlates: Object\.freeze/);
 assert.match(docs, /Square Guardians/);
 assert.match(docs, /capability is not authority/i);

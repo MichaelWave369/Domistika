@@ -1,3 +1,28 @@
+## v0.9.36 — Symmetry Receipts
+
+Domistika now exports the generative grammar with the artwork instead of letting the pixels leave home without identification.
+
+A SHA-256-bound receipt preserves:
+
+```text
+formula
+plate id + frozen regional grammar
+Art Director seed
+palette + palette source
+transform count + count semantics
+```
+
+Creative Bridge remains protocol v2. The receipt carries its own hash, and that hash is anchored into the existing manifest-hashed bridge note so current Auralith receivers remain compatible.
+
+Stable SDK v0.1.13 adds:
+
+```js
+const receipt = await Domistika.symmetryReceipts.current()
+await Domistika.symmetryReceipts.verify(receipt)
+```
+
+See [Symmetry Receipts](docs/SYMMETRY_RECEIPTS_V0936.md).
+
 ## v0.9.35 — Composition Plates
 
 Domistika symmetry can now obey different laws in different canvas regions.
