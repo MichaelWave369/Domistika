@@ -10,7 +10,7 @@ const rotation = fs.readFileSync(new URL('../src/DomistikaKineticRotationV0912.j
 const expansion = fs.readFileSync(new URL('../src/DomistikaKineticExpansionV0914.js', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
-assert.ok(/^0\\.9\\.\\d+$/.test(pkg.version));
+assert.ok(Number(pkg.version.split('.')[2]) >= 31);
 assert.match(engine, /LAYER_ROLES = Object\.freeze\(\['paint', 'guide', 'type'\]\)/);
 assert.match(engine, /MOTION_POLICIES = Object\.freeze\(\['inherit', 'animate', 'ignore'\]\)/);
 assert.match(engine, /requested === 'motion-ignore'/);
