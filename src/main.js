@@ -36,9 +36,9 @@ app.innerHTML = `
     <div class="inspector-tabs"><button class="active" data-panel="layersPanel">Layers</button><button data-panel="referencePanel">3D Form Lab</button></div>
     <section id="layersPanel" class="inspector-panel active">
       <div class="panel-heading"><div><h2>Layers</h2><p>Non-destructive building blocks</p></div><button id="addLayer" class="icon-button">＋</button></div>
-      <div class="layer-actions"><button id="duplicateLayer">Duplicate</button><button id="layerUp">Up</button><button id="layerDown">Down</button><button id="deleteLayer">Delete</button></div>
+      <div class="layer-actions"><button id="duplicateLayer">Duplicate</button><button id="mergeLayerDown">Merge down</button><button id="layerUp">Up</button><button id="layerDown">Down</button><button id="deleteLayer">Delete</button><button id="newLayerGroup">＋ Group</button></div>
       <div id="layerList" class="layer-list"></div>
-      <div class="layer-properties"><label>Layer role<select id="layerRole"><option value="paint">Paint</option><option value="type">Type</option><option value="guide">Guide</option></select></label><label>Motion<select id="layerMotionPolicy"><option value="inherit">Inherit</option><option value="animate">Animate</option><option value="ignore">Ignore</option></select></label><label>Layer opacity <output id="layerOpacityOutput">100%</output><input id="layerOpacity" type="range" min="0" max="100" value="100"></label><label>Blend mode<select id="blendMode"><option value="normal">Normal</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="overlay">Overlay</option><option value="soft-light">Soft light</option><option value="hard-light">Hard light</option><option value="difference">Difference</option></select></label></div>
+      <div class="layer-properties"><label class="check-row"><input id="layerLock" type="checkbox"> Lock layer</label><label>Group<select id="layerGroup"><option value="">No group</option></select></label><label>Layer role<select id="layerRole"><option value="paint">Paint</option><option value="type">Type</option><option value="guide">Guide</option></select></label><label>Motion<select id="layerMotionPolicy"><option value="inherit">Inherit</option><option value="animate">Animate</option><option value="ignore">Ignore</option></select></label><label>Layer opacity <output id="layerOpacityOutput">100%</output><input id="layerOpacity" type="range" min="0" max="100" value="100"></label><label>Blend mode<select id="blendMode"><option value="normal">Normal</option><option value="multiply">Multiply</option><option value="screen">Screen</option><option value="overlay">Overlay</option><option value="soft-light">Soft light</option><option value="hard-light">Hard light</option><option value="difference">Difference</option></select></label></div>
     </section>
     <section id="referencePanel" class="inspector-panel">
       <div class="panel-heading"><div><h2>3D Form Lab</h2><p>Rotate forms and study light</p></div><span class="gpu-badge" id="gpuStatus">Starting…</span></div>
@@ -176,6 +176,12 @@ viewport.addEventListener('wheel', (event) => { event.preventDefault(); const re
 
 $('#addLayer').addEventListener('click', () => engine.createLayer());
 $('#duplicateLayer').addEventListener('click', () => engine.duplicateActiveLayer());
+$('#mergeLayerDown').addEventListener('click', () => { void engine.mergeActiveLayerDown(); });
+$('#newLayerGroup').addEventListener('click', () => {
+  const group = engine.createLayerGroup();
+  if (engine.activeLayerId) engine.setLayerGroup(engine.activeLayerId, group.id);
+  renderLayers();
+});
 $('#deleteLayer').addEventListener('click', () => engine.deleteActiveLayer());
 $('#layerUp').addEventListener('click', () => engine.moveActiveLayer(1));
 $('#layerDown').addEventListener('click', () => engine.moveActiveLayer(-1));
@@ -190,18 +196,27 @@ function renderLayers() {
   list.innerHTML = '';
   [...engine.layers].reverse().forEach((layer) => {
     const row = document.createElement('div');
-    row.className = `layer-row ${layer.id === engine.activeLayerId ? 'active' : ''}`;
-    row.innerHTML = `<button class="visibility-button">${layer.visible ? '◉' : '○'}</button><div class="layer-thumb"><canvas width="54" height="42"></canvas></div><div class="layer-copy"><input class="layer-name" value="${escapeHtml(layer.name)}"><span class="layer-role-badge" data-role="${escapeHtml(layer.role || (layer.kind === 'guide' ? 'guide' : 'paint'))}">${escapeHtml(layer.role || (layer.kind === 'guide' ? 'guide' : 'paint'))}</span></div>`;
-    row.addEventListener('click', (event) => { if (!event.target.closest('.visibility-button')) engine.setActiveLayer(layer.id); });
+    row.className = `layer-row ${layer.id === engine.activeLayerId ? 'active' : ''} ${layer.locked ? 'locked' : ''}`;
+    const group = engine.layerGroup?.(layer.groupId);
+    row.innerHTML = `<button class="visibility-button">${layer.visible ? '◉' : '○'}</button><button class="layer-lock-button" title="${layer.locked ? 'Unlock layer' : 'Lock layer'}">${layer.locked ? '🔒' : '🔓'}</button><div class="layer-thumb"><canvas width="54" height="42"></canvas></div><div class="layer-copy"><input class="layer-name" value="${escapeHtml(layer.name)}"><span class="layer-role-badge" data-role="${escapeHtml(layer.role || (layer.kind === 'guide' ? 'guide' : 'paint'))}">${escapeHtml(layer.role || (layer.kind === 'guide' ? 'guide' : 'paint'))}</span>${group ? `<span class="layer-group-badge">▸ ${escapeHtml(group.name)}</span>` : ''}</div>`;
+    row.addEventListener('click', (event) => { if (!event.target.closest('.visibility-button, .layer-lock-button')) engine.setActiveLayer(layer.id); });
     row.querySelector('.visibility-button').addEventListener('click', () => engine.setLayerVisibility(layer.id, !layer.visible));
+    row.querySelector('.layer-lock-button').addEventListener('click', () => engine.setLayerLocked(layer.id, !layer.locked));
     row.querySelector('.layer-name').addEventListener('change', (event) => engine.renameLayer(layer.id, event.target.value));
     const thumb = row.querySelector('canvas');
     const ctx = thumb.getContext('2d');
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, thumb.width, thumb.height); ctx.drawImage(layer.canvas, 0, 0, thumb.width, thumb.height);
     list.appendChild(row);
   });
+  const groupSelect = $('#layerGroup');
+  if (groupSelect) {
+    groupSelect.innerHTML = '<option value="">No group</option>' + (engine.layerGroups || [])
+      .map((group) => `<option value="${escapeHtml(group.id)}">${escapeHtml(group.name)}</option>`).join('');
+  }
   const active = engine.activeLayer;
   if (active) {
+    $('#layerLock').checked = active.locked === true;
+    if (groupSelect) groupSelect.value = active.groupId || '';
     $('#layerRole').value = active.role || (active.kind === 'guide' ? 'guide' : 'paint');
     $('#layerRole').disabled = active.kind === 'guide';
     $('#layerMotionPolicy').value = active.motionPolicy || 'inherit';
@@ -211,6 +226,14 @@ function renderLayers() {
     $('#blendMode').value = active.blendMode;
   }
 }
+$('#layerLock').addEventListener('change', (event) => {
+  engine.setLayerLocked(engine.activeLayerId, event.target.checked);
+  renderLayers();
+});
+$('#layerGroup').addEventListener('change', (event) => {
+  engine.setLayerGroup(engine.activeLayerId, event.target.value || null);
+  renderLayers();
+});
 $('#layerRole').addEventListener('change', (event) => {
   engine.setLayerRole(engine.activeLayerId, event.target.value);
   renderLayers();
