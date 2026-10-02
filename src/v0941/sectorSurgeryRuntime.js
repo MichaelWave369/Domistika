@@ -269,16 +269,19 @@ export function beginSectorSurgery(point) {
       visible: true,
       locked: false,
       groupId: source.groupId || null,
-      semanticOverlays: [{
-        kind: 'sector-surgery',
-        schema: SCHEMA,
-        version: VERSION,
-        plateId: target.plateId,
-        regionId: target.regionId,
-        sectorIndex: target.sectorIndex,
-        sectorCount: target.sectorCount,
-        sourceLayerId: source.id,
-      }],
+      semanticOverlays: [
+        ...(Array.isArray(source.semanticOverlays) ? source.semanticOverlays : []),
+        {
+          kind: 'sector-surgery',
+          schema: SCHEMA,
+          version: VERSION,
+          plateId: target.plateId,
+          regionId: target.regionId,
+          sectorIndex: target.sectorIndex,
+          sectorCount: target.sectorCount,
+          sourceLayerId: source.id,
+        },
+      ].slice(0, 32),
     },
   );
   repair.ctx.drawImage(source.canvas, 0, 0);
