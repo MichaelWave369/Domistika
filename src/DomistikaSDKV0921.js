@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.37';
-const SDK_VERSION = '0.1.14';
+const APP_VERSION = '0.9.38';
+const SDK_VERSION = '0.1.15';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -219,7 +219,9 @@ function stroke(points, options = {}) {
   if (engine.activeLayer.locked === true) throw new Error('DOMISTIKA_SDK_LAYER_LOCKED');
 
   const space = options.space || 'canvas';
-  const normalized = points.map((point) => normalizePoint(point, engine, space));
+  let normalized = points.map((point) => normalizePoint(point, engine, space));
+  const drafting = window.domistikaDraftingGuidesV0938;
+  if (drafting?.snapPoints) normalized = drafting.snapPoints(normalized, engine);
   if (options.history !== false) engine.captureHistory?.();
 
   engine.drawDot(normalized[0]);
@@ -732,6 +734,38 @@ function compositionPlateRegionAt(point) {
   return runtime.regionAt(point);
 }
 
+function draftingGuideRuntime() {
+  return window.domistikaDraftingGuidesV0938 || null;
+}
+
+function draftingGuideApply(kind, options = {}) {
+  const runtime = draftingGuideRuntime();
+  if (!runtime?.apply) throw new Error('DOMISTIKA_SDK_DRAFTING_GUIDES_UNAVAILABLE');
+  return runtime.apply(kind, options);
+}
+
+function draftingGuideClear() {
+  const runtime = draftingGuideRuntime();
+  if (!runtime?.clear) throw new Error('DOMISTIKA_SDK_DRAFTING_GUIDES_UNAVAILABLE');
+  return runtime.clear();
+}
+
+function draftingGuideActive() {
+  return draftingGuideRuntime()?.active?.() || null;
+}
+
+function draftingGuideSnap(enabled) {
+  const runtime = draftingGuideRuntime();
+  if (!runtime?.snap) throw new Error('DOMISTIKA_SDK_DRAFTING_GUIDES_UNAVAILABLE');
+  return runtime.snap(Boolean(enabled));
+}
+
+function draftingGuideVisible(visible) {
+  const runtime = draftingGuideRuntime();
+  if (!runtime?.visible) throw new Error('DOMISTIKA_SDK_DRAFTING_GUIDES_UNAVAILABLE');
+  return runtime.visible(Boolean(visible));
+}
+
 function symmetryReceiptRuntime() {
   return window.domistikaSymmetryReceiptsV0936 || null;
 }
@@ -938,6 +972,34 @@ registerSdkCommand('layer.merge-down', {
   description: 'Flatten the active layer into the layer directly below as one undoable operation.',
   keywords: ['layer', 'merge', 'flatten', 'down'],
 }, async () => layerMergeDown(requireEngine().activeLayerId));
+
+registerSdkCommand('guide.drafting.horizontal', {
+  label: 'Drafting Guide · Horizontal Ruler',
+  category: 'Guides',
+  description: 'Create a horizontal straight ruler with optional snapping.',
+  keywords: ['guide', 'drafting', 'ruler', 'horizontal', 'snap'],
+}, async (options = {}) => draftingGuideApply('horizontal-ruler', options));
+
+registerSdkCommand('guide.drafting.vertical', {
+  label: 'Drafting Guide · Vertical Ruler',
+  category: 'Guides',
+  description: 'Create a vertical straight ruler with optional snapping.',
+  keywords: ['guide', 'drafting', 'ruler', 'vertical', 'snap'],
+}, async (options = {}) => draftingGuideApply('vertical-ruler', options));
+
+registerSdkCommand('guide.drafting.ellipse', {
+  label: 'Drafting Guide · Ellipse',
+  category: 'Guides',
+  description: 'Create an ellipse guide with optional curve snapping.',
+  keywords: ['guide', 'drafting', 'ellipse', 'curve', 'snap'],
+}, async (options = {}) => draftingGuideApply('ellipse', options));
+
+registerSdkCommand('guide.drafting.one-point', {
+  label: 'Drafting Guide · One-Point Perspective',
+  category: 'Guides',
+  description: 'Create one horizon and one vanishing point with perspective-ray snapping.',
+  keywords: ['guide', 'drafting', 'perspective', 'horizon', 'vanishing point', 'snap'],
+}, async (options = {}) => draftingGuideApply('one-point', options));
 
 registerSdkCommand('layer.role.paint', {
   label: 'Layer Role · Paint',
@@ -1311,6 +1373,14 @@ function capabilities() {
       schema: symmetryReceiptRuntime()?.schema || null,
       bridgeAnchored: true,
     }),
+    draftingGuides: Object.freeze({
+      available: Boolean(draftingGuideRuntime()?.apply),
+      version: draftingGuideRuntime()?.version || null,
+      schema: draftingGuideRuntime()?.schema || null,
+      kinds: Object.freeze([...(draftingGuideRuntime()?.kinds || [])]),
+      active: draftingGuideActive(),
+      sharedSnapBoundary: Boolean(draftingGuideRuntime()?.snapPoints),
+    }),
     art: Object.freeze({
       available: Boolean(recipeArtifactRuntime()?.draw),
       version: recipeArtifactRuntime()?.version || null,
@@ -1428,6 +1498,15 @@ if (!window[INSTALL_FLAG]) {
     symmetryReceipts: {
       current: symmetryReceiptCurrent,
       verify: symmetryReceiptVerify,
+    },
+
+    draftingGuides: {
+      apply: draftingGuideApply,
+      clear: draftingGuideClear,
+      active: draftingGuideActive,
+      snap: draftingGuideSnap,
+      visible: draftingGuideVisible,
+      kinds: () => Object.freeze([...(draftingGuideRuntime()?.kinds || [])]),
     },
 
     art: {

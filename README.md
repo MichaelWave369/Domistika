@@ -1,3 +1,31 @@
+## v0.9.38 — Drafting Guides
+
+Domistika now turns its existing export-excluded `guide` layers into precision constraints.
+
+Built-ins:
+
+```text
+Horizontal ruler
+Vertical ruler
+Ellipse
+One-point perspective · one horizon + one vanishing point
+```
+
+Guide visibility and snapping are independent. The same active snap boundary applies to pointer/pen input and stable SDK strokes, so Recipe Artifacts and Agent Art Director output cannot silently bypass a drafting constraint.
+
+Stable SDK v0.1.15 adds:
+
+```js
+Domistika.draftingGuides.apply('horizontal-ruler', { position: 0.42 })
+Domistika.draftingGuides.apply('ellipse', { cx: .5, cy: .5, rx: .32, ry: .22 })
+Domistika.draftingGuides.apply('one-point', { horizonY: .42, vanishingX: .5 })
+Domistika.draftingGuides.snap(false)
+Domistika.draftingGuides.visible(false)
+Domistika.draftingGuides.clear()
+```
+
+See [Drafting Guides](docs/DRAFTING_GUIDES_V0938.md).
+
 ## v0.9.37 — Layer Housekeeping
 
 Domistika now has persistent **layer locks, organizational groups, and one-step merge down**.
