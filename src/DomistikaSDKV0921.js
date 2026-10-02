@@ -1,4 +1,4 @@
-const APP_VERSION = '0.9.31';
+const APP_VERSION = '0.9.32';
 const SDK_VERSION = '0.1.9';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
@@ -611,6 +611,30 @@ function playgroundState() {
 }
 
 
+function symmetryRecipeRuntime() {
+  return window.domistikaSymmetryRecipesV0932 || null;
+}
+
+function symmetryRecipeList() {
+  return symmetryRecipeRuntime()?.list?.() || Object.freeze([]);
+}
+
+function symmetryRecipeApply(id) {
+  const runtime = symmetryRecipeRuntime();
+  if (!runtime?.apply) throw new Error('DOMISTIKA_SDK_SYMMETRY_RECIPES_UNAVAILABLE');
+  return runtime.apply(id);
+}
+
+function symmetryRecipeApplyFormula(formula, label = 'Custom') {
+  const runtime = symmetryRecipeRuntime();
+  if (!runtime?.applyFormula) throw new Error('DOMISTIKA_SDK_SYMMETRY_RECIPES_UNAVAILABLE');
+  return runtime.applyFormula(formula, label);
+}
+
+function symmetryRecipeActive() {
+  return symmetryRecipeRuntime()?.active?.() || null;
+}
+
 function colorStudioRuntime() {
   return window.domistikaColorStudioV0924 || null;
 }
@@ -1064,6 +1088,13 @@ function capabilities() {
     layerRoles: Object.freeze(['paint', 'guide', 'type']),
     motionPolicies: Object.freeze(['inherit', 'animate', 'ignore']),
     playground: playgroundState(),
+    symmetryRecipes: Object.freeze({
+      available: Boolean(symmetryRecipeRuntime()?.apply),
+      version: symmetryRecipeRuntime()?.version || null,
+      schema: symmetryRecipeRuntime()?.schema || null,
+      presets: Object.freeze(symmetryRecipeList().map((recipe) => recipe.id)),
+      active: symmetryRecipeActive(),
+    }),
     spiro: Object.freeze({
       available: Boolean(spiro),
       version: spiro?.version || '0.7',
@@ -1146,6 +1177,13 @@ if (!window[INSTALL_FLAG]) {
       opacity: (value) => value == null ? requireEngine().settings.opacity : setSetting('opacity', value),
       smoothing: (value) => value == null ? requireEngine().settings.smoothing : setSetting('smoothing', value),
       symmetry: (value) => value == null ? requireEngine().settings.symmetry : setSetting('symmetry', value),
+    },
+
+    symmetryRecipes: {
+      list: symmetryRecipeList,
+      apply: symmetryRecipeApply,
+      applyFormula: symmetryRecipeApplyFormula,
+      active: symmetryRecipeActive,
     },
 
     colors: {
