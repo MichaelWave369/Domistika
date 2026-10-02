@@ -340,7 +340,7 @@ async function commitSelectionAct(kind) {
     ctx.fillStyle = latestEngine.settings.color || '#000000';
     if (traceSelectionBoundary(ctx, item)) ctx.fill();
   } else if (kind === 'stroke-outline') {
-    ctx.globalCompositeOperation = latestEngine.tool === 'eraser' ? 'destination-out' : 'source-over';
+    ctx.globalCompositeOperation = 'source-over';
     ctx.globalAlpha = clamp(Number(latestEngine.settings.opacity ?? 1), 0.01, 1);
     ctx.strokeStyle = latestEngine.settings.color || '#000000';
     ctx.lineWidth = Math.max(0.5, Number(latestEngine.settings.size ?? 1));
