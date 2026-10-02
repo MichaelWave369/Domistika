@@ -33,6 +33,7 @@ export class CanvasEngine {
     this.width = width;
     this.height = height;
     this.layers = [];
+    this.layerGroups = [];
     this.activeLayerId = null;
     this.tool = 'pencil';
     this.settings = {
@@ -104,6 +105,8 @@ export class CanvasEngine {
       blendMode: options.blendMode ?? 'normal',
       role,
       motionPolicy,
+      locked: options.locked === true,
+      groupId: options.groupId || null,
       semanticOverlays: Array.isArray(options.semanticOverlays)
         ? JSON.parse(JSON.stringify(options.semanticOverlays)).slice(0, 32)
         : [],
@@ -170,6 +173,63 @@ export class CanvasEngine {
     this.markChanged('Layer renamed');
   }
 
+  setLayerLocked(id, locked) {
+    const layer = this.layers.find((candidate) => candidate.id === id);
+    if (!layer) return null;
+    layer.locked = Boolean(locked);
+    layer.canvas.dataset.locked = String(layer.locked);
+    this.markChanged(layer.locked ? 'Layer locked' : 'Layer unlocked');
+    this.onChange({ reason: 'layer-lock', engine: this, layerId: layer.id, locked: layer.locked });
+    return layer.locked;
+  }
+
+  createLayerGroup(name = `Group ${this.layerGroups.length + 1}`) {
+    const group = {
+      id: uid('group'),
+      name: String(name || '').trim().slice(0, 120) || `Group ${this.layerGroups.length + 1}`,
+    };
+    this.layerGroups.push(group);
+    this.markChanged('Layer group created');
+    return group;
+  }
+
+  renameLayerGroup(id, name) {
+    const group = this.layerGroups.find((candidate) => candidate.id === id);
+    if (!group) return null;
+    group.name = String(name || '').trim().slice(0, 120) || group.name;
+    this.markChanged('Layer group renamed');
+    return group;
+  }
+
+  deleteLayerGroup(id) {
+    const index = this.layerGroups.findIndex((candidate) => candidate.id === id);
+    if (index < 0) return false;
+    this.layerGroups.splice(index, 1);
+    this.layers.forEach((layer) => {
+      if (layer.groupId === id) layer.groupId = null;
+    });
+    this.markChanged('Layer group removed');
+    return true;
+  }
+
+  setLayerGroup(layerId, groupId = null) {
+    const layer = this.layers.find((candidate) => candidate.id === layerId);
+    if (!layer) return null;
+    const requested = groupId == null || groupId === '' ? null : String(groupId);
+    if (requested && !this.layerGroups.some((group) => group.id === requested)) return null;
+    layer.groupId = requested;
+    this.markChanged(requested ? 'Layer grouped' : 'Layer ungrouped');
+    return layer.groupId;
+  }
+
+  layerGroup(id) {
+    return this.layerGroups.find((candidate) => candidate.id === id) ?? null;
+  }
+
+  layerWritable(layer = this.activeLayer) {
+    return Boolean(layer && layer.locked !== true);
+  }
+
   setLayerVisibility(id, visible) {
     const layer = this.layers.find((candidate) => candidate.id === id);
     if (!layer) return;
@@ -229,6 +289,10 @@ export class CanvasEngine {
   clearActiveLayer() {
     const layer = this.activeLayer;
     if (!layer) return;
+    if (!this.layerWritable(layer)) {
+      this.onStatus('Layer is locked');
+      return false;
+    }
     this.captureHistory();
     layer.ctx.clearRect(0, 0, this.width, this.height);
     layer.semanticOverlays = [];
@@ -282,6 +346,10 @@ export class CanvasEngine {
       return;
     }
     if (!DRAW_TOOLS.has(this.tool) && !SHAPE_TOOLS.has(this.tool)) return;
+    if (!this.layerWritable()) {
+      this.onStatus('Layer is locked');
+      return;
+    }
     this.captureHistory();
     this.overlay.setPointerCapture(event.pointerId);
     this.pointer = { mode: this.tool, id: event.pointerId, start: point, last: point, smoothed: point, moved: false };
@@ -360,7 +428,7 @@ export class CanvasEngine {
 
   drawSingleSegment(from, to) {
     const layer = this.activeLayer;
-    if (!layer) return;
+    if (!layer || !this.layerWritable(layer)) return;
     const ctx = layer.ctx;
     const fromPressureRaw = Number(from?.pressure);
     const toPressureRaw = Number(to?.pressure);
@@ -412,7 +480,7 @@ export class CanvasEngine {
 
   commitShape(tool, start, end) {
     const layer = this.activeLayer;
-    if (!layer) return;
+    if (!layer || !this.layerWritable(layer)) return;
     for (const transform of this.symmetryTransforms()) this.drawShape(layer.ctx, tool, transform(start), transform(end), false);
   }
 
@@ -488,6 +556,149 @@ export class CanvasEngine {
     this.onStatus(`Color picked: ${color}`);
   }
 
+  async mergeActiveLayerDown() {
+    const sourceIndex = this.layers.findIndex((layer) => layer.id === this.activeLayerId);
+    if (sourceIndex <= 0) {
+      this.onStatus('No lower layer to merge into');
+      return false;
+    }
+    const source = this.layers[sourceIndex];
+    const target = this.layers[sourceIndex - 1];
+    if (!this.layerWritable(source) || !this.layerWritable(target)) {
+      this.onStatus('Unlock both layers before merging');
+      return false;
+    }
+
+    const before = {
+      sourceIndex,
+      targetIndex: sourceIndex - 1,
+      source: this.layerSnapshot(source),
+      target: this.layerSnapshot(target),
+      activeLayerId: this.activeLayerId,
+    };
+
+    this.applyMergeDown(source, target);
+    const afterTarget = this.layerSnapshot(target);
+    this.layers.splice(sourceIndex, 1);
+    source.canvas.remove();
+    this.setActiveLayer(target.id);
+    this.syncLayerDomOrder();
+
+    this.undoStack.push({
+      kind: 'merge-down',
+      before,
+      after: {
+        target: afterTarget,
+        activeLayerId: target.id,
+      },
+    });
+    if (this.undoStack.length > this.maxHistory) this.undoStack.shift();
+    this.redoStack.length = 0;
+    this.markChanged('Layer merged down');
+    return true;
+  }
+
+  applyMergeDown(source, target) {
+    const merged = document.createElement('canvas');
+    merged.width = this.width;
+    merged.height = this.height;
+    const ctx = merged.getContext('2d');
+    ctx.save();
+    ctx.globalAlpha = Number(target.opacity ?? 1);
+    ctx.globalCompositeOperation = this.mapBlendMode(target.blendMode);
+    ctx.drawImage(target.canvas, 0, 0);
+    ctx.restore();
+    ctx.save();
+    ctx.globalAlpha = Number(source.opacity ?? 1);
+    ctx.globalCompositeOperation = this.mapBlendMode(source.blendMode);
+    ctx.drawImage(source.canvas, 0, 0);
+    ctx.restore();
+
+    target.ctx.clearRect(0, 0, this.width, this.height);
+    target.ctx.drawImage(merged, 0, 0);
+    target.opacity = 1;
+    target.blendMode = 'normal';
+    target.canvas.style.opacity = '1';
+    target.canvas.style.mixBlendMode = 'normal';
+    target.semanticOverlays = [
+      ...(Array.isArray(target.semanticOverlays) ? target.semanticOverlays : []),
+      ...(Array.isArray(source.semanticOverlays) ? source.semanticOverlays : []),
+    ].slice(0, 32);
+  }
+
+  layerSnapshot(layer) {
+    return {
+      id: layer.id,
+      name: layer.name,
+      visible: layer.visible !== false,
+      opacity: Number(layer.opacity ?? 1),
+      blendMode: layer.blendMode || 'normal',
+      role: layer.role || 'paint',
+      motionPolicy: layer.motionPolicy || 'inherit',
+      locked: layer.locked === true,
+      groupId: layer.groupId || null,
+      semanticOverlays: Array.isArray(layer.semanticOverlays)
+        ? JSON.parse(JSON.stringify(layer.semanticOverlays))
+        : [],
+      image: layer.canvas.toDataURL('image/png'),
+    };
+  }
+
+  async restoreLayerSnapshot(target, snapshot) {
+    target.name = snapshot.name;
+    target.visible = snapshot.visible !== false;
+    target.opacity = Number(snapshot.opacity ?? 1);
+    target.blendMode = snapshot.blendMode || 'normal';
+    target.role = snapshot.role || 'paint';
+    target.motionPolicy = snapshot.motionPolicy || 'inherit';
+    target.locked = snapshot.locked === true;
+    target.groupId = snapshot.groupId || null;
+    target.semanticOverlays = Array.isArray(snapshot.semanticOverlays)
+      ? JSON.parse(JSON.stringify(snapshot.semanticOverlays))
+      : [];
+    target.canvas.hidden = !target.visible;
+    target.canvas.style.opacity = String(target.opacity);
+    target.canvas.style.mixBlendMode = target.blendMode;
+    target.canvas.dataset.layerRole = target.role;
+    target.canvas.dataset.motionPolicy = target.motionPolicy;
+    target.canvas.dataset.locked = String(target.locked);
+    target.ctx.clearRect(0, 0, this.width, this.height);
+    if (snapshot.image) {
+      const image = await loadImage(snapshot.image);
+      target.ctx.drawImage(image, 0, 0);
+    }
+  }
+
+  async undoMergeDown(snapshot) {
+    const target = this.layers.find((layer) => layer.id === snapshot.before.target.id);
+    if (!target) return false;
+    await this.restoreLayerSnapshot(target, snapshot.before.target);
+    const restoredSource = this.createLayer(snapshot.before.source.name, {
+      ...snapshot.before.source,
+      id: snapshot.before.source.id,
+    });
+    const createdIndex = this.layers.findIndex((layer) => layer.id === restoredSource.id);
+    if (createdIndex >= 0) this.layers.splice(createdIndex, 1);
+    this.layers.splice(snapshot.before.sourceIndex, 0, restoredSource);
+    await this.restoreLayerSnapshot(restoredSource, snapshot.before.source);
+    this.syncLayerDomOrder();
+    this.setActiveLayer(snapshot.before.activeLayerId);
+    return true;
+  }
+
+  async redoMergeDown(snapshot) {
+    const source = this.layers.find((layer) => layer.id === snapshot.before.source.id);
+    const target = this.layers.find((layer) => layer.id === snapshot.before.target.id);
+    if (!source || !target) return false;
+    await this.restoreLayerSnapshot(target, snapshot.after.target);
+    const sourceIndex = this.layers.findIndex((layer) => layer.id === source.id);
+    if (sourceIndex >= 0) this.layers.splice(sourceIndex, 1);
+    source.canvas.remove();
+    this.syncLayerDomOrder();
+    this.setActiveLayer(snapshot.after.activeLayerId);
+    return true;
+  }
+
   captureHistory() {
     const layer = this.activeLayer;
     if (!layer) return;
@@ -507,6 +718,13 @@ export class CanvasEngine {
   async undo() {
     const snapshot = this.undoStack.pop();
     if (!snapshot) return this.onStatus('Nothing to undo');
+    if (snapshot.kind === 'merge-down') {
+      if (await this.undoMergeDown(snapshot)) {
+        this.redoStack.push(snapshot);
+        this.markChanged('Undo merge down');
+      }
+      return;
+    }
     const layer = this.layers.find((candidate) => candidate.id === snapshot.layerId);
     if (!layer) return;
     this.redoStack.push({ layerId: layer.id, dataUrl: layer.canvas.toDataURL('image/png') });
@@ -517,6 +735,13 @@ export class CanvasEngine {
   async redo() {
     const snapshot = this.redoStack.pop();
     if (!snapshot) return this.onStatus('Nothing to redo');
+    if (snapshot.kind === 'merge-down') {
+      if (await this.redoMergeDown(snapshot)) {
+        this.undoStack.push(snapshot);
+        this.markChanged('Redo merge down');
+      }
+      return;
+    }
     const layer = this.layers.find((candidate) => candidate.id === snapshot.layerId);
     if (!layer) return;
     this.undoStack.push({ layerId: layer.id, dataUrl: layer.canvas.toDataURL('image/png') });
@@ -571,10 +796,12 @@ export class CanvasEngine {
       format: 'domistika-project', version: 1, savedAt: new Date().toISOString(),
       width: this.width, height: this.height, activeLayerId: this.activeLayerId,
       settings: this.settings,
+      layerGroups: this.layerGroups.map((group) => ({ id: group.id, name: group.name })),
       layers: this.layers.map((layer) => ({
         id: layer.id, name: layer.name, visible: layer.visible, opacity: layer.opacity,
         blendMode: layer.blendMode, role: layer.role || 'paint',
         motionPolicy: layer.motionPolicy || 'inherit',
+        locked: layer.locked === true, groupId: layer.groupId || null,
         semanticOverlays: Array.isArray(layer.semanticOverlays) ? JSON.parse(JSON.stringify(layer.semanticOverlays)) : [],
         image: layer.canvas.toDataURL('image/png'),
       })),
@@ -585,6 +812,12 @@ export class CanvasEngine {
     if (!project || project.format !== 'domistika-project' || !Array.isArray(project.layers)) throw new Error('Not a valid Domistika project');
     this.layers.forEach((layer) => layer.canvas.remove());
     this.layers = [];
+    this.layerGroups = Array.isArray(project.layerGroups)
+      ? project.layerGroups.slice(0, 64).map((group) => ({
+        id: String(group?.id || uid('group')),
+        name: String(group?.name || 'Group').slice(0, 120),
+      }))
+      : [];
     this.resizeCanvases(project.width, project.height, false);
     this.settings = { ...this.settings, ...(project.settings ?? {}) };
     for (const saved of project.layers) {
