@@ -860,6 +860,7 @@ window.domistikaSelectionV04 = {
   cancel: cancelSelection,
   copy: copySelection,
   paste: pasteSelection,
+  disable: disableSelection,
   fill: fillSelection,
   strokeOutline: strokeSelectionOutline,
   boundary: () => selectionBoundaryPoints().map((point) => ({ ...point })),
