@@ -2,6 +2,7 @@ const VERSION = '0.9.37';
 const SCHEMA = 'domistika.layer-housekeeping.v1';
 
 function addStyles() {
+  if (typeof document === 'undefined') return;
   if (document.querySelector('#domistikaV0937LayerHousekeepingStyles')) return;
   const style = document.createElement('style');
   style.id = 'domistikaV0937LayerHousekeepingStyles';
@@ -16,7 +17,7 @@ function addStyles() {
 }
 
 addStyles();
-document.documentElement.dataset.layerHousekeeping = VERSION;
+if (typeof document !== 'undefined') document.documentElement.dataset.layerHousekeeping = VERSION;
 
 if (typeof window !== 'undefined') {
   window.domistikaLayerHousekeepingV0937 = Object.freeze({
