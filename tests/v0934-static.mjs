@@ -29,7 +29,7 @@ const planB = planArtDirection({
   surprise: .22,
 });
 
-assert.equal(planA.symmetry, 'gear', 'mechanical keywords intentionally outrank later cosmic ties');
+assert.equal(planA.symmetry, 'portal', 'cosmic portal intent should resolve to the portal recipe');
 assert.deepEqual(planA, planB, 'same direction must compile deterministically');
 assert.ok(planA.strokeCount >= 3 && planA.strokeCount <= 10);
 assert.ok(planA.pointsPerStroke >= 3 && planA.pointsPerStroke <= 6);
