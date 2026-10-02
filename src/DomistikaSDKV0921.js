@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.35';
-const SDK_VERSION = '0.1.12';
+const APP_VERSION = '0.9.36';
+const SDK_VERSION = '0.1.13';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -665,6 +665,22 @@ function compositionPlateRegionAt(point) {
   return runtime.regionAt(point);
 }
 
+function symmetryReceiptRuntime() {
+  return window.domistikaSymmetryReceiptsV0936 || null;
+}
+
+async function symmetryReceiptCurrent() {
+  const runtime = symmetryReceiptRuntime();
+  if (!runtime?.current) throw new Error('DOMISTIKA_SDK_SYMMETRY_RECEIPTS_UNAVAILABLE');
+  return runtime.current();
+}
+
+async function symmetryReceiptVerify(receipt) {
+  const runtime = symmetryReceiptRuntime();
+  if (!runtime?.verify) throw new Error('DOMISTIKA_SDK_SYMMETRY_RECEIPTS_UNAVAILABLE');
+  return runtime.verify(receipt);
+}
+
 function recipeArtifactRuntime() {
   return window.domistikaRecipeArtifactsV0933 || null;
 }
@@ -1195,6 +1211,12 @@ function capabilities() {
       plates: Object.freeze(compositionPlateList().map((plate) => plate.id)),
       active: compositionPlateActive(),
     }),
+    symmetryReceipts: Object.freeze({
+      available: Boolean(symmetryReceiptRuntime()?.current),
+      version: symmetryReceiptRuntime()?.version || null,
+      schema: symmetryReceiptRuntime()?.schema || null,
+      bridgeAnchored: true,
+    }),
     art: Object.freeze({
       available: Boolean(recipeArtifactRuntime()?.draw),
       version: recipeArtifactRuntime()?.version || null,
@@ -1244,6 +1266,7 @@ function capabilities() {
         protocol: 'parallax-creative-bridge',
         version: auralithBridgeRuntime()?.protocolVersion || 2,
         semanticOverlays: true,
+        symmetryReceipts: Boolean(symmetryReceiptRuntime()?.current),
         maxOverlays: 16,
       }),
     }),
@@ -1306,6 +1329,11 @@ if (!window[INSTALL_FLAG]) {
       clear: compositionPlateClear,
       active: compositionPlateActive,
       regionAt: compositionPlateRegionAt,
+    },
+
+    symmetryReceipts: {
+      current: symmetryReceiptCurrent,
+      verify: symmetryReceiptVerify,
     },
 
     art: {
