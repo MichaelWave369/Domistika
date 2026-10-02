@@ -62,7 +62,7 @@ const sdk = fs.readFileSync(new URL('../src/DomistikaSDKV0921.js', import.meta.u
 const siteTools = fs.readFileSync(new URL('../src/DomistikaSiteToolsV0929.js', import.meta.url), 'utf8');
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
-assert.ok(/^0\\.9\\.\\d+$/.test(pkg.version));
+assert.ok(Number(pkg.version.split('.')[2]) >= 31);
 assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
 assert.match(sdk, /SDK_VERSION = '0\.1\.9'/);
 
