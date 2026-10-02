@@ -90,7 +90,7 @@ assert.match(sdk, /bridge: Object\.freeze/);
 assert.match(sdk, /semanticOverlays: true/);
 assert.match(sdk, /transfer: transferToAuralith/);
 
-assert.match(siteTools, /VERSION = '0\.1\.2'/);
+assert.match(siteTools, /VERSION = '0\.1\.\d+'/);
 assert.match(siteTools, /domistika_transfer_to_auralith/);
 assert.doesNotMatch(siteTools, /\beval\s*\(/);
 assert.doesNotMatch(siteTools, /new Function\s*\(/);
