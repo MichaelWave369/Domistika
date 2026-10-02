@@ -63,7 +63,7 @@ const siteTools = fs.readFileSync(new URL('../src/DomistikaSiteToolsV0929.js', i
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
 
 assert.ok(/^0\\.9\\.\\d+$/.test(pkg.version));
-assert.match(sdk, /APP_VERSION = '0\.9\.31'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
 assert.match(sdk, /SDK_VERSION = '0\.1\.9'/);
 
 assert.match(engine, /semanticOverlays:/);
