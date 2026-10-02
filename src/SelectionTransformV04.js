@@ -141,6 +141,24 @@ function selectionCorners(item = selection) {
   ];
 }
 
+function selectionBoundaryPoints(item = selection) {
+  if (!item) return [];
+  if (Array.isArray(item.pathPointsLocal) && item.pathPointsLocal.length >= 3) {
+    return item.pathPointsLocal.map((point) => transformedPoint(point.x, point.y, item));
+  }
+  return selectionCorners(item);
+}
+
+function traceSelectionBoundary(ctx, item = selection) {
+  const points = selectionBoundaryPoints(item);
+  if (points.length < 3) return false;
+  ctx.beginPath();
+  ctx.moveTo(points[0].x, points[0].y);
+  for (let index = 1; index < points.length; index += 1) ctx.lineTo(points[index].x, points[index].y);
+  ctx.closePath();
+  return true;
+}
+
 function rotationHandle(item = selection) {
   return transformedPoint(0, -item.source.height / 2 - 46 / Math.max(0.18, Math.abs(item.scaleY)), item);
 }
@@ -184,6 +202,10 @@ function pushHistory(layer, dataUrl) {
 async function extractSelection(bounds, pathPoints = null) {
   const layer = activeLayer();
   if (!layer || bounds.width < 2 || bounds.height < 2) return;
+  if (layer.locked === true || latestEngine?.layerWritable?.(layer) === false) {
+    setStatus('Layer is locked. Unlock it before selecting pixels.');
+    return;
+  }
   if (selection) await commitSelection(true);
 
   const x = Math.floor(clamp(bounds.x, 0, latestEngine.width - 1));
@@ -225,6 +247,13 @@ async function extractSelection(bounds, pathPoints = null) {
     originalDataUrl,
     createdFromLayer: true,
     duplicateCount: 0,
+    selectionShape: pathPoints?.length >= 3 ? 'lasso' : 'rectangle',
+    pathPointsLocal: pathPoints?.length >= 3
+      ? pathPoints.map((point) => ({
+        x: point.x - (x + width / 2),
+        y: point.y - (y + height / 2),
+      }))
+      : null,
   };
   updateTransformUi();
   redrawSelectionOverlay();
@@ -273,6 +302,80 @@ async function cancelSelection() {
   latestEngine?.onChange?.({ reason: 'selection-cancelled', engine: latestEngine });
   updateTransformUi();
   setStatus('Selection cancelled and original pixels restored');
+}
+
+function selectionActReady() {
+  if (!selection) {
+    setStatus('Make a selection first');
+    return null;
+  }
+  const layer = layerForSelection();
+  if (!layer) {
+    setStatus('The selected layer is no longer available');
+    return null;
+  }
+  if (layer.locked === true || latestEngine?.layerWritable?.(layer) === false) {
+    setStatus('Layer is locked. Unlock it before applying a selection act.');
+    return null;
+  }
+  return { item: selection, layer };
+}
+
+async function commitSelectionAct(kind) {
+  const ready = selectionActReady();
+  if (!ready) return false;
+  const { item, layer } = ready;
+  const originalDataUrl = item.originalDataUrl;
+  await restoreLayer(layer, originalDataUrl);
+  pushHistory(layer, originalDataUrl);
+
+  const ctx = layer.ctx;
+  ctx.save();
+  ctx.lineJoin = 'round';
+  ctx.lineCap = 'round';
+
+  if (kind === 'fill') {
+    ctx.globalCompositeOperation = 'source-over';
+    ctx.globalAlpha = clamp(Number(latestEngine.settings.opacity ?? 1), 0.01, 1);
+    ctx.fillStyle = latestEngine.settings.color || '#000000';
+    if (traceSelectionBoundary(ctx, item)) ctx.fill();
+  } else if (kind === 'stroke-outline') {
+    ctx.globalCompositeOperation = latestEngine.tool === 'eraser' ? 'destination-out' : 'source-over';
+    ctx.globalAlpha = clamp(Number(latestEngine.settings.opacity ?? 1), 0.01, 1);
+    ctx.strokeStyle = latestEngine.settings.color || '#000000';
+    ctx.lineWidth = Math.max(0.5, Number(latestEngine.settings.size ?? 1));
+    if (traceSelectionBoundary(ctx, item)) ctx.stroke();
+  } else {
+    ctx.restore();
+    throw new Error('DOMISTIKA_SELECTION_ACT_INVALID');
+  }
+  ctx.restore();
+
+  const detail = {
+    kind,
+    layerId: layer.id,
+    color: latestEngine.settings.color || '#000000',
+    size: Number(latestEngine.settings.size ?? 1),
+    opacity: Number(latestEngine.settings.opacity ?? 1),
+    selectionShape: item.selectionShape || 'rectangle',
+  };
+
+  selection = null;
+  drawingSelection = null;
+  interaction = null;
+  redrawSelectionOverlay();
+  updateTransformUi();
+  latestEngine.markChanged(kind === 'fill' ? 'Selection filled' : 'Selection outline stroked');
+  document.dispatchEvent(new CustomEvent('domistika:v0939-selection-act', { detail }));
+  return true;
+}
+
+async function fillSelection() {
+  return commitSelectionAct('fill');
+}
+
+async function strokeSelectionOutline() {
+  return commitSelectionAct('stroke-outline');
 }
 
 function flattenedSelection(item = selection) {
@@ -327,6 +430,8 @@ async function pasteSelection() {
     originalDataUrl: layer.canvas.toDataURL('image/png'),
     createdFromLayer: false,
     duplicateCount: 0,
+    selectionShape: 'rectangle',
+    pathPointsLocal: null,
   };
   enableSelection();
   updateTransformUi();
@@ -641,6 +746,11 @@ function initUi() {
       <div class="v04-row"><button class="v04-button" id="v04Copy" data-needs-selection>Copy</button><button class="v04-button" id="v04Cut" data-needs-selection>Cut</button><button class="v04-button" id="v04Paste" disabled>Paste</button><button class="v04-button" id="v04Duplicate" data-needs-selection>Duplicate</button><button class="v04-button v04-danger" id="v04Delete" data-needs-selection>Delete</button></div>
     </div>
     <div class="v04-section">
+      <div><h3>Selection acts</h3><p>Apply one bounded operation to the active selection. Each act is one undo step.</p></div>
+      <div class="v04-row"><button class="v04-button v04-primary" id="v0939FillSelection" data-needs-selection>Fill selection</button><button class="v04-button" id="v0939StrokeOutline" data-needs-selection>Stroke outline</button></div>
+      <div id="v0939RecentBrushStrip" class="v0939-recent-brush-strip" aria-label="Recent brushes"></div>
+    </div>
+    <div class="v04-section">
       <div><h3>Transform</h3><p>Use precise controls or manipulate the selection directly on the canvas.</p></div>
       <label class="v04-slider">Scale <output id="v04ScaleOut">100%</output><input id="v04Scale" type="range" min="10" max="300" value="100"></label>
       <label class="v04-slider">Rotation <output id="v04RotationOut">0°</output><input id="v04Rotation" type="range" min="-180" max="180" value="0"></label>
@@ -673,6 +783,8 @@ function initUi() {
   panel.querySelector('#v04Paste').addEventListener('click', pasteSelection);
   panel.querySelector('#v04Duplicate').addEventListener('click', duplicateSelection);
   panel.querySelector('#v04Delete').addEventListener('click', () => commitSelection(false));
+  panel.querySelector('#v0939FillSelection').addEventListener('click', () => { void fillSelection(); });
+  panel.querySelector('#v0939StrokeOutline').addEventListener('click', () => { void strokeSelectionOutline(); });
   panel.querySelector('#v04Commit').addEventListener('click', () => commitSelection(true));
   panel.querySelector('#v04Cancel').addEventListener('click', cancelSelection);
   panel.querySelector('#v04Scale').addEventListener('input', (event) => {
@@ -740,6 +852,9 @@ window.domistikaSelectionV04 = {
   cancel: cancelSelection,
   copy: copySelection,
   paste: pasteSelection,
+  fill: fillSelection,
+  strokeOutline: strokeSelectionOutline,
+  boundary: () => selectionBoundaryPoints().map((point) => ({ ...point })),
   get active() { return !!selection; },
 };
 
