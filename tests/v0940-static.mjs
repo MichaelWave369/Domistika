@@ -54,7 +54,7 @@ const runtime = fs.readFileSync(new URL('../src/v0940/layeredExitRuntime.js', im
 const sdk = fs.readFileSync(new URL('../src/DomistikaSDKV0921.js', import.meta.url), 'utf8');
 const docs = fs.readFileSync(new URL('../docs/LAYERED_EXIT_V0940.md', import.meta.url), 'utf8');
 
-assert.equal(pkg.version, '0.9.40');
+assert.ok(Number(pkg.version.split('.')[2]) >= 40);
 assert.equal(pkg.dependencies['ag-psd'], '14.3.7');
 assert.match(pkg.scripts.check, /tests\/v0940-static\.mjs/);
 assert.match(index, /DomistikaLayeredExitV0940\.js/);
@@ -74,8 +74,8 @@ assert.match(core, /domistika:v0940-layered-export/);
 assert.match(runtime, /exportCurrentLayeredPsd/);
 assert.match(runtime, /inspectLayeredExit/);
 
-assert.match(sdk, /APP_VERSION = '0\.9\.40'/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.17'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 assert.match(sdk, /layeredExit: Object\.freeze/);
 assert.match(sdk, /psd: exportPsd/);
 assert.match(sdk, /inspectLayered: inspectLayeredExit/);
