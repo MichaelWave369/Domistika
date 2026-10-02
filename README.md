@@ -1,3 +1,49 @@
+## v0.9.42 — Field Qualification
+
+Domistika now contains an executable **creative-authority end-to-end qualification protocol**.
+
+It snapshots the current project, runs a deterministic acceptance scenario on a disposable 512×512 project, hashes pixel evidence, writes a PSD in memory, then restores the original project even when a gate fails.
+
+The frozen path verifies:
+
+```text
+Composition Plate apply
+Art Director generate + auto-lock
+Symmetry Receipt verification
+locked SDK write refusal
+one-sector surgery
+outside-sector no-op
+inside-sector redraw
+erase
+redraw after erase
+explicit radial refold + lock
+exact undo / redo
+.domistika save / restore
+surgery provenance persistence
+guide exclusion from PSD
+motion-ignore exclusion from PSD
+layered PSD write
+original-project restoration
+```
+
+Pixel mutation checks use SHA-256 over raw RGBA canvas bytes. The final JSON qualification receipt is itself canonicalized and SHA-256 bound.
+
+Stable SDK v0.1.19 adds:
+
+```js
+await Domistika.qualification.run()
+Domistika.qualification.last()
+Domistika.qualification.running()
+```
+
+Command palette:
+
+```text
+qualification.run
+```
+
+See [Field Qualification](docs/FIELD_QUALIFICATION_V0942.md).
+
 ## v0.9.41 — Sector Surgery
 
 Domistika can now open **exactly one radial Composition Plate sector** for bounded repair.
