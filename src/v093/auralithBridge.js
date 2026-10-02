@@ -139,7 +139,6 @@ async function transfer() {
             maxDimension: options.maxDimension,
             overlayCount: payload.overlays.length,
             contentHash: payload.contentHash,
-          symmetryReceiptHash: payload.symmetryReceipt?.contentHash || null,
             symmetryReceiptHash: payload.symmetryReceipt?.contentHash || null,
           },
         }));
@@ -153,6 +152,7 @@ async function transfer() {
           overlayCount: payload.overlays.length,
           baseContentHash: payload.baseContentHash,
           contentHash: payload.contentHash,
+          symmetryReceiptHash: payload.symmetryReceipt?.contentHash || null,
         };
       }
     } catch (error) {
