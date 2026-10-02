@@ -17,8 +17,10 @@ assert.equal(portal[1].op, 'MIRROR');
 assert.equal(compileRecipePlan('RADIAL(12)').count, 12);
 assert.equal(compileRecipePlan('RADIAL(12) | MIRROR(15)').count, 24);
 assert.equal(compileRecipePlan('RADIAL(12) | NEST(3,.82,.03)').count, 36);
-assert.equal(compileRecipePlan('RADIAL(96) | MIRROR | NEST(4,.8,.02)').count, MAX_TRANSFORMS);
-assert.equal(compileRecipePlan('RADIAL(96) | MIRROR | NEST(4,.8,.02)').truncated, true);
+
+const capped = compileRecipePlan('RADIAL(96) | MIRROR | NEST(4,.8,.02)');
+assert.equal(capped.count, MAX_TRANSFORMS);
+assert.equal(capped.truncated, true);
 
 const fractureA = compileRecipePlan('RADIAL(18) | NEST(2,.9,.025) | PERTURB(.055)');
 const fractureB = compileRecipePlan('RADIAL(18) | NEST(2,.9,.025) | PERTURB(.055)');
@@ -44,7 +46,9 @@ const [index, pkgText, entry, runtime, panel, docs, sdk] = await Promise.all([
   read('src/v0932/symmetryRecipeRuntime.js'),
   read('src/v0932/symmetryRecipePanel.js'),
   read('docs/SYMMETRY_RECIPES_V0932.md'),
+  read('src/DomistikaSDKV0921.js'),
 ]);
+
 const pkg = JSON.parse(pkgText);
 assert.equal(pkg.version, '0.9.32');
 assert.match(pkg.scripts.check, /tests\/v0932-static\.mjs/);
@@ -52,10 +56,16 @@ assert.match(index, /DomistikaSymmetryRecipesV0932\.js/);
 assert.match(entry, /symmetryRecipeRuntime\.js/);
 assert.match(entry, /symmetryRecipePanel\.js/);
 assert.match(runtime, /CanvasEngine\.prototype\.symmetryTransforms/);
-assert.match(runtime, /domistikaSymmetryRecipesV0932/);\nassert.match(sdk, /APP_VERSION = '0\\.9\\.32'/);\nassert.match(sdk, /symmetryRecipes: Object\\.freeze/);\nassert.match(sdk, /applyFormula: symmetryRecipeApplyFormula/);
+assert.match(runtime, /domistikaSymmetryRecipesV0932/);
+assert.match(sdk, /APP_VERSION = '0\.9\.32'/);
+assert.match(sdk, /symmetryRecipes: Object\.freeze/);
+assert.match(sdk, /applyFormula: symmetryRecipeApplyFormula/);
 assert.match(panel, /Symmetry Recipes/);
 assert.match(panel, /Run formula/);
-for (const primitive of ['RADIAL', 'MIRROR', 'NEST', 'SPIRAL', 'COUNTERSPIN', 'PERTURB']) assert.match(panel, new RegExp(primitive));
+for (const primitive of ['RADIAL', 'MIRROR', 'NEST', 'SPIRAL', 'COUNTERSPIN', 'PERTURB']) {
+  assert.match(panel, new RegExp(primitive));
+}
 assert.match(docs, /domistika\.symmetry-recipe\.v1|Symmetry Recipes/);
+assert.match(docs, /window\.Domistika\.symmetryRecipes/);
 
 console.log('Domistika v0.9.32 symmetry recipe contracts passed.');
