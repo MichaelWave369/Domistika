@@ -1437,6 +1437,8 @@ function capabilities() {
     }),
     selectionActs: Object.freeze({
       available: Boolean(selectionRuntime()?.fill && selectionRuntime()?.strokeOutline),
+      version: window.domistikaSelectionActsV0939?.version || null,
+      schema: window.domistikaSelectionActsV0939?.schema || null,
       active: Boolean(selectionRuntime()?.active),
       fill: Boolean(selectionRuntime()?.fill),
       strokeOutline: Boolean(selectionRuntime()?.strokeOutline),
