@@ -26,7 +26,7 @@ assert.match(main,/id="layerMotionPolicy"/);
 assert.match(main,/layer-role-badge/);
 assert.match(main,/engine\.setLayerRole/);
 
-assert.match(sdk,/SDK_VERSION = '0\.1\.9'/);
+assert.match(sdk,/SDK_VERSION = '0\.1\.\d+'/);
 assert.match(sdk,/role: layerRole/);
 assert.match(sdk,/layer\.role\.motion-ignore/);
 assert.match(sdk,/layerRoles:/);

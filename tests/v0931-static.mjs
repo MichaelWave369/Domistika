@@ -26,7 +26,7 @@ assert.doesNotMatch(main, /<option value="motion-ignore">Motion ignore<\/option>
 assert.match(main, /engine\.setLayerMotionPolicy/);
 
 assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.9'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 assert.match(sdk, /motionPolicy: String\(layer\.motionPolicy \|\| 'inherit'\)/);
 assert.match(sdk, /function layerMotionPolicy/);
 assert.match(sdk, /layer\.motion\.ignore/);
@@ -35,7 +35,7 @@ assert.match(sdk, /Compatibility alias/);
 assert.match(sdk, /motionPolicies: Object\.freeze\(\['inherit', 'animate', 'ignore'\]\)/);
 assert.match(sdk, /motionPolicy: layerMotionPolicy/);
 
-assert.match(site, /VERSION = '0\.1\.2'/);
+assert.match(site, /VERSION = '0\.1\.\d+'/);
 assert.match(site, /domistika_set_layer_motion_policy/);
 assert.match(site, /enum: \['paint', 'guide', 'type'\]/);
 assert.match(site, /enum: \['inherit', 'animate', 'ignore'\]/);

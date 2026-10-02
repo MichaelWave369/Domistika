@@ -50,14 +50,14 @@ const [index, pkgText, entry, runtime, panel, docs, sdk] = await Promise.all([
 ]);
 
 const pkg = JSON.parse(pkgText);
-assert.equal(pkg.version, '0.9.32');
+assert.ok(Number(pkg.version.split('.')[2]) >= 32);
 assert.match(pkg.scripts.check, /tests\/v0932-static\.mjs/);
 assert.match(index, /DomistikaSymmetryRecipesV0932\.js/);
 assert.match(entry, /symmetryRecipeRuntime\.js/);
 assert.match(entry, /symmetryRecipePanel\.js/);
 assert.match(runtime, /CanvasEngine\.prototype\.symmetryTransforms/);
 assert.match(runtime, /domistikaSymmetryRecipesV0932/);
-assert.match(sdk, /APP_VERSION = '0\.9\.32'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
 assert.match(sdk, /symmetryRecipes: Object\.freeze/);
 assert.match(sdk, /applyFormula: symmetryRecipeApplyFormula/);
 assert.match(panel, /Symmetry Recipes/);

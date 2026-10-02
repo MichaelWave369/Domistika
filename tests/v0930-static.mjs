@@ -64,7 +64,7 @@ const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.ur
 
 assert.ok(Number(pkg.version.split('.')[2]) >= 31);
 assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.9'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 
 assert.match(engine, /semanticOverlays:/);
 assert.match(engine, /excludeLayerIds/);
@@ -90,7 +90,7 @@ assert.match(sdk, /bridge: Object\.freeze/);
 assert.match(sdk, /semanticOverlays: true/);
 assert.match(sdk, /transfer: transferToAuralith/);
 
-assert.match(siteTools, /VERSION = '0\.1\.2'/);
+assert.match(siteTools, /VERSION = '0\.1\.\d+'/);
 assert.match(siteTools, /domistika_transfer_to_auralith/);
 assert.doesNotMatch(siteTools, /\beval\s*\(/);
 assert.doesNotMatch(siteTools, /new Function\s*\(/);

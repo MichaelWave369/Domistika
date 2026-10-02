@@ -32,6 +32,8 @@ function fakeApi() {
       motion: { available: true, presets: ['portal-369'], clips: { available: true, count: 1 } },
       capture: { available: true },
       playground: { available: true, running: false, canRestore: true },
+      symmetryRecipes: { available: true, presets: ['portal'] },
+      art: { available: true, recipeArtifact: true, presets: ['portal-bloom'] },
       bridge: { auralith: { available: true, version: 2, semanticOverlays: true, maxOverlays: 16 } },
     }),
     canvas: { info: () => ({ width: 1200, height: 1200 }) },
@@ -48,6 +50,9 @@ function fakeApi() {
     },
     motion: { state: () => ({ playing: false }) },
     playground: { state: () => ({ available: true, running: false, canRestore: true }) },
+    art: {
+      drawRecipeArtifact: async (input) => { calls.push(['recipe-artifact', input.preset, input.freshCanvas]); return { ok: true, preset: input.preset, strokeCount: 4 }; },
+    },
     stroke: (points, options) => { calls.push(['stroke', points.length, options.tool]); return { ok: true, pointCount: points.length }; },
     spiro: {
       place: (preset, options) => { calls.push(['spiro', preset, options.x, options.y]); return { preset }; },
@@ -69,18 +74,19 @@ function fakeApi() {
   };
 }
 
-assert.equal(VERSION, '0.1.2');
+assert.equal(VERSION, '0.1.3');
 assert.equal(SCHEMA, 'domistika.site-tools.v1');
 
 const api = fakeApi();
 const tools = createDomistikaSiteTools(api);
 assert.equal(Object.isFrozen(tools), true);
-assert.equal(tools.length, 11);
+assert.equal(tools.length, 12);
 assert.deepEqual(tools.map((tool) => tool.name), [
   'domistika_get_capabilities',
   'domistika_search_commands',
   'domistika_get_state',
   'domistika_draw_stroke',
+  'domistika_draw_recipe_artifact',
   'domistika_set_color',
   'domistika_apply_gradient',
   'domistika_place_spiro',
@@ -120,6 +126,11 @@ const strokeResult = JSON.parse(await stroke.execute({
   space: 'normalized',
 }));
 assert.equal(strokeResult.result.pointCount, 2);
+
+const recipeArtifact = tools.find((tool) => tool.name === 'domistika_draw_recipe_artifact');
+const recipeResult = JSON.parse(await recipeArtifact.execute({ preset: 'portal-bloom', freshCanvas: true }));
+assert.equal(recipeResult.result.preset, 'portal-bloom');
+assert.deepEqual(api.calls.at(-1), ['recipe-artifact', 'portal-bloom', true]);
 
 const setColor = tools.find((tool) => tool.name === 'domistika_set_color');
 await setColor.execute({ color: '#AABBCC' });
@@ -165,8 +176,8 @@ const modelContext = {
 };
 const installed = await installDomistikaSiteTools({ api: fakeApi(), modelContext });
 assert.equal(installed.available, true);
-assert.equal(installed.registered.length, 11);
-assert.equal(registered.length, 11);
+assert.equal(installed.registered.length, 12);
+assert.equal(registered.length, 12);
 
 const source = fs.readFileSync(new URL('../src/DomistikaSiteToolsV0929.js', import.meta.url), 'utf8');
 assert.match(source, /document/);

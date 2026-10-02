@@ -20,7 +20,7 @@ assert.match(playground,/motion\.record\.stop\(\{source:'kinetic'\}\)/);
 assert.match(playground,/domistika:motion-clip-added/);
 assert.match(playground,/restorePrevious/);
 
-assert.match(sdk,/SDK_VERSION = '0\.1\.9'/);
+assert.match(sdk,/SDK_VERSION = '0\.1\.\d+'/);
 assert.match(sdk,/function motionRecorderRuntime/);
 assert.match(sdk,/project: \{[\s\S]*restore: restoreProject/);
 assert.match(sdk,/playground: \{/);

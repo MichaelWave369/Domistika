@@ -1,8 +1,10 @@
-const VERSION = '0.1.2';
+const VERSION = '0.1.3';
 const SCHEMA = 'domistika.site-tools.v1';
 const INSTALL_FLAG = '__domistikaWebMcpSiteToolsV0929Installed';
 const MAX_SEARCH_RESULTS = 20;
 const MAX_STROKE_POINTS = 1024;
+const MAX_ARTIFACT_STROKES = 16;
+const MAX_ARTIFACT_POINTS = 256;
 
 const freeze = (value) => {
   if (!value || typeof value !== 'object' || Object.isFrozen(value)) return value;
@@ -73,6 +75,8 @@ function slimCapabilities(api) {
     motion: caps.motion,
     capture: caps.capture,
     playground: caps.playground,
+    symmetryRecipes: caps.symmetryRecipes,
+    art: caps.art,
     bridge: caps.bridge,
   };
 }
@@ -102,6 +106,27 @@ function normalizedPoints(points) {
       throw new Error('DOMISTIKA_SITE_TOOLS_STROKE_POINT_INVALID');
     }
     return { x, y, p: clamp(p, 0.08, 1) };
+  });
+}
+
+function normalizedArtifactStrokes(strokes) {
+  if (strokes == null) return undefined;
+  if (!Array.isArray(strokes) || strokes.length < 1 || strokes.length > MAX_ARTIFACT_STROKES) {
+    throw new Error('DOMISTIKA_SITE_TOOLS_RECIPE_ARTIFACT_STROKES_INVALID');
+  }
+  return strokes.map((stroke) => {
+    const points = Array.isArray(stroke?.points) ? stroke.points : [];
+    if (points.length < 2 || points.length > MAX_ARTIFACT_POINTS) {
+      throw new Error('DOMISTIKA_SITE_TOOLS_RECIPE_ARTIFACT_POINTS_INVALID');
+    }
+    const normalized = { points: normalizedPoints(points) };
+    for (const key of ['tool', 'color']) {
+      if (stroke?.[key] != null) normalized[key] = cleanString(stroke[key], 80);
+    }
+    for (const key of ['size', 'opacity', 'smoothing']) {
+      if (stroke?.[key] != null) normalized[key] = Number(stroke[key]);
+    }
+    return normalized;
   });
 }
 
@@ -190,6 +215,77 @@ function makeTools(api) {
           if (input[key] != null) options[key] = input[key];
         }
         const result = api.stroke(normalizedPoints(input.points), options);
+        return ok({ result });
+      },
+    },
+    {
+      name: 'domistika_draw_recipe_artifact',
+      title: 'Draw Domistika recipe artifact',
+      description: 'Create a complete symmetry-recipe artwork through one bounded Domistika SDK action. Prefer a built-in preset for efficient browser-agent drawing; custom formula and stroke sets are also supported.',
+      inputSchema: {
+        type: 'object',
+        properties: {
+          preset: { type: 'string', enum: ['portal-bloom', 'counterspin-flower', 'gear-halo', 'fracture-iris'] },
+          recipe: { type: 'string', minLength: 1, maxLength: 80 },
+          formula: { type: 'string', minLength: 1, maxLength: 600 },
+          name: { type: 'string', minLength: 1, maxLength: 120 },
+          freshCanvas: { type: 'boolean', default: false },
+          clearFirst: { type: 'boolean', default: false },
+          width: { type: 'integer', minimum: 256, maximum: 4096 },
+          height: { type: 'integer', minimum: 256, maximum: 4096 },
+          strokes: {
+            type: 'array',
+            minItems: 1,
+            maxItems: MAX_ARTIFACT_STROKES,
+            items: {
+              type: 'object',
+              properties: {
+                tool: { type: 'string', enum: ['pencil', 'ink', 'marker', 'airbrush', 'eraser'] },
+                color: { type: 'string', pattern: '^#[0-9a-fA-F]{6}$' },
+                size: { type: 'number', minimum: 1, maximum: 180 },
+                opacity: { type: 'number', minimum: 0.01, maximum: 1 },
+                smoothing: { type: 'number', minimum: 0, maximum: 95 },
+                points: {
+                  type: 'array',
+                  minItems: 2,
+                  maxItems: MAX_ARTIFACT_POINTS,
+                  items: {
+                    type: 'object',
+                    properties: {
+                      x: { type: 'number', minimum: 0, maximum: 1 },
+                      y: { type: 'number', minimum: 0, maximum: 1 },
+                      p: { type: 'number', minimum: 0.08, maximum: 1 },
+                    },
+                    required: ['x', 'y'],
+                    additionalProperties: false,
+                  },
+                },
+              },
+              required: ['points'],
+              additionalProperties: false,
+            },
+          },
+        },
+        additionalProperties: false,
+      },
+      annotations: { readOnlyHint: false, untrustedContentHint: false, consequentialHint: false },
+      execute: async (input = {}, { signal } = {}) => {
+        requireReady(api);
+        if (signal?.aborted) throw new DOMException('Tool execution cancelled', 'AbortError');
+        if (!api.art?.drawRecipeArtifact) throw new Error('DOMISTIKA_SITE_TOOLS_RECIPE_ARTIFACT_UNAVAILABLE');
+
+        const request = {};
+        if (input.preset != null) request.preset = cleanString(input.preset, 80);
+        if (input.recipe != null) request.recipe = cleanString(input.recipe, 80);
+        if (input.formula != null) request.formula = String(input.formula).trim().slice(0, 600);
+        if (input.name != null) request.name = cleanString(input.name, 120);
+        if (input.freshCanvas != null) request.freshCanvas = Boolean(input.freshCanvas);
+        if (input.clearFirst != null) request.clearFirst = Boolean(input.clearFirst);
+        if (input.width != null) request.width = Math.round(clamp(input.width, 256, 4096));
+        if (input.height != null) request.height = Math.round(clamp(input.height, 256, 4096));
+        if (input.strokes != null) request.strokes = normalizedArtifactStrokes(input.strokes);
+
+        const result = await api.art.drawRecipeArtifact(request);
         return ok({ result });
       },
     },
@@ -420,4 +516,4 @@ async function autoInstall() {
 
 autoInstall();
 
-export { VERSION, SCHEMA, MAX_SEARCH_RESULTS, MAX_STROKE_POINTS, modelContextFor };
+export { VERSION, SCHEMA, MAX_SEARCH_RESULTS, MAX_STROKE_POINTS, MAX_ARTIFACT_STROKES, MAX_ARTIFACT_POINTS, modelContextFor };
