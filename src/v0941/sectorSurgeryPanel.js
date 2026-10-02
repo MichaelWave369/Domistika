@@ -46,7 +46,7 @@ function render(section) {
     : 'No sector repair active.';
 }
 
-function armPick(section) {
+async function armPick(section) {
   const engine = getEngine();
   if (!engine?.settings?.compositionPlateId) {
     setStatus('Apply a Composition Plate before picking a repair sector');
@@ -56,6 +56,8 @@ function armPick(section) {
     setStatus('Finish or cancel the active sector repair first');
     return;
   }
+  if (window.domistikaSelectionV04?.active) await window.domistikaSelectionV04.cancel?.();
+  window.domistikaSelectionV04?.disable?.();
   pickArmed = true;
   render(section);
   setStatus('Sector Surgery armed · click one radial plate region');
@@ -84,7 +86,7 @@ function init() {
   `;
   parent.appendChild(section);
 
-  section.querySelector('[data-sector-pick]').addEventListener('click', () => armPick(section));
+  section.querySelector('[data-sector-pick]').addEventListener('click', () => { void armPick(section); });
   section.querySelector('[data-sector-refold]').addEventListener('click', () => {
     try { refoldSectorSurgery(); } catch (error) { setStatus(error.message); }
     render(section);
