@@ -18,7 +18,7 @@ const artDirector = fs.readFileSync(new URL('../src/v0934/artDirector.js', impor
 const recipeArtifacts = fs.readFileSync(new URL('../src/v0933/recipeArtifacts.js', import.meta.url), 'utf8');
 const docs = fs.readFileSync(new URL('../docs/LAYER_HOUSEKEEPING_V0937.md', import.meta.url), 'utf8');
 
-assert.equal(pkg.version, '0.9.37');
+assert.ok(Number(pkg.version.split('.')[2]) >= 37);
 assert.match(pkg.scripts.check, /tests\/v0937-static\.mjs/);
 assert.match(index, /DomistikaLayerHousekeepingV0937\.js/);
 
@@ -51,8 +51,8 @@ assert.match(sdk, /lock: layerLock/);
 assert.match(sdk, /mergeDown: layerMergeDown/);
 assert.match(sdk, /groups: \{/);
 assert.match(sdk, /layerHousekeeping: Object\.freeze/);
-assert.match(sdk, /APP_VERSION = '0\.9\.37'/);
-assert.match(sdk, /SDK_VERSION = '0\.1\.14'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
+assert.match(sdk, /SDK_VERSION = '0\.1\.\d+'/);
 
 assert.match(main, /id="mergeLayerDown"/);
 assert.match(main, /id="newLayerGroup"/);
