@@ -179,16 +179,74 @@ function identity(point) {
   return { ...point };
 }
 
+function segmentIntersectsRect(from, to, rect) {
+  const dx = finite(to?.x) - finite(from?.x);
+  const dy = finite(to?.y) - finite(from?.y);
+  const p = [-dx, dx, -dy, dy];
+  const q = [
+    finite(from?.x) - rect.x0,
+    rect.x1 - finite(from?.x),
+    finite(from?.y) - rect.y0,
+    rect.y1 - finite(from?.y),
+  ];
+  let u0 = 0;
+  let u1 = 1;
+  for (let index = 0; index < 4; index += 1) {
+    if (p[index] === 0) {
+      if (q[index] < 0) return false;
+      continue;
+    }
+    const ratio = q[index] / p[index];
+    if (p[index] < 0) u0 = Math.max(u0, ratio);
+    else u1 = Math.min(u1, ratio);
+    if (u0 > u1) return false;
+  }
+  return true;
+}
+
+function rectForGeometry(geometry, width, height) {
+  return {
+    x0: finite(geometry.x0, 0) * width,
+    x1: finite(geometry.x1, 1) * width,
+    y0: finite(geometry.y0, 0) * height,
+    y1: finite(geometry.y1, 1) * height,
+  };
+}
+
+function segmentIntersectsGeometry(geometry, from, to, width, height) {
+  const kind = String(geometry?.kind || '');
+  if (kind === 'rect') return segmentIntersectsRect(from, to, rectForGeometry(geometry, width, height));
+  if (kind === 'corners') {
+    const cornerWidth = finite(geometry.x, .2) * width;
+    const cornerHeight = finite(geometry.y, .2) * height;
+    const rects = [
+      { x0: 0, x1: cornerWidth, y0: 0, y1: cornerHeight },
+      { x0: width - cornerWidth, x1: width, y0: 0, y1: cornerHeight },
+      { x0: 0, x1: cornerWidth, y0: height - cornerHeight, y1: height },
+      { x0: width - cornerWidth, x1: width, y0: height - cornerHeight, y1: height },
+    ];
+    return rects.some((rect) => segmentIntersectsRect(from, to, rect));
+  }
+  if (kind === 'any') {
+    return Array.isArray(geometry.items)
+      && geometry.items.some((item) => segmentIntersectsGeometry(item, from, to, width, height));
+  }
+  return isExcludedPoint({ regions: [{ excluded: true, geometry }] }, midpoint(from, to), width, height);
+}
+
+export function segmentTouchesExcluded(plateInput, from, to, width, height) {
+  const plate = typeof plateInput === 'string' ? plateById(plateInput) : plateInput;
+  if (!plate) return false;
+  return plate.regions.some((item) => item.excluded
+    && segmentIntersectsGeometry(item.geometry, from, to, width, height));
+}
+
 function targetAllowed(plate, region, transform, from, to, width, height) {
   const transformedFrom = transform(from);
   const transformedTo = transform(to);
   const transformedMid = transform(midpoint(from, to));
 
-  if (
-    isExcludedPoint(plate, transformedFrom, width, height)
-    || isExcludedPoint(plate, transformedTo, width, height)
-    || isExcludedPoint(plate, transformedMid, width, height)
-  ) return false;
+  if (segmentTouchesExcluded(plate, transformedFrom, transformedTo, width, height)) return false;
 
   if (region.output === 'same-region') {
     return resolveCompositionRegion(plate, transformedMid, width, height)?.id === region.id;
