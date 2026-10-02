@@ -13,6 +13,7 @@ import {
 const originalEventPoint = CanvasEngine.prototype.eventPoint;
 const originalPointerDown = CanvasEngine.prototype.pointerDown;
 const originalPointerUp = CanvasEngine.prototype.pointerUp;
+const originalDrawDot = CanvasEngine.prototype.drawDot;
 
 function stateFor(engine) {
   const state = engine?.settings?.draftingGuide;
@@ -56,6 +57,16 @@ CanvasEngine.prototype.pointerUp = function pointerUpV0938(event) {
   } finally {
     this._draftingSnapSession = null;
   }
+};
+
+CanvasEngine.prototype.drawDot = function drawDotV0938(point) {
+  const state = stateFor(this);
+  if (!state?.snap) return originalDrawDot.call(this, point);
+  const session = this._draftingSnapSession || beginDraftingSnap(state.guide, point, this.width, this.height);
+  const start = snapDraftingPoint(state.guide, point, this.width, this.height, session);
+  const candidate = { ...start, x: start.x + 0.01, y: start.y + 0.01 };
+  const end = snapDraftingPoint(state.guide, candidate, this.width, this.height, session);
+  this.drawSegment(start, end);
 };
 
 function removeDraftingLayer(engine, layerId) {
