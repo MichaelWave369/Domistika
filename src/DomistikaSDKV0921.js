@@ -1,5 +1,5 @@
-const APP_VERSION = '0.9.40';
-const SDK_VERSION = '0.1.17';
+const APP_VERSION = '0.9.41';
+const SDK_VERSION = '0.1.18';
 const SCHEMA = 'domistika.sdk.v1';
 const INSTALL_FLAG = '__domistikaStableSdkV0921Installed';
 
@@ -752,6 +752,45 @@ async function selectionStrokeOutline() {
   return runtime.strokeOutline();
 }
 
+function sectorSurgeryRuntime() {
+  return window.domistikaSectorSurgeryV0941 || null;
+}
+
+function sectorSurgeryBegin(point, options = {}) {
+  const runtime = sectorSurgeryRuntime();
+  if (!runtime?.begin) throw new Error('DOMISTIKA_SDK_SECTOR_SURGERY_UNAVAILABLE');
+  const engine = requireEngine();
+  const space = options.space || 'canvas';
+  const normalized = normalizePoint(point, engine, space);
+  return runtime.begin(normalized);
+}
+
+function sectorSurgeryActive() {
+  return sectorSurgeryRuntime()?.active?.() || null;
+}
+
+function sectorSurgeryRefold() {
+  const runtime = sectorSurgeryRuntime();
+  if (!runtime?.refold) throw new Error('DOMISTIKA_SDK_SECTOR_SURGERY_UNAVAILABLE');
+  return runtime.refold();
+}
+
+function sectorSurgerySeal() {
+  const runtime = sectorSurgeryRuntime();
+  if (!runtime?.seal) throw new Error('DOMISTIKA_SDK_SECTOR_SURGERY_UNAVAILABLE');
+  return runtime.seal();
+}
+
+function sectorSurgeryCancel() {
+  const runtime = sectorSurgeryRuntime();
+  if (!runtime?.cancel) throw new Error('DOMISTIKA_SDK_SECTOR_SURGERY_UNAVAILABLE');
+  return runtime.cancel();
+}
+
+function sectorSurgeryReceipt() {
+  return sectorSurgeryRuntime()?.receipt?.() || null;
+}
+
 function recentBrushRuntime() {
   return window.domistikaRecentBrushesV0939 || null;
 }
@@ -1078,6 +1117,34 @@ registerSdkCommand('selection.stroke-outline', {
   description: 'Stroke the active selection boundary with the current brush size, opacity, and color as one undo step.',
   keywords: ['selection', 'lasso', 'stroke', 'outline', 'brush', 'undo'],
 }, async () => selectionStrokeOutline());
+
+registerSdkCommand('sector.begin', {
+  label: 'Sector Surgery · Begin',
+  category: 'Composition',
+  description: 'Lock the active paint source and open exactly one radial plate sector for bounded repair.',
+  keywords: ['sector', 'surgery', 'plate', 'repair', 'radial', 'unlock'],
+}, async ({ point, space = 'canvas' } = {}) => sectorSurgeryBegin(point, { space }));
+
+registerSdkCommand('sector.refold', {
+  label: 'Sector Surgery · Refold + Lock',
+  category: 'Composition',
+  description: 'Propagate the repaired sector across the plate radial count, then lock the repair layer.',
+  keywords: ['sector', 'surgery', 'refold', 'radial', 'lock'],
+}, async () => sectorSurgeryRefold());
+
+registerSdkCommand('sector.seal', {
+  label: 'Sector Surgery · Seal Only',
+  category: 'Composition',
+  description: 'Keep the repaired sector local and lock the repair layer without refolding.',
+  keywords: ['sector', 'surgery', 'seal', 'local', 'lock'],
+}, async () => sectorSurgerySeal());
+
+registerSdkCommand('sector.cancel', {
+  label: 'Sector Surgery · Cancel',
+  category: 'Composition',
+  description: 'Discard the repair copy and restore the original source layer state.',
+  keywords: ['sector', 'surgery', 'cancel', 'restore'],
+}, async () => sectorSurgeryCancel());
 
 registerSdkCommand('export.psd', {
   label: 'Export Layered PSD',
@@ -1486,6 +1553,16 @@ function capabilities() {
       omitsMotionIgnore: true,
       canonicalSourceOfTruth: 'domistika-project',
     }),
+    sectorSurgery: Object.freeze({
+      available: Boolean(sectorSurgeryRuntime()?.begin),
+      version: sectorSurgeryRuntime()?.version || null,
+      schema: sectorSurgeryRuntime()?.schema || null,
+      active: sectorSurgeryActive(),
+      radialOnly: true,
+      oneSectorAtATime: true,
+      sourceLocked: true,
+      repairLayerBounded: true,
+    }),
     art: Object.freeze({
       available: Boolean(recipeArtifactRuntime()?.draw),
       version: recipeArtifactRuntime()?.version || null,
@@ -1621,6 +1698,15 @@ if (!window[INSTALL_FLAG]) {
       fill: selectionFill,
       strokeOutline: selectionStrokeOutline,
       boundary: () => Object.freeze((selectionRuntime()?.boundary?.() || []).map((point) => Object.freeze({ ...point }))),
+    },
+
+    sectorSurgery: {
+      begin: sectorSurgeryBegin,
+      active: sectorSurgeryActive,
+      refold: sectorSurgeryRefold,
+      seal: sectorSurgerySeal,
+      cancel: sectorSurgeryCancel,
+      receipt: sectorSurgeryReceipt,
     },
 
     art: {

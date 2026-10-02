@@ -350,6 +350,13 @@ export async function directArt(options = {}, apiInput = null) {
     height: plan.height,
   });
 
+  const lockResult = newLayer && options.lockResult !== false;
+  let targetLayerLocked = false;
+  if (lockResult && targetLayer && api.layers?.lock) {
+    api.layers.lock(targetLayer, true);
+    targetLayerLocked = true;
+  }
+
   const result = Object.freeze({
     ok: true,
     schema: SCHEMA,
@@ -358,6 +365,7 @@ export async function directArt(options = {}, apiInput = null) {
     artifact,
     placement: freshCanvas ? 'fresh-canvas' : clearFirst ? 'clear-active-layer' : newLayer ? 'new-layer' : 'active-layer',
     targetLayer,
+    targetLayerLocked,
   });
 
   globalThis.window?.dispatchEvent?.(new CustomEvent('domistika:art-directed', { detail: result }));

@@ -202,6 +202,10 @@ function pushHistory(layer, dataUrl) {
 async function extractSelection(bounds, pathPoints = null) {
   const layer = activeLayer();
   if (!layer || bounds.width < 2 || bounds.height < 2) return;
+  if (window.domistikaSectorSurgeryV0941?.restrictsLayer?.(layer.id)) {
+    setStatus('Selection is disabled on the active Sector Surgery repair layer. Use brush or shape edits inside the highlighted sector.');
+    return;
+  }
   if (layer.locked === true || latestEngine?.layerWritable?.(layer) === false) {
     setStatus('Layer is locked. Unlock it before selecting pixels.');
     return;
@@ -316,6 +320,10 @@ function selectionActReady() {
   }
   if (layer.locked === true || latestEngine?.layerWritable?.(layer) === false) {
     setStatus('Layer is locked. Unlock it before applying a selection act.');
+    return null;
+  }
+  if (window.domistikaSectorSurgeryV0941?.restrictsLayer?.(layer.id)) {
+    setStatus('Selection acts are disabled on the Sector Surgery repair layer.');
     return null;
   }
   return { item: selection, layer };
@@ -852,6 +860,7 @@ window.domistikaSelectionV04 = {
   cancel: cancelSelection,
   copy: copySelection,
   paste: pasteSelection,
+  disable: disableSelection,
   fill: fillSelection,
   strokeOutline: strokeSelectionOutline,
   boundary: () => selectionBoundaryPoints().map((point) => ({ ...point })),

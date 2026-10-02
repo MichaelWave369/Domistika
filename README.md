@@ -1,3 +1,44 @@
+## v0.9.41 — Sector Surgery
+
+Domistika can now open **exactly one radial Composition Plate sector** for bounded repair.
+
+The workflow is deliberately narrow:
+
+```text
+Art Director draws on a new layer
+        ↓
+generated layer locks
+        ↓
+pick one radial plate sector
+        ↓
+source is hidden + protected
+        ↓
+full repair copy becomes active
+        ↓
+brush / shape edits are clipped to sector ∩ region
+        ↓
+Seal only
+or
+Refold + lock
+```
+
+The full-copy approach means erasing and replacement edits are real rather than merely transparent paint stacked above the original.
+
+Refold uses only the region's base `RADIAL(n)` count. MIRROR, NEST, SPIRAL, COUNTERSPIN, PERTURB, and PHASE are not silently reinterpreted as repair semantics.
+
+Stable SDK v0.1.18 adds:
+
+```js
+Domistika.sectorSurgery.begin(point, { space: 'normalized' })
+Domistika.sectorSurgery.active()
+Domistika.sectorSurgery.refold()
+Domistika.sectorSurgery.seal()
+Domistika.sectorSurgery.cancel()
+Domistika.sectorSurgery.receipt()
+```
+
+See [Sector Surgery](docs/SECTOR_SURGERY_V0941.md).
+
 ## v0.9.40 — Layered Exit
 
 Domistika now exports **layered PSD paint interchange** while keeping `.domistika` as the canonical project format.

@@ -80,6 +80,10 @@ function fakeApi() {
         calls.push(['layer.activate', id]);
         return { id };
       },
+      lock: (id, locked) => {
+        calls.push(['layer.lock', id, locked]);
+        return locked;
+      },
     },
     art: {
       drawRecipeArtifact: async (input) => {
@@ -102,13 +106,25 @@ assert.equal(directed.ok, true);
 assert.equal(directed.plan.symmetry, 'counterspin');
 assert.equal(directed.placement, 'new-layer');
 assert.equal(directed.targetLayer, 'director-layer');
+assert.equal(directed.targetLayerLocked, true);
 assert.equal(api.calls[0][0], 'layer.create');
 assert.deepEqual(api.calls[1], ['layer.activate', 'director-layer']);
 assert.equal(api.calls[2][0], 'artifact');
+assert.deepEqual(api.calls[3], ['layer.lock', 'director-layer', true]);
+
+const unlockedApi = fakeApi();
+const unlocked = await directArt({
+  mood: 'mechanical gear',
+  seed: 'unlocked-test',
+  lockResult: false,
+}, unlockedApi);
+assert.equal(unlocked.targetLayerLocked, false);
+assert.equal(unlockedApi.calls.some((call) => call[0] === 'layer.lock'), false);
 
 const freshApi = fakeApi();
 const fresh = await directArt({ mood: 'crystal prism', freshCanvas: true, seed: 'fresh-test' }, freshApi);
 assert.equal(fresh.placement, 'fresh-canvas');
+assert.equal(fresh.targetLayerLocked, false);
 assert.equal(freshApi.calls[0][0], 'artifact');
 
 const pkg = JSON.parse(fs.readFileSync(new URL('../package.json', import.meta.url), 'utf8'));
