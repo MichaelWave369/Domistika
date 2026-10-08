@@ -19,6 +19,26 @@ The receiver:
 
 This is not an endpoint for untrusted general-purpose SVG files. A cryptographic digest stored beside the payload cannot protect against a compromised same-origin script; the allowlist and visitor consent remain the primary defense.
 
+## Receiver compatibility qualification (v1.0.1)
+
+The museum's generated SVG uses `data-motif="yes"` as an inert annotation on
+Radial Bloom paths, Nested Gears polygons, and Iris Cathedral groups.
+This attribute is **not active content**; the receiver explicitly permits
+that one value and rejects other custom attributes and event handlers.
+
+The museum's maximum Iris Cathedral recipe (9 rings × 36 motifs) emits roughly
+1,620 motif elements plus supporting shapes and gradients. The validator's
+element ceiling is now 2,000, still bounded by the 350,000-character SVG limit.
+Before this patch, the receiver rejected **all three** modes because
+`data-motif` was not allowlisted, and high-density Iris layouts were rejected
+for element count too.
+
+CI adds isolated compatibility-policy tests covering the motif markers for
+all three modes, the max-detail layout, malformed attributes, script-like tags,
+and oversized trees. This is **not a substitute for a real two-site browser
+smoke test**. After deployment, complete the visitor acceptance checklist
+for Bloom, Gears, Iris, and the maximum Iris sliders.
+
 ## Visitor consent and preservation
 
 The modal never auto-imports. It requires:
