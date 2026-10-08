@@ -1,3 +1,15 @@
+## Silicon Louvre Creative Handoff Receiver v1
+
+Domistika can now **receive** a 5-minute browser-local SVG handoff from the museum's Creative Studio at `https://michaelwave369.github.io/SiliconLouvre/` using the matching sender release.
+
+- Preview is safe and automatic; **import is not**. Back up the current `.domistika` project, confirm the download, then create a new rasterized 800×800 paint-layer project.
+- Checks the short-lived message, digest and a strict static SVG element/attribute allowlist.
+- Imports locally with the public stable SDK and attempts rollback on failure.
+- Does not publish artwork or enable arbitrary cross-app scripting.
+- The museum's original scalable SVG export remains available for independent preservation.
+
+See [Silicon Louvre Receiver v1](docs/SILICON_LOUVRE_HANDOFF_V1.md) for complete protocol and manual acceptance cases.
+
 ## v0.9.42 — Field Qualification
 
 Domistika now contains an executable **creative-authority end-to-end qualification protocol**.
