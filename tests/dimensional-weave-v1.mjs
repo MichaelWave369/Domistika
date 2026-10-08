@@ -79,5 +79,5 @@ assert.match(runtime, /domistikaAuralithBridgeV093/);
 assert.match(runtime, /domistikaKineticRotationV0912/);
 assert.match(panel, /data-weave-option="impossible"/);
 assert.match(panel, /data-weave-action="render"/);
-assert.match(docs, /never.*overwritten/i);
+assert.match(docs, /source pixels and layer are untouched/i);
 console.log('Dimensional Weave v1 geometry and integration contracts passed.');
