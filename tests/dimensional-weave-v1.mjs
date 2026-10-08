@@ -27,13 +27,13 @@ const geometry = buildWeaveGeometry(points, 800, 800, { copies: 4, depth: 20, di
 assert.equal(geometry.copies.length, 4);
 assert.equal(geometry.copies[0].top.length, 3);
 assert.equal(geometry.copies[0].sides.length, 3);
-assert.equal(geometry.copies[0].top[0].x, 440);
-assert.equal(geometry.copies[0].far[0].x, 460);
+assert.ok(Math.abs(geometry.copies[0].top[0].x - 440) < 1e-8);
+assert.ok(Math.abs(geometry.copies[0].far[0].x - 460) < 1e-8);
 assert.ok(Math.abs(geometry.copies[1].top[0].x - 480) < 1e-8);
 assert.ok(Math.abs(geometry.copies[1].top[0].y - 440) < 1e-8);
 
 const impossible = buildWeaveGeometry(points, 800, 800, { copies: 1, depth: 20, direction: 0, impossible: true });
-assert.equal(impossible.copies[0].far[0].x, 460);
+assert.ok(Math.abs(impossible.copies[0].far[0].x - 460) < 1e-8);
 assert.equal(impossible.copies[0].far[1].x, impossible.copies[0].top[1].x - 11);
 assert.equal(JSON.stringify(points), original, 'geometry must not mutate source anchors');
 
