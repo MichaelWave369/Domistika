@@ -37,15 +37,21 @@ export function validateStaticSvg(svg, parser) {
       parsed.querySelector('parsererror') || root.getAttribute('width') !== '800' ||
       root.getAttribute('height') !== '800') return false;
   const elements = parsed.querySelectorAll('*');
-  if (elements.length > 1000) return false;
+  // At the maximum supported 9 × 36 Iris layout, each motif has a group,
+  // an eye path and three circles. That is ~1,640 static nodes. Keep a
+  // bounded ceiling without rejecting valid artwork from our own generator.
+  if (elements.length > 2000) return false;
   const names = new Set(['svg','title','desc','defs','radialGradient','stop','rect','g','circle','path','polygon']);
   const attributes = new Set(['xmlns','width','height','viewBox','role','aria-label','id','offset',
     'stop-color','cx','cy','r','fill','stroke','stroke-width','stroke-linejoin',
-    'stroke-dasharray','d','points','transform','opacity']);
+    'stroke-dasharray','d','points','transform','opacity','data-motif']);
   for (const element of elements) {
     if (element.namespaceURI !== 'http://www.w3.org/2000/svg' || !names.has(element.localName)) return false;
     for (const attr of element.attributes) {
       if (!attributes.has(attr.name)) return false;
+      // The museum generator puts this inert marker on bloom paths, gear
+      // polygons and iris groups. Allow exactly the documented value.
+      if (attr.name === 'data-motif' && attr.value !== 'yes') return false;
       if (/javascript:|https?:\/\/|data:|expression\s*\(/i.test(attr.value) && attr.name !== 'xmlns') return false;
       if (/url\(/i.test(attr.value) && !/^url\(#[a-zA-Z0-9-]+\)$/.test(attr.value)) return false;
     }
