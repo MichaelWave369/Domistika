@@ -10,6 +10,10 @@ Domistika can now **receive** a 5-minute browser-local SVG handoff from the muse
 
 See [Silicon Louvre Receiver v1](docs/SILICON_LOUVRE_HANDOFF_V1.md) for complete protocol and manual acceptance cases.
 
+## v0.9.43 — Artists Series / Impossible Geometry
+
+Domistika now includes six original **Artists Series** symmetry studies under the **Recipes** inspector tab, inspired by mathematical tessellation, reversible perspective, recursive architecture, and optical geometry. The new `TILE`, `GLIDE`, and `SHEAR` primitives are live as you draw, and the generated thumbnail cards let you preview a style before applying it. The existing **Dimensional Weave** tool is linked from the series for intentional impossible-depth construction on independent layers. The patterns are original, not reproductions of existing artists' artworks. [Guide](docs/ARTIST_SERIES_V0943.md).
+
 ## v0.9.42 — Field Qualification
 
 Domistika now contains an executable **creative-authority end-to-end qualification protocol**.
