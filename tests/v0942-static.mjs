@@ -60,7 +60,7 @@ const panel = fs.readFileSync(new URL('../src/v0942/fieldQualificationPanel.js',
 const sdk = fs.readFileSync(new URL('../src/DomistikaSDKV0921.js', import.meta.url), 'utf8');
 const docs = fs.readFileSync(new URL('../docs/FIELD_QUALIFICATION_V0942.md', import.meta.url), 'utf8');
 
-assert.equal(pkg.version, '0.9.42');
+assert.ok(Number(pkg.version.split('.')[2]) >= 42, 'v0.9.42 qualification survives later application releases');
 assert.match(pkg.scripts.check, /tests\/v0942-static\.mjs/);
 assert.match(index, /DomistikaFieldQualificationV0942\.js/);
 
@@ -88,7 +88,7 @@ assert.match(panel, /Run qualification/);
 assert.match(panel, /Download receipt/);
 assert.match(panel, /application\/json/);
 
-assert.match(sdk, /APP_VERSION = '0\.9\.42'/);
+assert.match(sdk, /APP_VERSION = '0\.9\.\d+'/);
 assert.match(sdk, /SDK_VERSION = '0\.1\.19'/);
 assert.match(sdk, /fieldQualification: Object\.freeze/);
 assert.match(sdk, /qualification: \{/);
