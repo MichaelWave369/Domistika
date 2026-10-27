@@ -17,7 +17,7 @@ app.innerHTML = `
 <header class="topbar">
   <div class="brand-block"><div class="brand-mark">D</div><div><h1>Domistika</h1><p>draw your way</p></div></div>
   <div class="project-strip"><input id="projectName" value="Josh's First Canvas" aria-label="Project name"><span class="save-state" id="saveState">Ready</span></div>
-  <div class="top-actions"><button class="soft-button" id="newProject">New</button><button class="soft-button" id="openFile">Open</button><button class="soft-button" id="saveProject">Project</button><button class="primary-button" id="exportImage">Export</button></div>
+  <div class="top-actions"><a class="xr-entry-link" href="./xr.html" target="_blank" rel="noopener noreferrer" aria-label="Open Domistika XR Studio in a new tab" title="Open Domistika XR Studio"><span aria-hidden="true">◈</span> XR <span class="xr-entry-detail">Studio</span></a><button class="soft-button" id="newProject">New</button><button class="soft-button" id="openFile">Open</button><button class="soft-button" id="saveProject">Project</button><button class="primary-button" id="exportImage">Export</button></div>
 </header>
 <main class="workspace">
   <aside class="tool-rail"><div class="tool-list">${TOOLS.map(([tool,label,shortcut,icon]) => `<button class="tool-button ${tool === 'pencil' ? 'active' : ''}" data-tool="${tool}" title="${label} (${shortcut})"><span>${icon}</span><small>${label}</small></button>`).join('')}</div><button class="handed-button active" id="handedToggle"><span>✋</span><small>Lefty</small></button></aside>
