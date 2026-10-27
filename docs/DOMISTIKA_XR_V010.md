@@ -21,7 +21,7 @@ An **independent /xr.html route** inside the existing Domistika Three.js/Vite re
 
 ## Run locally
 
-    npm ci
+    npm install --no-audit --no-fund
     node --test tests/xr-*.test.mjs
     npm run build
     npm run dev
