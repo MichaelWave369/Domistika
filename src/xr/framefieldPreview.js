@@ -89,15 +89,27 @@ function initialPose(value){
   const keys=list(value,1,600,'keyframes').map(key=>{
     object(key,'keyframe');
     const frame=integer(key.frame,0,600,'frame');
-    return {frame,position:vector(key.position,3,-30,30,'position'),
+    const pose={frame,position:vector(key.position,3,-30,30,'position'),
       rotationRadians:vector(key.rotationRadians,3,-100,100,'radian rotation'),
       scale:vector(key.scale,3,-30,30,'scale')};
+    if(pose.scale.some(s=>Math.abs(s)<0.001))fail('Non-invertible keyframe scale.');
+    if(key.curves!==undefined){
+      const curves=object(key.curves,'keyframe curves');
+      if(Object.keys(curves).length>9)fail('Too many curve channels.');
+      pose.curves={};
+      for(const [channel,curve] of Object.entries(curves)){
+        if(!/^(position|rotation|scale)\.[012]$/.test(channel))
+          fail('Unsupported Framefield animation curve channel.');
+        if(curve==='hold')pose.curves[channel]='hold';
+        else pose.curves[channel]=vector(curve,4,0,1,'Bezier curve');
+      }
+    }
+    return pose;
   });
   const frameIds=keys.map(k=>k.frame);
   if(new Set(frameIds).size!==frameIds.length)fail('Duplicate keyframe.');
-  const first=keys.sort((a,b)=>a.frame-b.frame)[0];
-  if(first.scale.some(s=>Math.abs(s)<0.001))fail('Non-invertible keyframe scale.');
-  return first;
+  keys.sort((a,b)=>a.frame-b.frame);
+  return {first:keys[0],keys};
 }
 function inspectObject(asset){
   object(asset,'asset');
@@ -112,10 +124,10 @@ function inspectObject(asset){
       fail(label+' has enabled modifiers. Disable/bake in Framefield before preview; BPC exports source cages only.');
   }
   const geometryData=geometry(asset.mesh,label);
-  const pose=initialPose(asset.keyframes);
+  const {first:pose,keys:keyframes}=initialPose(asset.keyframes);
   return {label,sourceId:String(asset.sourceId??'').slice(0,80),color:asset.color.toLowerCase(),
     positions:geometryData.positions,sourceVertexCount:geometryData.vertices.length,
-    triangleCount:geometryData.positions.length/9,pose,visible:asset.visible!==false};
+    triangleCount:geometryData.positions.length/9,pose,keyframes,visible:asset.visible!==false};
 }
 export function normalizeBpcFramefieldPacket(raw){
   object(raw,'BPC packet');
@@ -136,9 +148,18 @@ export function normalizeBpcFramefieldPacket(raw){
   const triangles=normalized.reduce((n,a)=>n+a.triangleCount,0);
   if(vertices>BPC_PREVIEW_MAX_VERTICES||triangles>BPC_PREVIEW_MAX_TRIANGLES)
     fail('Quest preview geometry budget exceeded. Reduce meshes in Framefield.');
+  // Older BPC preview fixtures may omit FPS/duration. Use explicit conservative defaults
+  // without altering their original source files.
+  const fps=raw.source.fps===undefined?24:integer(raw.source.fps,12,60,'FPS');
+  if(![12,24,30,60].includes(fps))fail('Unsupported Framefield FPS.');
+  const lastFrame=Math.max(0,...normalized.map(asset=>asset.keyframes.at(-1).frame));
+  const duration=raw.source.duration===undefined?Math.max(12,lastFrame):integer(raw.source.duration,12,600,'duration');
+  if(duration>600||normalized.some(asset=>asset.keyframes.some(key=>key.frame>duration)))
+    fail('Keyframes exceed project duration.');
   return {schema:BPC_PREVIEW_SCHEMA,sourceName:String(raw.source.projectName??'Framefield').slice(0,80),
-    assets:normalized,vertices,triangles,
-    limits:'Read-only initial-keyframe mesh cage preview. No animation, modifier baking or persistence.'};
+    assets:normalized,vertices,triangles,fps,duration,
+    assumedTiming:raw.source.fps===undefined||raw.source.duration===undefined,
+    limits:'Read-only transform animation preview. No modifier baking, asset edits, scene persistence or publishing.'};
 }
 export function readBpcFramefieldPreview(text){
   if(typeof text!=='string')fail('Choose a JSON preview file.');
@@ -147,4 +168,44 @@ export function readBpcFramefieldPreview(text){
   let raw;
   try{raw=JSON.parse(text);}catch{fail('BPC preview is not valid JSON.');}
   return normalizeBpcFramefieldPacket(raw);
+}
+
+
+// Match Framefield Studio scene.js easing: curves live on the outgoing keyframe,
+// each axis has its own interpolation, and explicit hold preserves the preceding pose.
+const mix=(a,b,t)=>a+(b-a)*t;
+const bezier=(t,p1,p2)=>{const s=1-t;return 3*s*s*t*p1+3*s*t*t*p2+t*t*t;};
+export function framefieldEase(t,curve){
+  t=Math.max(0,Math.min(1,t));
+  if(t===0||t===1)return t;
+  if(curve==='hold')return 0;
+  if(!Array.isArray(curve)||curve.length!==4)return t;
+  const [x1,y1,x2,y2]=curve;
+  if(x1===0&&y1===0&&x2===1&&y2===1)return t;
+  let low=0,high=1;
+  for(let i=0;i<28;i++){
+    const mid=(low+high)/2;
+    if(bezier(mid,x1,x2)<t)low=mid;else high=mid;
+  }
+  return bezier((low+high)/2,y1,y2);
+}
+/** Sample only transform channels, not geometry, at a possibly fractional frame. */
+export function sampleFramefieldPose(keyframes,frame){
+  if(!Array.isArray(keyframes)||keyframes.length===0)fail('Missing animation keyframes.');
+  if(typeof frame!=='number'||!Number.isFinite(frame))fail('Invalid playback frame.');
+  const snapshot=k=>({position:[...k.position],rotationRadians:[...k.rotationRadians],scale:[...k.scale]});
+  if(frame<=keyframes[0].frame)return snapshot(keyframes[0]);
+  const last=keyframes.at(-1);
+  if(frame>=last.frame)return snapshot(last);
+  for(let i=0;i<keyframes.length-1;i++){
+    const a=keyframes[i],b=keyframes[i+1];
+    if(frame>=a.frame&&frame<=b.frame){
+      const t=(frame-a.frame)/(b.frame-a.frame);
+      const channels=[['position','position'],['rotationRadians','rotation'],['scale','scale']];
+      return Object.fromEntries(channels.map(([field,channel])=>[
+        field,a[field].map((value,axis)=>mix(value,b[field][axis],framefieldEase(t,a.curves?.[channel+'.'+axis])))
+      ]));
+    }
+  }
+  return snapshot(last);
 }
