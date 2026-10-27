@@ -3,6 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { MAX_BOARDS, MAX_STROKES, makeBoard, makeScene, newStroke, extendStroke, readScene, writeScene } from './model.js';
+import {readBpcFramefieldPreview, BPC_PREVIEW_MAX_BYTES} from './framefieldPreview.js';
 import './styles.css';
 
 const $ = (s) => document.querySelector(s);
@@ -12,6 +13,9 @@ const STORE_KEY='domistika.xr.scene.v1';
 const renderedBoards=new Map(), xrInteractions=new Map();
 let sceneData=makeScene(), selectedId=sceneData.selectedId, mode='draw', erasing=false, pointerState=null;
 const scene=new THREE.Scene();
+// Read-only BPC objects are deliberately outside sceneData and its localStorage schema.
+const bpcMeshRoot=new THREE.Group();
+scene.add(bpcMeshRoot);
 const bgColor=0x091125;
 scene.background=new THREE.Color(bgColor);
 scene.fog=new THREE.Fog(bgColor,7,19);
@@ -328,6 +332,80 @@ $('#sceneFile').addEventListener('change',async e=>{
   catch(error){message('Import rejected: '+error.message);}
   e.target.value='';
 });
+// A user-selected BPC neutral packet becomes a non-persistent 3D mesh preview.
+// No source file is uploaded, no editor project is replaced, and it is not a drawable board.
+function clearBpcMeshes(){
+  for(const item of [...bpcMeshRoot.children]){
+    item.traverse(obj=>{
+      obj.geometry?.dispose();
+      if(Array.isArray(obj.material))obj.material.forEach(material=>material.dispose());
+      else obj.material?.dispose();
+    });
+    bpcMeshRoot.remove(item);
+  }
+  bpcMeshRoot.position.set(0,0,0);
+  bpcMeshRoot.scale.setScalar(1);
+  $('#bpcPreviewCount').textContent='None loaded';
+}
+function showBpcMeshes(preview){
+  // Build a new detached group first so errors cannot destroy the existing preview.
+  const next=new THREE.Group();
+  try{
+    for(const asset of preview.assets){
+      const geometry=new THREE.BufferGeometry();
+      geometry.setAttribute('position',new THREE.Float32BufferAttribute(asset.positions,3));
+      geometry.computeVertexNormals();
+      const material=new THREE.MeshStandardMaterial({
+        color:asset.color,roughness:.65,metalness:.12,side:THREE.DoubleSide
+      });
+      const mesh=new THREE.Mesh(geometry,material);
+      mesh.name=asset.label;
+      mesh.visible=asset.visible;
+      mesh.position.fromArray(asset.pose.position);
+      mesh.rotation.set(...asset.pose.rotationRadians);
+      mesh.scale.fromArray(asset.pose.scale);
+      next.add(mesh);
+    }
+    // Use all objects for bounds, temporarily including hidden objects for safe fit.
+    const bounds=new THREE.Box3();
+    for(const mesh of next.children){
+      const box=new THREE.Box3().setFromObject(mesh);
+      bounds.union(box);
+    }
+    if(bounds.isEmpty())throw Error('No previewable geometry.');
+    const midpoint=bounds.getCenter(new THREE.Vector3());
+    const span=bounds.getSize(new THREE.Vector3());
+    const ratio=Math.min(1.2,2.4/Math.max(.1,span.x,span.y,span.z));
+    clearBpcMeshes();
+    for(const mesh of [...next.children])bpcMeshRoot.add(mesh);
+    bpcMeshRoot.scale.setScalar(ratio);
+    bpcMeshRoot.position.set(-midpoint.x*ratio,1.5-midpoint.y*ratio,-1.4-midpoint.z*ratio);
+    $('#bpcPreviewCount').textContent=preview.assets.length+' meshes · '+preview.triangles+' triangles';
+  }catch(error){
+    next.traverse(obj=>{
+      obj.geometry?.dispose();
+      if(Array.isArray(obj.material))obj.material.forEach(material=>material.dispose());
+      else obj.material?.dispose();
+    });
+    throw error;
+  }
+}
+$('#importBpcPreview').addEventListener('click',()=>$('#bpcPreviewFile').click());
+$('#clearBpcPreview').addEventListener('click',()=>{
+  clearBpcMeshes();message('BPC mesh preview cleared. Your canvases were not changed.');
+});
+$('#bpcPreviewFile').addEventListener('change',async event=>{
+  const file=event.target.files?.[0];
+  event.target.value='';
+  if(!file)return;
+  try{
+    if(file.size>BPC_PREVIEW_MAX_BYTES)throw Error('BPC preview file exceeds 5 MiB.');
+    const preview=readBpcFramefieldPreview(await file.text());
+    showBpcMeshes(preview);
+    message('BPC imported '+preview.assets.length+' read-only mesh preview(s). First keyframes only; not saved in XR scene.');
+  }catch(error){message('BPC preview rejected: '+error.message);}
+});
+
 $('#downloadPng').addEventListener('click',()=>{
   const r=renderedBoards.get(selectedId),b=selected();if(!r||!b)return;
   r.canvas.toBlob(blob=>{if(blob)download(b.name.replace(/[^\w-]+/g,'-').slice(0,40)+'.png',blob,'image/png');},'image/png');

@@ -28,6 +28,7 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: node --check src/xr/main.js
       - run: node --check src/xr/model.js
-      - run: node --test tests/xr-model.test.mjs tests/xr-integration.test.mjs
+      - run: node --check src/xr/framefieldPreview.js
+      - run: node --test tests/xr-model.test.mjs tests/xr-integration.test.mjs tests/xr-framefield-preview.test.mjs tests/xr-bpc-integration.test.mjs
       - run: npm run build
       - run: test -f dist/index.html && test -f dist/xr.html
