@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { MAX_BOARDS, MAX_STROKES, makeBoard, makeScene, newStroke, extendStroke, readScene, writeScene } from './model.js';
-import {readBpcFramefieldPreview, sampleFramefieldPose, BPC_PREVIEW_MAX_BYTES} from './framefieldPreview.js';
+import {readBpcFramefieldPreview, sampleFramefieldPose, FRAMEFIELD_EULER_ORDER, BPC_PREVIEW_MAX_BYTES} from './framefieldPreview.js';
 import './styles.css';
 
 const $ = (s) => document.querySelector(s);
@@ -429,6 +429,7 @@ function showBpcMeshes(preview){
       mesh.name=asset.label;
       mesh.visible=asset.visible;
       mesh.position.fromArray(asset.pose.position);
+      mesh.rotation.order=FRAMEFIELD_EULER_ORDER;
       mesh.rotation.set(...asset.pose.rotationRadians);
       mesh.scale.fromArray(asset.pose.scale);
       next.add(mesh);

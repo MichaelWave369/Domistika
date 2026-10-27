@@ -4,6 +4,9 @@
  * Requires an explicit local bpc.spatial-preview.v1 packet created in the BPC Bridge Lab.
  */
 export const BPC_PREVIEW_SCHEMA='bpc.spatial-preview.v1';
+// Framefield src/mesh.js transformVertex applies X then Y then Z rotations.
+// In Three.js that is Euler 'ZYX' (matrix Rz * Ry * Rx), not default 'XYZ'.
+export const FRAMEFIELD_EULER_ORDER='ZYX';
 export const BPC_PREVIEW_MAX_BYTES=5*1024*1024;
 export const BPC_PREVIEW_MAX_OBJECTS=12;
 export const BPC_PREVIEW_MAX_VERTICES=3500;
