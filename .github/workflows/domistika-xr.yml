@@ -25,8 +25,7 @@ jobs:
       - uses: actions/setup-node@v4
         with:
           node-version: '22'
-          cache: npm
-      - run: npm ci
+      - run: npm install --no-audit --no-fund
       - run: node --check src/xr/main.js
       - run: node --check src/xr/model.js
       - run: node --test tests/xr-model.test.mjs tests/xr-integration.test.mjs
