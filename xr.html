@@ -33,6 +33,10 @@
     <div class="button-row"><button id="save">Save local</button><button id="downloadPng">Export PNG</button></div>
     <div class="button-row"><button id="exportScene">Export scene</button><button id="importScene">Import scene</button></div>
     <input id="sceneFile" type="file" accept=".json,application/json" hidden>
+    <h2>BPC 3D Preview <span id="bpcPreviewCount">None loaded</span></h2>
+    <div class="button-row"><button id="importBpcPreview">Load BPC mesh</button><button id="clearBpcPreview">Clear preview</button></div>
+    <input id="bpcPreviewFile" type="file" accept=".json,application/json" hidden>
+    <p class="help bpc-help">Use <a href="https://michaelwave369.github.io/BackyardProductionCompany/" target="_blank" rel="noopener noreferrer">BPC Bridge Lab</a> to export a Framefield mesh preview. Read-only 3D, first keyframe only. It is never added to your drawing scene or local backup.</p>
     <p class="help"><b>DESKTOP:</b> Drag to paint or transform; background drag orbits; scroll zooms.<br><br><b>QUEST:</b> Trigger draws or grabs. Point at the in-world tool panel to change modes. Actual headset testing required.</p>
   </aside>
   <main class="stage" aria-label="3D drawing studio">
