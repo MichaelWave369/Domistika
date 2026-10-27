@@ -1,0 +1,47 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0a0d1b">
+<meta name="description" content="Domistika XR: paint on floating canvases in desktop, VR, or mixed reality.">
+<title>Domistika XR | Paint Beyond the Page</title>
+</head>
+<body>
+<div id="xr-app">
+  <aside class="sidebar" aria-label="Drawing controls">
+    <header class="brand"><strong class="brand-mark">D·XR</strong><div><h1>DOMISTIKA XR</h1><p>PAINT BEYOND THE PAGE</p></div></header>
+    <a class="back-link" href="./">← Back to Domistika</a>
+    <h2>Interaction</h2>
+    <div class="mode-grid" role="group" aria-label="Tool mode">
+      <button class="mode active" data-mode="draw" aria-pressed="true">✎ Draw</button>
+      <button class="mode" data-mode="move" aria-pressed="false">✥ Move</button>
+      <button class="mode" data-mode="rotate" aria-pressed="false">↻ Rotate</button>
+      <button class="mode" data-mode="scale" aria-pressed="false">⤢ Scale</button>
+    </div>
+    <label class="control-label" for="brushColor">BRUSH COLOR</label>
+    <div class="color-wrap"><input id="brushColor" type="color" value="#68e4ff"><span id="colorValue">#68E4FF</span></div>
+    <label class="control-label" for="brushWidth">BRUSH SIZE <output id="widthValue">12</output></label>
+    <input id="brushWidth" type="range" min="2" max="80" value="12">
+    <button id="eraser" class="wide" aria-pressed="false">◌ Eraser: OFF</button>
+    <h2>Your canvases <span id="boardCount">1 / 12</span></h2>
+    <div id="canvasList" class="canvas-list" role="group" aria-label="Canvas selection"></div>
+    <div class="button-row"><button id="addBoard">+ New canvas</button><button id="duplicateBoard">Duplicate</button></div>
+    <div class="button-row"><button id="undo">↶ Undo</button><button id="redo">↷ Redo</button></div>
+    <div class="button-row"><button id="gallery">Gallery layout</button><button id="removeBoard">Delete</button></div>
+    <h2>Your work stays yours</h2>
+    <div class="button-row"><button id="save">Save local</button><button id="downloadPng">Export PNG</button></div>
+    <div class="button-row"><button id="exportScene">Export scene</button><button id="importScene">Import scene</button></div>
+    <input id="sceneFile" type="file" accept=".json,application/json" hidden>
+    <p class="help"><b>DESKTOP:</b> Drag to paint or transform; background drag orbits; scroll zooms.<br><br><b>QUEST:</b> Trigger draws or grabs. Point at the in-world tool panel to change modes. Actual headset testing required.</p>
+  </aside>
+  <main class="stage" aria-label="3D drawing studio">
+    <div class="stage-top">SPATIAL SKETCH STUDIO <span id="modeName">/ DRAW</span></div>
+    <div id="render-root" class="render-root"></div>
+    <div id="xr-entry" class="xr-entry" aria-label="Immersive controls"></div>
+    <div class="stage-bottom"><span id="status" role="status" aria-live="polite">Starting spatial studio...</span><button id="resetView">Reset view</button></div>
+  </main>
+</div>
+<script type="module" src="/src/xr/main.js"></script>
+</body>
+</html>
