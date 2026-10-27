@@ -2,3 +2,6 @@
 
 /* BPC local preview only; deliberately retains the existing XR stage and canvas controls. */
 .bpc-help{margin-top:10px;border-left:2px solid #77dfc9;background:#77dfc912;padding:11px;border-radius:0 8px 8px 0}.bpc-help a{color:#a9f4eb;text-decoration:underline}.bpc-help a:focus-visible{outline-color:#a9f4eb}
+
+/* Framefield animation preview stays within the BPC sidebar section. */
+.bpc-timeline{padding:12px;background:#12283a;border:1px solid #42577c;border-radius:9px;margin:13px 0}.bpc-timeline .wide{margin:0}.bpc-timeline .control-label{margin:13px 0 8px;gap:9px;flex-wrap:wrap}.bpc-timeline output{font-size:10px;color:#8ff2d8;letter-spacing:0;text-transform:none}.bpc-timeline input[type=range]{margin:2px 0 4px}.bpc-timeline button:disabled,.bpc-timeline input:disabled{opacity:.55;cursor:not-allowed}
