@@ -3,7 +3,7 @@ import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { MAX_BOARDS, MAX_STROKES, makeBoard, makeScene, newStroke, extendStroke, readScene, writeScene } from './model.js';
-import {readBpcFramefieldPreview, BPC_PREVIEW_MAX_BYTES} from './framefieldPreview.js';
+import {readBpcFramefieldPreview, sampleFramefieldPose, BPC_PREVIEW_MAX_BYTES} from './framefieldPreview.js';
 import './styles.css';
 
 const $ = (s) => document.querySelector(s);
@@ -16,6 +16,7 @@ const scene=new THREE.Scene();
 // Read-only BPC objects are deliberately outside sceneData and its localStorage schema.
 const bpcMeshRoot=new THREE.Group();
 scene.add(bpcMeshRoot);
+let bpcMotion=null,bpcLastTick=null; // Ephemeral, never serialized into the XR canvas project.
 const bgColor=0x091125;
 scene.background=new THREE.Color(bgColor);
 scene.fog=new THREE.Fog(bgColor,7,19);
@@ -193,7 +194,7 @@ window.addEventListener('blur',()=>{if(pointerState){pointerState=null;controls.
 
 // An actual 3D toolbar, not an HTML overlay that disappears inside XR.
 const toolPanel=new THREE.Group();toolPanel.position.set(1.8,1.65,-1.25);toolPanel.rotation.y=-.3;scene.add(toolPanel);
-const backing=new THREE.Mesh(new THREE.PlaneGeometry(.93,1.5),new THREE.MeshBasicMaterial({color:0x102238,side:THREE.DoubleSide}));
+const backing=new THREE.Mesh(new THREE.PlaneGeometry(.93,1.85),new THREE.MeshBasicMaterial({color:0x102238,side:THREE.DoubleSide}));
 backing.position.z=-.01;toolPanel.add(backing);
 const controls3d=[];
 const headingTex=textTexture('XR TOOL DECK');
@@ -211,11 +212,16 @@ for(const [i,color] of ['#68e4ff','#ff74c6','#ffdd80','#6cf59c','#ffffff'].entri
 const eraseTex=textTexture('ERASER ON / OFF');
 const eraseBtn=new THREE.Mesh(new THREE.PlaneGeometry(.75,.18),new THREE.MeshBasicMaterial({map:eraseTex,side:THREE.DoubleSide}));
 eraseBtn.position.set(0,-.36,.025);eraseBtn.userData.action={type:'erase'};toolPanel.add(eraseBtn);controls3d.push(eraseBtn);
+const bpcControlTex=textTexture('BPC ANIMATION');
+const bpcControl=new THREE.Mesh(new THREE.PlaneGeometry(.75,.16),new THREE.MeshBasicMaterial({map:bpcControlTex,side:THREE.DoubleSide}));
+bpcControl.position.set(0,-.79,.025);bpcControl.userData.action={type:'bpc-playback'};
+toolPanel.add(bpcControl);controls3d.push(bpcControl);
 function updateToolColors(){
   for(const mesh of controls3d){
     const a=mesh.userData.action;
     if(a.type==='mode')mesh.material.color.setHex(a.value===mode?0x7ef7e7:0xffffff);
     if(a.type==='erase')mesh.material.color.setHex(erasing?0xffaaaa:0xffffff);
+    if(a.type==='bpc-playback')mesh.material.color.setHex(bpcMotion?.playing?0x79f4ae:0xffffff);
   }
 }
 function toggleEraser(){
@@ -237,6 +243,7 @@ function startXR(c,index){
     const a=tool.object.userData.action;
     if(a.type==='mode')setMode(a.value);
     if(a.type==='erase')toggleEraser();
+    if(a.type==='bpc-playback')toggleBpcPlayback();
     if(a.type==='color'){$('#brushColor').value=a.value;$('#colorValue').textContent=a.value.toUpperCase();erasing=false;$('#eraser').textContent='◌ Eraser: OFF';$('#eraser').setAttribute('aria-pressed','false');updateToolColors();}
     return;
   }
@@ -334,6 +341,64 @@ $('#sceneFile').addEventListener('change',async e=>{
 });
 // A user-selected BPC neutral packet becomes a non-persistent 3D mesh preview.
 // No source file is uploaded, no editor project is replaced, and it is not a drawable board.
+function syncBpcPlaybackUI(){
+  const loaded=!!bpcMotion;
+  $('#bpcAnimationButton').disabled=!loaded;
+  $('#bpcTimeline').disabled=!loaded;
+  $('#bpcAnimationButton').textContent=bpcMotion?.playing?'Pause preview':'Play preview';
+  $('#bpcAnimationButton').setAttribute('aria-pressed',String(!!bpcMotion?.playing));
+  $('#bpcTimeline').max=String(bpcMotion?.duration??120);
+  $('#bpcTimeline').value=String(Math.round(bpcMotion?.frame??0));
+  $('#bpcFrameValue').textContent=bpcMotion
+    ?Math.round(bpcMotion.frame)+' / '+bpcMotion.duration+' · '+bpcMotion.fps+' FPS'+(bpcMotion.assumedTiming?' (assumed)':'')
+    :'No animation loaded';
+  updateToolColors();
+}
+function setBpcFrame(next){
+  if(!bpcMotion)return;
+  bpcMotion.frame=Math.min(bpcMotion.duration,Math.max(0,next));
+  for(const [i,mesh] of bpcMeshRoot.children.entries()){
+    const pose=sampleFramefieldPose(bpcMotion.assets[i].keyframes,bpcMotion.frame);
+    mesh.position.fromArray(pose.position);
+    mesh.rotation.set(...pose.rotationRadians);
+    mesh.scale.fromArray(pose.scale);
+  }
+  $('#bpcTimeline').value=String(Math.round(bpcMotion.frame));
+  $('#bpcFrameValue').textContent=Math.round(bpcMotion.frame)+' / '+bpcMotion.duration+' · '+bpcMotion.fps+' FPS'+(bpcMotion.assumedTiming?' (assumed)':'');
+}
+function toggleBpcPlayback(){
+  if(!bpcMotion){message('Load a Framefield BPC mesh preview before playing animation.');return;}
+  if(bpcMotion.frame>=bpcMotion.duration)setBpcFrame(0);
+  bpcMotion.playing=!bpcMotion.playing;
+  bpcLastTick=null;
+  syncBpcPlaybackUI();
+  message(bpcMotion.playing?'BPC animation playing in desktop/VR. Meshes remain read-only.':'BPC animation paused.');
+}
+function updateBpcPlayback(timeMs){
+  if(!bpcMotion?.playing)return;
+  if(bpcLastTick!==null){
+    const elapsed=timeMs-bpcLastTick;
+    // Browser tab suspension, XR session clock transitions and negative timestamps
+    // must not cause a surprise fast-forward.
+    if(Number.isFinite(elapsed)&&elapsed>0&&elapsed<250){
+      const next=bpcMotion.frame+elapsed*bpcMotion.fps/1000;
+      setBpcFrame(next>=bpcMotion.duration?next%bpcMotion.duration:next);
+    }
+  }
+  bpcLastTick=timeMs;
+}
+$('#bpcAnimationButton').addEventListener('click',toggleBpcPlayback);
+$('#bpcTimeline').addEventListener('input',event=>{
+  if(!bpcMotion)return;
+  bpcMotion.playing=false;
+  bpcLastTick=null;
+  setBpcFrame(Number(event.target.value));
+  syncBpcPlaybackUI();
+});
+document.addEventListener('visibilitychange',()=>{
+  if(document.hidden){bpcLastTick=null;if(bpcMotion)bpcMotion.playing=false;syncBpcPlaybackUI();}
+});
+
 function clearBpcMeshes(){
   for(const item of [...bpcMeshRoot.children]){
     item.traverse(obj=>{
@@ -345,7 +410,9 @@ function clearBpcMeshes(){
   }
   bpcMeshRoot.position.set(0,0,0);
   bpcMeshRoot.scale.setScalar(1);
+  bpcMotion=null;bpcLastTick=null;
   $('#bpcPreviewCount').textContent='None loaded';
+  syncBpcPlaybackUI();
 }
 function showBpcMeshes(preview){
   // Build a new detached group first so errors cannot destroy the existing preview.
@@ -381,6 +448,10 @@ function showBpcMeshes(preview){
     bpcMeshRoot.scale.setScalar(ratio);
     bpcMeshRoot.position.set(-midpoint.x*ratio,1.5-midpoint.y*ratio,-1.4-midpoint.z*ratio);
     $('#bpcPreviewCount').textContent=preview.assets.length+' meshes · '+preview.triangles+' triangles';
+    bpcMotion={assets:preview.assets,fps:preview.fps,duration:preview.duration,
+      assumedTiming:preview.assumedTiming,playing:false,frame:0};
+    setBpcFrame(0);
+    syncBpcPlaybackUI();
   }catch(error){
     next.traverse(obj=>{
       obj.geometry?.dispose();
@@ -402,7 +473,7 @@ $('#bpcPreviewFile').addEventListener('change',async event=>{
     if(file.size>BPC_PREVIEW_MAX_BYTES)throw Error('BPC preview file exceeds 5 MiB.');
     const preview=readBpcFramefieldPreview(await file.text());
     showBpcMeshes(preview);
-    message('BPC imported '+preview.assets.length+' read-only mesh preview(s). First keyframes only; not saved in XR scene.');
+    message('BPC imported '+preview.assets.length+' read-only mesh(es). Scrub or play Framefield transform keyframes; not saved in XR scene.');
   }catch(error){message('BPC preview rejected: '+error.message);}
 });
 
@@ -425,7 +496,7 @@ try{
   if(mr.tagName==='BUTTON')mr.textContent='ENTER MR';
   $('#xr-entry').append(vr,mr);
 }catch(error){message('XR init unavailable: '+error.message);}
-renderer.xr.addEventListener('sessionstart',()=>{
+renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
   const blend=renderer.xr.getSession()?.environmentBlendMode;
   const passthrough=blend==='alpha-blend'||blend==='additive';
   scene.background=passthrough?null:new THREE.Color(bgColor);
@@ -433,7 +504,7 @@ renderer.xr.addEventListener('sessionstart',()=>{
   grid.visible=!passthrough;floor.visible=!passthrough;
   controls.enabled=false;message(passthrough?'Mixed reality active; no room anchoring.':'VR active; trigger to paint or move.');
 });
-renderer.xr.addEventListener('sessionend',()=>{
+renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
   for(const i of [...xrInteractions.keys()])endXR(i);
   scene.background=new THREE.Color(bgColor);scene.fog=new THREE.Fog(bgColor,7,19);
   grid.visible=true;floor.visible=true;controls.enabled=true;persist();
@@ -444,5 +515,6 @@ function resize(){
 }
 window.addEventListener('resize',resize);new ResizeObserver(resize).observe($('#render-root'));
 resize();updateToolColors();
-renderer.setAnimationLoop(()=>{if(renderer.xr.isPresenting)updateXR();else controls.update();renderer.render(scene,camera);});
+syncBpcPlaybackUI();
+renderer.setAnimationLoop(timeMs=>{updateBpcPlayback(timeMs);if(renderer.xr.isPresenting)updateXR();else controls.update();renderer.render(scene,camera);});
 message(location.protocol==='https:'||['localhost','127.0.0.1'].includes(location.hostname)?'Studio ready. Drag on the canvas to draw.':'Desktop ready. Immersive XR requires HTTPS or localhost.');
