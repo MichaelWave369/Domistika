@@ -1,0 +1,34 @@
+name: Domistika XR verification
+on:
+  pull_request:
+    paths:
+      - 'xr.html'
+      - 'src/xr/**'
+      - 'tests/xr-*.test.mjs'
+      - 'vite.config.js'
+      - '.github/workflows/domistika-xr.yml'
+  push:
+    branches: [main]
+    paths:
+      - 'xr.html'
+      - 'src/xr/**'
+      - 'tests/xr-*.test.mjs'
+      - 'vite.config.js'
+permissions:
+  contents: read
+jobs:
+  xr:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+          cache: npm
+      - run: npm ci
+      - run: node --check src/xr/main.js
+      - run: node --check src/xr/model.js
+      - run: node --test tests/xr-model.test.mjs tests/xr-integration.test.mjs
+      - run: npm run build
+      - run: test -f dist/index.html && test -f dist/xr.html
