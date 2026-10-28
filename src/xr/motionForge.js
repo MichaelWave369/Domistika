@@ -17,11 +17,13 @@ export function validateMotion(input){
   const phase=numeric(input.phase,0,Math.PI*2,'phase');
   return {mode:input.mode,speed,amplitude,phase};
 }
-export function sampleMotion(object,timeSeconds){
+export function sampleMotion(object,timeSeconds,audioEnergy=0){
   if(!object||!Array.isArray(object.position)||!Array.isArray(object.rotation)||!Array.isArray(object.scale))
     throw Error('Missing rest-pose transform.');
   if(typeof timeSeconds!=='number'||!Number.isFinite(timeSeconds)||timeSeconds<0)
     throw Error('Invalid motion preview time.');
+  if(typeof audioEnergy!=='number'||!Number.isFinite(audioEnergy)||audioEnergy<0||audioEnergy>1)
+    throw Error('Invalid audio-reactive energy.');
   const position=[...object.position],rotation=[...object.rotation],scale=[...object.scale];
   const motion=validateMotion(object.motion);
   if(!motion||motion.mode==='none')return {position,rotation,scale};
@@ -29,14 +31,14 @@ export function sampleMotion(object,timeSeconds){
   const a=((timeSeconds*motion.speed*2*Math.PI)%(2*Math.PI))+motion.phase;
   const zero=motion.phase;
   const sin=Math.sin(a)-Math.sin(zero),cos=Math.cos(a)-Math.cos(zero);
-  if(motion.mode==='spin')rotation[1]+=timeSeconds*motion.speed*2*Math.PI;
-  if(motion.mode==='bob')position[1]+=motion.amplitude*sin;
+  if(motion.mode==='spin')rotation[1]+=timeSeconds*motion.speed*2*Math.PI+audioEnergy*.45*sin;
+  if(motion.mode==='bob')position[1]+=(motion.amplitude+audioEnergy*.35)*sin;
   if(motion.mode==='orbit'){
-    position[0]+=motion.amplitude*cos;
-    position[2]+=motion.amplitude*sin;
+    position[0]+=(motion.amplitude+audioEnergy*.4)*cos;
+    position[2]+=(motion.amplitude+audioEnergy*.4)*sin;
   }
   if(motion.mode==='pulse'){
-    const factor=1+(motion.amplitude*.35)*sin;
+    const factor=1+(motion.amplitude*.35+audioEnergy*.35)*sin;
     for(let i=0;i<3;i++)scale[i]*=factor;
   }
   return {position,rotation,scale};
