@@ -2,6 +2,7 @@ import * as THREE from 'three';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {emptyWorkshop,createWorkshopObject,createWorkshopMesh,validateWorkshop,readWorkshop,writeWorkshop,withTransform,snapPosition,snapAngle,WORKSHOP_STORE_KEY,WORKSHOP_MAX_OBJECTS} from './workshopModel.js';
 import {duplicateObject,measureObjectCenters} from './objectLab.js';
+import {linearPattern,radialPattern,alignObjectCenter} from './patternForge.js';
 
 const clamp=THREE.MathUtils.clamp;
 function shapeGeometry(o){
@@ -154,6 +155,49 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     if(active.size)throw Error('Release held objects before duplicating.');
     const source=get(selectedId);if(!source)throw Error('Select a workshop object first.');
     return insert(duplicateObject(source,{mirrorX,snap:gridStep,offset:Math.max(.5,gridStep)}));
+  }
+  /** Commit all generated objects atomically, so an over-limit array leaves no partial scene. */
+  function appendMany(objects){
+    if(active.size)throw Error('Release held objects before creating a pattern.');
+    if(!Array.isArray(objects)||!objects.length)throw Error('Pattern has no objects.');
+    const candidate=validateWorkshop({schema:data.schema,objects:[...data.objects,...objects]});
+    writeWorkshop(candidate);
+    snapshot();
+    data=candidate;
+    selectedId=objects.at(-1).id;
+    rebuild();
+    save();
+    return objects.length;
+  }
+  function patternSelected(type,options={}){
+    if(active.size)throw Error('Release held objects before making patterns.');
+    const source=get(selectedId);
+    if(!source)throw Error('Select an editable workshop object first.');
+    const fresh=type==='linear'?linearPattern(source,{...options,snap:gridStep}):
+      type==='radial'?radialPattern(source,{...options,snap:gridStep}):null;
+    if(!fresh)throw Error('Unknown pattern type.');
+    return appendMany(fresh);
+  }
+  function alignSelected(targetId,axis='x'){
+    if(active.size)throw Error('Release held objects before alignment.');
+    const source=get(selectedId),target=get(targetId);
+    if(!source||!target)throw Error('Select two editable workshop objects.');
+    const result=alignObjectCenter(source,target,axis);
+    patchSelected({position:result.position});
+  }
+  /** This is the real transformed mesh bounding box, not unrotated dimensions. */
+  function floorSelected(){
+    if(active.size)throw Error('Release held objects before aligning to floor.');
+    const source=get(selectedId),mesh=meshes.get(selectedId);
+    if(!source||!mesh)throw Error('Select an editable workshop object first.');
+    mesh.updateWorldMatrix(true,false);
+    const bounds=new THREE.Box3().setFromObject(mesh);
+    if(bounds.isEmpty()||!Number.isFinite(bounds.min.y))throw Error('Cannot calculate floor contact.');
+    const newY=source.position[1]-bounds.min.y;
+    if(Math.abs(newY-source.position[1])<1e-8)return false;
+    // Floor contact deliberately bypasses grid snapping to preserve zero Y clearance.
+    patchSelected({position:[source.position[0],newY,source.position[2]]});
+    return true;
   }
   function setSelectedAppearance({name,color}){
     const old=get(selectedId);if(!old)throw Error('Select a workshop object first.');
@@ -330,6 +374,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     get measure(){return measureInfo;},get pendingMeasureId(){return pendingMeasureId;},
     add,select,insert,hit,beginController,updateController,beginMouse,updateMouse,finish,
     promoteFramefield,promoteCad,patchSelected,removeSelected,duplicateSelected,setSelectedAppearance,
+    appendMany,patternSelected,alignSelected,floorSelected,
     setMeasurement,clearMeasurement,measurePick,undo,redo,clear,save,importJson,
     exportJson:()=>writeWorkshop(data),exportGLB};
 }

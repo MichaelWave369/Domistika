@@ -60,3 +60,17 @@ background:#183348;border:1px solid #486a85}
  outline:2px solid #ffd891;outline-offset:3px}
 .workshop-tools #workshopDistance{font-variant-numeric:tabular-nums;line-height:1.6;color:#ffe1a9}
 .workshop-tools h2{gap:10px}
+
+/* Pattern Forge v0.4: labeled numeric controls and legible, compact procedural tools. */
+.pattern-forge{border:1px solid #547f85;border-radius:12px;padding:11px;margin:16px 0;
+ background:linear-gradient(150deg,#102a35,#1b2439)}
+.pattern-forge h2{color:#b3f8e6;margin:3px 0 12px}
+.pattern-forge>.workshop-copy{color:#b8dada}
+.pattern-forge .control-label{display:flex;flex-direction:column;align-items:stretch;gap:7px;
+ min-width:0;margin:5px 0;font-size:10px}
+.pattern-forge .control-label input,.pattern-forge .control-label select{
+ width:100%;min-width:0;font:inherit;font-size:12px;padding:10px;border-radius:8px}
+.pattern-forge>.help{margin:9px 0 14px}
+.pattern-forge button:hover{border-color:#9aeac8}
+.pattern-forge button:disabled{opacity:.5;cursor:not-allowed}
+.pattern-forge>select{width:100%;margin:4px 0 8px}
