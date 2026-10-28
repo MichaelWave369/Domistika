@@ -91,7 +91,7 @@ export function createShowrunner(initial=DEFAULT_SHOW){
   function previous(){return jump(Math.max(0,cueIndex()-1));}
   function tick(dt){
     if(!Number.isFinite(dt)||dt<0)throw Error('Invalid show frame delta.');
-    if(playing){elapsed=Math.min(total(),elapsed+Math.min(dt,.1));if(elapsed>=total())playing=false;}
+    if(playing){elapsed=Math.min(total(),Math.round((elapsed+Math.min(dt,.1))*1e6)/1e6);if(elapsed>=total())playing=false;}
     return status();
   }
   function frame(){
