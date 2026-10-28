@@ -52,7 +52,7 @@ const size=()=>Number($('#brushWidth').value);
 const message=(text)=>status(text);
 const brushStudio=createBrushStudio({scene,onStatus:message,onCount:n=>{$('#spatialCount').textContent=n+' / 160';}});
 const workshop=createWorkshop({scene,onStatus:message,paintRoot:()=>brushStudio.root,onChange:data=>{
-  $('#workshopCount').textContent=data.count+' / 48';refreshWorkshopSelection(data.selected);
+  $('#workshopCount').textContent=data.count+' / 48';refreshWorkshopSelection(data.selected);refreshWorkshopObjectLab(data);
 }});
 function textTexture(text,color='#c7ffef') {
   const el=document.createElement('canvas');el.width=512;el.height=120;
@@ -160,6 +160,39 @@ function beginStroke(board,p){
   board.strokes.push(s);renderedBoards.get(board.id).undo.length=0;paintBoard(board);return s;
 }
 function continueStroke(board,s,p){if(s&&extendStroke(s,p))paintBoard(board);}
+function refreshWorkshopObjectLab(data){
+  const objs=data.objects||[],selection=data.selected;
+  const list=$('#workshopObjects');
+  list.replaceChildren();
+  if(!objs.length){
+    const none=document.createElement('option');none.value='';none.textContent='No workshop objects';list.append(none);
+  }
+  for(const o of objs){
+    const option=document.createElement('option');option.value=o.id;option.textContent=o.name+' ('+o.kind+')';list.append(option);
+  }
+  list.value=selection?.id??'';
+  $('#workshopName').value=selection?.name??'';
+  $('#workshopName').disabled=!selection;$('#workshopColor').disabled=!selection;
+  $('#workshopColor').value=selection?.color??'#68e4ff';
+  for(const id of ['workshopDuplicate','workshopMirror','workshopAppearance'])$('#'+id).disabled=!selection;
+  const activeA=$('#workshopMeasureA').value,activeB=$('#workshopMeasureB').value;
+  for(const id of ['workshopMeasureA','workshopMeasureB']){
+    const select=$('#'+id);select.replaceChildren();
+    const prompt=document.createElement('option');prompt.value='';prompt.textContent=id.endsWith('A')?'First object':'Second object';select.append(prompt);
+    for(const o of objs){
+      const option=document.createElement('option');option.value=o.id;option.textContent=o.name;select.append(option);
+    }
+  }
+  const ids=new Set(objs.map(o=>o.id));
+  $('#workshopMeasureA').value=data.measure?.from??(ids.has(activeA)?activeA:'');
+  $('#workshopMeasureB').value=data.measure?.to??(ids.has(activeB)?activeB:'');
+  $('#workshopMeasure').disabled=objs.length<2;
+  const m=data.measure;
+  $('#workshopDistance').textContent=m?
+    'Center distance: '+m.distance.toFixed(3)+' m · ΔX '+m.delta[0].toFixed(3)+
+      ' · ΔY '+m.delta[1].toFixed(3)+' · ΔZ '+m.delta[2].toFixed(3)+' m':
+    data.pendingMeasureId?'First center selected. Point at a second object.':'No measurement. Select two workshop objects.';
+}
 function refreshWorkshopSelection(item){
   $('#workshopSelection').textContent=item?
     'Selected: '+item.name+' · '+item.kind+' · '+item.position.map(v=>v.toFixed(2)).join(', ')+' m':
@@ -185,6 +218,11 @@ function startMouse(e){
     if(!brushStudio.start('mouse',p.toArray(),ink(),size(),airStyle,airMirror))return;
     e.preventDefault();renderer.domElement.setPointerCapture(e.pointerId);controls.enabled=false;
     pointerState={id:e.pointerId,kind:'airbrush'};return;
+  }
+  if(mode==='work-measure'){
+    const found=workshop.hit(mouseRay(e));if(!found)return;
+    try{const measure=workshop.measurePick(found.id);message(measure?'Center-to-center: '+measure.distance.toFixed(3)+' m':'First center recorded. Choose another object.');}
+    catch(error){message(error.message);}return;
   }
   if(mode.startsWith('work-')){
     const ray=mouseRay(e);
@@ -281,13 +319,13 @@ for(const [i,label,action] of [
   mesh.position.set(0,.54-i*.22,.024);mesh.userData.action=action;airDeck.add(mesh);controls3d.push(mesh);
 }
 // In-world workshop tool deck stays separate from painting and protected source previews.
-const workDeck=new THREE.Group();workDeck.position.set(0,2.15,-2.65);scene.add(workDeck);
-const workBacking=new THREE.Mesh(new THREE.PlaneGeometry(.92,2.36),
+const workDeck=new THREE.Group();workDeck.position.set(0,2.0,-2.65);scene.add(workDeck);
+const workBacking=new THREE.Mesh(new THREE.PlaneGeometry(1.53,2.05),
   new THREE.MeshBasicMaterial({color:0x172e39,side:THREE.DoubleSide,transparent:true,opacity:.9}));
 workBacking.position.z=-.012;workDeck.add(workBacking);
-const workTitle=new THREE.Mesh(new THREE.PlaneGeometry(.8,.14),
+const workTitle=new THREE.Mesh(new THREE.PlaneGeometry(1.25,.14),
   new THREE.MeshBasicMaterial({map:textTexture('SPATIAL WORKSHOP','#ffe4a6'),side:THREE.DoubleSide}));
-workTitle.position.set(0,.99,.025);workDeck.add(workTitle);
+workTitle.position.set(0,.86,.025);workDeck.add(workTitle);
 const workActions=[
   ['ADD CUBE',{type:'work-add',value:'box'}],
   ['ADD SPHERE',{type:'work-add',value:'sphere'}],
@@ -298,16 +336,30 @@ const workActions=[
   ['SCALE',{type:'mode',value:'work-scale'}],
   ['SNAP GRID',{type:'work-grid'}],
   ['UNDO WORKSHOP',{type:'work-undo'}],
-  ['SAVE WORKSHOP',{type:'work-save'}]
+  ['SAVE WORKSHOP',{type:'work-save'}],
+  ['DUPLICATE',{type:'work-duplicate'}],
+  ['MIRROR X',{type:'work-mirror'}],
+  ['MEASURE',{type:'mode',value:'work-measure'}],
+  ['DELETE',{type:'work-delete'}]
 ];
 for(const [i,[label,action]] of workActions.entries()){
-  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.77,.16),
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.68,.19),
     new THREE.MeshBasicMaterial({map:textTexture(label,'#ffedce'),side:THREE.DoubleSide}));
-  mesh.position.set(0,.76-i*.185,.026);mesh.userData.action=action;workDeck.add(mesh);controls3d.push(mesh);
+  mesh.position.set(i%2===0?-.375:.375,.62-Math.floor(i/2)*.23,.026);mesh.userData.action=action;workDeck.add(mesh);controls3d.push(mesh);
 }
 function addWorkshopShape(kind,position=[0,1.5,-2]){
   try{workshop.add(kind,ink(),position);setMode('work-move');message(kind.toUpperCase()+' created. Point at it and hold trigger to move.');}
   catch(e){message('Workshop create rejected: '+e.message);}
+}
+function duplicateWorkshop(mirror=false){
+  try{
+    workshop.duplicateSelected(mirror);setMode('work-move');
+    message(mirror?'Mirrored geometry and world pose across X=0. Editable copy added.':'Editable duplicate created. Grab to position it.');
+  }catch(e){message('Workshop copy rejected: '+e.message);}
+}
+function deleteWorkshop(){
+  try{workshop.removeSelected();message('Selected workshop object deleted. Undo is available.');}
+  catch(e){message('Delete rejected: '+e.message);}
 }
 function cycleWorkshopGrid(){
   const choices=[0,.1,.25,.5,1],next=choices[(choices.indexOf(workshop.grid)+1)%choices.length];
@@ -362,11 +414,19 @@ function startXR(c,index){
     if(a.type==='work-grid')cycleWorkshopGrid();
     if(a.type==='work-undo'){try{workshop.undo();}catch(e){message(e.message);}}
     if(a.type==='work-save'){if(workshop.save())message('Workshop assembly saved locally.');}
+    if(a.type==='work-duplicate')duplicateWorkshop();
+    if(a.type==='work-mirror')duplicateWorkshop(true);
+    if(a.type==='work-delete')deleteWorkshop();
     if(a.type==='air-style')setAirStyle(a.value);
     if(a.type==='air-mirror')toggleAirMirror();
     if(a.type==='air-undo')brushStudio.undo();
     if(a.type==='air-save'){brushStudio.save();message('Spatial sketch saved on this headset.');}
     if(a.type==='color'){$('#brushColor').value=a.value;$('#colorValue').textContent=a.value.toUpperCase();erasing=false;$('#eraser').textContent='◌ Eraser: OFF';$('#eraser').setAttribute('aria-pressed','false');updateToolColors();}
+    return;
+  }
+  if(mode==='work-measure'){
+    if(workHit){try{const measurement=workshop.measurePick(workHit.id);message(measurement?'Center distance: '+measurement.distance.toFixed(3)+' m':'First center recorded. Pick another object.');}
+      catch(e){message(e.message);}}
     return;
   }
   if(mode.startsWith('work-')){
@@ -466,6 +526,22 @@ $('#redo').addEventListener('click',redo);
 $('#gallery').addEventListener('click',gallery);
 $('#save').addEventListener('click',()=>{persist();brushStudio.save();});
 $('#workshopAdd').addEventListener('click',()=>addWorkshopShape($('#workshopShape').value));
+$('#workshopObjects').addEventListener('change',e=>workshop.select(e.target.value));
+$('#workshopDuplicate').addEventListener('click',()=>duplicateWorkshop());
+$('#workshopMirror').addEventListener('click',()=>duplicateWorkshop(true));
+$('#workshopAppearance').addEventListener('click',()=>{
+  try{
+    workshop.setSelectedAppearance({name:$('#workshopName').value,color:$('#workshopColor').value});
+    message('Object name and color updated; source preview remains unchanged.');
+  }catch(e){message('Appearance update rejected: '+e.message);}
+});
+$('#workshopMeasure').addEventListener('click',()=>{
+  try{
+    const measure=workshop.setMeasurement($('#workshopMeasureA').value,$('#workshopMeasureB').value);
+    message('Distance between object centers: '+measure.distance.toFixed(3)+' meters.');
+  }catch(e){message('Ruler rejected: '+e.message);}
+});
+$('#workshopMeasureClear').addEventListener('click',()=>workshop.clearMeasurement());
 for(const id of ['workshopSnap','workshopAngle'])$('#'+id).addEventListener('change',()=>{
   workshop.setSnap(Number($('#workshopSnap').value),Number($('#workshopAngle').value));
   updateToolColors();message('Workshop snap set: '+workshop.grid+'m / '+workshop.rotationSnap+'°.');
@@ -479,7 +555,7 @@ $('#workshopApply').addEventListener('click',()=>{
     message('Exact transform applied in meters. Workshop data saved.');
   }catch(e){message('Exact transform rejected: '+e.message);}
 });
-$('#workshopDelete').addEventListener('click',()=>{try{workshop.removeSelected();}catch(e){message(e.message);}});
+$('#workshopDelete').addEventListener('click',deleteWorkshop);
 $('#workshopUndo').addEventListener('click',()=>{try{workshop.undo();}catch(e){message(e.message);}});
 $('#workshopRedo').addEventListener('click',()=>{try{workshop.redo();}catch(e){message(e.message);}});
 $('#workshopSave').addEventListener('click',()=>{if(workshop.save())message('Workshop saved in this browser. Export an independent backup.');});
