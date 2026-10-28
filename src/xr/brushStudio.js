@@ -148,7 +148,7 @@ export function createBrushStudio({scene,onStatus=()=>{},onCount=()=>{},storage=
     if(!data.strokes.length)throw Error('No spatial strokes to export.');
     return new GLTFExporter().parseAsync(root,{binary:true,onlyVisible:true});
   }
-  return {start,extend,end,undo,redo,clear,save,importJson,exportGLB,
+  return {root,start,extend,end,undo,redo,clear,save,importJson,exportGLB,
     exportJson:()=>writeSpatialScene(data),count:()=>data.strokes.length,
     finishAll:()=>{for(const key of [...active.keys()])end(key);}};
 }
