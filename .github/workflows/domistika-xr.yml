@@ -33,6 +33,8 @@ jobs:
       - run: node --check src/xr/main.js
       - run: node --check src/xr/model.js
       - run: node --check src/xr/framefieldPreview.js
-      - run: node --test tests/xr-model.test.mjs tests/xr-integration.test.mjs tests/xr-framefield-preview.test.mjs tests/xr-bpc-integration.test.mjs tests/xr-bpc-animation.test.mjs tests/xr-framefield-euler-parity.test.mjs tests/xr-entry-link.test.mjs
+      - run: node --check src/xr/brushModel.js
+      - run: node --check src/xr/brushStudio.js
+      - run: node --test tests/xr-brush-model.test.mjs tests/xr-brush-integration.test.mjs tests/xr-model.test.mjs tests/xr-integration.test.mjs tests/xr-framefield-preview.test.mjs tests/xr-bpc-integration.test.mjs tests/xr-bpc-animation.test.mjs tests/xr-framefield-euler-parity.test.mjs tests/xr-entry-link.test.mjs
       - run: npm run build
       - run: test -f dist/index.html && test -f dist/xr.html
