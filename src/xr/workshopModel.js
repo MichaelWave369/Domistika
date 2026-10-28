@@ -1,4 +1,5 @@
 /** Local-first editable assembly model; never modifies Framefield/OpenBlue source files. */
+import {validateMotion} from './motionForge.js';
 export const WORKSHOP_SCHEMA='domistika.xr.workshop.v1';
 export const WORKSHOP_STORE_KEY='domistika.xr.workshop.v1';
 export const WORKSHOP_MAX_BYTES=2_000_000;
@@ -22,7 +23,7 @@ export function snapAngle(radians,degrees=0){return snapValue(radians,degrees*Ma
 export function createWorkshopObject(kind,color='#68e4ff',position=[0,1.5,-1.5]){
   if(!WORKSHOP_TYPES.includes(kind)||kind==='mesh')throw Error('Unsupported workshop primitive.');
   return {id:makeId(),name:kind[0].toUpperCase()+kind.slice(1),kind,color,
-    position:[...position],rotation:[0,0,0],scale:[1,1,1],source:null,dimensions:[.6,.6,.6],mirroredX:false};
+    position:[...position],rotation:[0,0,0],scale:[1,1,1],source:null,dimensions:[.6,.6,.6],mirroredX:false,motion:null};
 }
 /** Meshes are explicit local editable COPIES of validated BPC preview triangles.
  *  Source IDs are labels only, never a claim of geometry preservation or rights. */
@@ -42,6 +43,7 @@ export function validateObject(input){
   const rotation=array(input.rotation,3,-Math.PI*8,Math.PI*8,'rotation');
   const scale=array(input.scale,3,.1,8,'scale');
   const dimensions=array(input.dimensions??[.6,.6,.6],3,.02,30,'dimensions');
+  const motion=validateMotion(input.motion);
   const mirroredX=input.mirroredX??false;
   if(typeof mirroredX!=='boolean')throw Error('Invalid mirror flag.');
   let positions;
@@ -57,7 +59,7 @@ export function validateObject(input){
     source={app:input.source.app,ref:input.source.ref};
   }
   return {id:input.id,name:input.name,kind:input.kind,color:input.color.toLowerCase(),
-    position,rotation,scale,dimensions,source,mirroredX,...(positions?{positions}:{})};
+    position,rotation,scale,dimensions,source,mirroredX,motion,...(positions?{positions}:{})};
 }
 export function validateWorkshop(input){
   if(!input||input.schema!==WORKSHOP_SCHEMA||!Array.isArray(input.objects)||input.objects.length>WORKSHOP_MAX_OBJECTS)

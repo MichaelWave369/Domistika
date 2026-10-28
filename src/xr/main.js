@@ -53,6 +53,10 @@ const message=(text)=>status(text);
 const brushStudio=createBrushStudio({scene,onStatus:message,onCount:n=>{$('#spatialCount').textContent=n+' / 160';}});
 const workshop=createWorkshop({scene,onStatus:message,paintRoot:()=>brushStudio.root,onChange:data=>{
   $('#workshopCount').textContent=data.count+' / 48';refreshWorkshopSelection(data.selected);refreshWorkshopObjectLab(data);
+},onMotion:({playing,time})=>{
+  $('#motionPlay').textContent=playing?'Pause & reset motion':'Play motion';
+  $('#motionTime').textContent=time.toFixed(1)+' s · '+(playing?'playing':'stopped');
+  $('#motionScrub').value=String(Math.min(8,time));
 }});
 function textTexture(text,color='#c7ffef') {
   const el=document.createElement('canvas');el.width=512;el.height=120;
@@ -172,6 +176,12 @@ function refreshWorkshopObjectLab(data){
   }
   list.value=selection?.id??'';
   $('#workshopName').value=selection?.name??'';
+  const fx=selection?.motion;
+  $('#motionEffect').value=fx?.mode??'none';
+  $('#motionSpeed').value=String(fx?.speed??1);
+  $('#motionAmplitude').value=String(fx?.amplitude??.4);
+  $('#motionPhase').value=String(Math.round((fx?.phase??0)*180/Math.PI));
+  for(const id of ['motionEffect','motionSpeed','motionAmplitude','motionPhase','motionApply'])$('#'+id).disabled=!selection;
   $('#workshopName').disabled=!selection;$('#workshopColor').disabled=!selection;
   $('#workshopColor').value=selection?.color??'#68e4ff';
   for(const id of ['workshopDuplicate','workshopMirror','workshopAppearance'])$('#'+id).disabled=!selection;
@@ -354,13 +364,27 @@ const workActions=[
   ['DELETE',{type:'work-delete'}],
   ['LINE +3',{type:'work-pattern',value:'linear'}],
   ['RING +5',{type:'work-pattern',value:'radial'}],
-  ['TO FLOOR',{type:'work-floor'}]
+  ['TO FLOOR',{type:'work-floor'}],
+  ['MOTION FX',{type:'work-motion-cycle'}],
+  ['PLAY / STOP',{type:'work-motion-toggle'}],
+  ['RESET MOTION',{type:'work-motion-reset'}]
 ];
 for(const [i,[label,action]] of workActions.entries()){
   const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.68,.19),
     new THREE.MeshBasicMaterial({map:textTexture(label,'#ffedce'),side:THREE.DoubleSide}));
   mesh.position.set(i%2===0?-.375:.375,.84-Math.floor(i/2)*.232,.026);mesh.userData.action=action;workDeck.add(mesh);controls3d.push(mesh);
 }
+function cycleWorkshopMotion(){
+  try{
+    const mode=workshop.cycleSelectedMotion();
+    message(mode==='none'?'Selected object now still.':'Selected object motion: '+mode.toUpperCase()+'. Press PLAY / STOP to preview.');
+  }catch(e){message('Motion effect rejected: '+e.message);}
+}
+function toggleWorkshopMotion(){
+  try{const playing=workshop.toggleMotion();message(playing?'Motion preview playing. Geometry and rest poses unchanged.':'Motion stopped and all objects reset to rest poses.');}
+  catch(e){message('Motion preview rejected: '+e.message);}
+}
+function resetWorkshopMotion(){workshop.stopMotion();message('Motion stopped and rest poses restored.');}
 function addWorkshopShape(kind,position=[0,1.5,-2]){
   try{workshop.add(kind,ink(),position);setMode('work-move');message(kind.toUpperCase()+' created. Point at it and hold trigger to move.');}
   catch(e){message('Workshop create rejected: '+e.message);}
@@ -446,6 +470,9 @@ function startXR(c,index){
     if(a.type==='work-delete')deleteWorkshop();
     if(a.type==='work-pattern')applyPattern(a.value,a.value==='linear'?{copies:3,axis:'x',spacing:.75}:{copies:5,radius:1.25});
     if(a.type==='work-floor')floorWorkshop();
+    if(a.type==='work-motion-cycle')cycleWorkshopMotion();
+    if(a.type==='work-motion-toggle')toggleWorkshopMotion();
+    if(a.type==='work-motion-reset')resetWorkshopMotion();
     if(a.type==='air-style')setAirStyle(a.value);
     if(a.type==='air-mirror')toggleAirMirror();
     if(a.type==='air-undo')brushStudio.undo();
@@ -570,6 +597,24 @@ $('#patternAlign').addEventListener('click',()=>{
   }catch(e){message('Alignment rejected: '+e.message);}
 });
 $('#patternFloor').addEventListener('click',floorWorkshop);
+$('#motionApply').addEventListener('click',()=>{
+  try{
+    const type=$('#motionEffect').value;
+    const motion=type==='none'?null:{
+      mode:type,speed:Number($('#motionSpeed').value),
+      amplitude:Number($('#motionAmplitude').value),
+      phase:Number($('#motionPhase').value)*Math.PI/180
+    };
+    workshop.setSelectedMotion(motion);
+    message(type==='none'?'Object motion cleared.':'Applied '+type+' motion to the selected editable object.');
+  }catch(e){message('Motion rejected: '+e.message);}
+});
+$('#motionPlay').addEventListener('click',toggleWorkshopMotion);
+$('#motionStop').addEventListener('click',resetWorkshopMotion);
+$('#motionScrub').addEventListener('input',e=>{
+  try{workshop.previewMotion(Number(e.target.value));}
+  catch(error){message('Motion scrub rejected: '+error.message);}
+});
 $('#workshopMirror').addEventListener('click',()=>duplicateWorkshop(true));
 $('#workshopAppearance').addEventListener('click',()=>{
   try{
@@ -903,6 +948,7 @@ renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
 renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
   for(const i of [...xrInteractions.keys()])endXR(i);
   brushStudio.finishAll();
+  workshop.stopMotion();
   workshop.save();
   scene.background=new THREE.Color(bgColor);scene.fog=new THREE.Fog(bgColor,7,19);
   grid.visible=true;floor.visible=true;controls.enabled=true;persist();
@@ -914,5 +960,13 @@ function resize(){
 window.addEventListener('resize',resize);new ResizeObserver(resize).observe($('#render-root'));
 resize();updateToolColors();
 syncBpcPlaybackUI();
-renderer.setAnimationLoop(timeMs=>{updateBpcPlayback(timeMs);if(renderer.xr.isPresenting)updateXR();else controls.update();renderer.render(scene,camera);});
+let lastMotionFrame=null;
+document.addEventListener('visibilitychange',()=>{if(document.hidden){workshop.stopMotion();lastMotionFrame=null;}});
+renderer.setAnimationLoop(timeMs=>{
+  const seconds=lastMotionFrame===null?0:Math.max(0,(timeMs-lastMotionFrame)/1000);
+  lastMotionFrame=timeMs;
+  workshop.tickMotion(seconds);
+  updateBpcPlayback(timeMs);
+  if(renderer.xr.isPresenting)updateXR();else controls.update();renderer.render(scene,camera);
+});
 message(location.protocol==='https:'||['localhost','127.0.0.1'].includes(location.hostname)?'Studio ready. Drag on the canvas to draw.':'Desktop ready. Immersive XR requires HTTPS or localhost.');

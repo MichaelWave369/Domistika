@@ -74,3 +74,21 @@ background:#183348;border:1px solid #486a85}
 .pattern-forge button:hover{border-color:#9aeac8}
 .pattern-forge button:disabled{opacity:.5;cursor:not-allowed}
 .pattern-forge>select{width:100%;margin:4px 0 8px}
+
+/* Motion Forge v0.5: readable animation authoring without overwriting CAD or geometry. */
+.motion-forge{margin:18px 0;padding:12px;background:linear-gradient(155deg,#18203b,#222040);
+ border:1px solid #7060a5;border-radius:12px}
+.motion-forge h2{margin:3px 0 10px;color:#f2ceff}
+.motion-forge>.control-label{margin:13px 0 7px}
+.motion-forge .control-label{display:flex;flex-direction:column;align-items:stretch;gap:6px;min-width:0}
+.motion-forge>.button-row label{margin:5px 0}
+.motion-forge select,.motion-forge input[type=number]{
+ width:100%;min-width:0;border:1px solid #77699e;border-radius:8px;
+ padding:9px;background:#111c35;color:#f6edff;font:inherit;font-size:12px}
+.motion-forge input[type=range]{accent-color:#e6b6ff}
+.motion-forge input:focus-visible,.motion-forge select:focus-visible{
+ outline:2px solid #e6b6ff;outline-offset:2px}
+.motion-forge output{color:#e3cdff;font-size:11px}
+.motion-forge .help{margin:12px 0 0}
+.motion-forge button:hover{border-color:#d6a9ee}
+.motion-forge button:disabled,.motion-forge input:disabled,.motion-forge select:disabled{opacity:.55;cursor:not-allowed}
