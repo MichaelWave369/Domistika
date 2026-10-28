@@ -42,7 +42,7 @@
       <p class="help">Desktop preview: select Paint in 3D and drag anywhere in the scene. Quest: pull either trigger to paint freely in space; release to finish. Mirroring uses the room's center plane. Existing 2D canvases stay separate.</p>
     </section>
     <section class="workshop-tools" aria-label="Spatial Workshop editable objects">
-      <h2>Spatial Workshop v0.7 <span id="workshopCount">0 / 48</span></h2>
+      <h2>Spatial Workshop v0.8 <span id="workshopCount">0 / 48</span></h2>
       <p class="workshop-copy">Create 3D shapes, grab them with Quest triggers, snap transforms, and assemble alongside airbrush paintings. Source CAD/BPC previews stay read-only until you explicitly copy an object.</p>
       <div class="mode-grid" role="group" aria-label="Workshop manipulation mode">
         <button class="mode" data-mode="work-move" aria-pressed="false">✥ Grab / Move</button>
@@ -148,6 +148,22 @@
         <label class="control-label" for="rhythmMeter">BASS / ENERGY <output id="rhythmLevel">0%</output></label>
         <progress id="rhythmMeter" max="100" value="0" aria-label="Current reactive energy"></progress>
         <p class="help">First assign a Motion Forge effect (Spin, Bob, Orbit or Pulse) to one or more workshop objects. Then choose a file and start the track. In Quest VR, preload your file in the browser sidebar before entering VR; use the in-world RHYTHM PLAY / STOP and BAND FX buttons. Original audio stays on your device and is never included in scene JSON or GLB. Supported formats depend on Quest Browser and codec availability.</p>
+      </section>
+      <section class="light-forge" aria-label="Local reactive material glow">
+        <h2>Light Forge · Ambient Sculpture Glow</h2>
+        <p class="workshop-copy">Add smooth, color-coded emissive glow to your music-reactive sculpture. The effect is visual only; your object colors, rest poses, exports, and original CAD/BPC previews remain unchanged.</p>
+        <label class="control-label" for="lightPalette">STAGE COLOR PALETTE</label>
+        <select id="lightPalette" aria-label="Reactive light color palette">
+          <option value="outrun">Outrun · neon sunset</option>
+          <option value="aurora">Aurora · green and blue</option>
+          <option value="ember">Ember · gold and warmth</option>
+          <option value="ice">Ice · crisp cyan</option>
+        </select>
+        <label class="control-label" for="lightGain">GLOW STRENGTH <output id="lightGainLabel">0.7×</output></label>
+        <input id="lightGain" type="range" min="0" max="1.5" value=".7" step=".1" aria-label="Visual glow strength">
+        <div class="button-row"><button id="lightToggle" aria-pressed="false">Enable reactive glow</button><button id="lightNextPalette">Next palette</button></div>
+        <p id="lightStatus" class="workshop-selection" role="status">Glow off. Original colors preserved.</p>
+        <p class="help">Quest controls now use three compact pages instead of one giant floating wall of buttons. Switch pages with PREV PAGE and NEXT PAGE; find LIGHT ON/OFF and PALETTE on the performance page. The glow uses emissive material shading with smooth transitions, not actual spotlights, shadows, lasers or high-speed strobes. It only illuminates when music is playing and Motion Forge preview is active.</p>
       </section>
       <h2>3D Center-to-Center Ruler</h2>
       <p class="workshop-copy">Select two editable object centers, or use the MEASURE button in VR and trigger-select two different objects. Measures layout distance, not surface clearance.</p>
