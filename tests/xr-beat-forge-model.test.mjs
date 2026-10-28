@@ -26,7 +26,7 @@ test('transient gate suppresses steady bass and handles pauses, rewind and refra
  assert.equal(gate.detect(.7,.5),0);
  assert.equal(gate.detect(0,.6),0);
  assert.equal(gate.detect(.8,.65),1);
- assert.equal(gate.detect(0,.75)>0);
+ assert.ok(gate.detect(0,.75)>0);
  assert.ok(gate.detect(.9,.76)<1); // refractory
  assert.equal(gate.detect(0,0),0); // rewind resets state
  assert.equal(gate.detect(.7,.1),1);
