@@ -41,6 +41,44 @@
       <input id="spatialFile" type="file" accept=".json,application/json" hidden>
       <p class="help">Desktop preview: select Paint in 3D and drag anywhere in the scene. Quest: pull either trigger to paint freely in space; release to finish. Mirroring uses the room's center plane. Existing 2D canvases stay separate.</p>
     </section>
+    <section class="workshop-tools" aria-label="Spatial Workshop editable objects">
+      <h2>Spatial Workshop v0.2 <span id="workshopCount">0 / 48</span></h2>
+      <p class="workshop-copy">Create 3D shapes, grab them with Quest triggers, snap transforms, and assemble alongside airbrush paintings. Source CAD/BPC previews stay read-only until you explicitly copy an object.</p>
+      <div class="mode-grid" role="group" aria-label="Workshop manipulation mode">
+        <button class="mode" data-mode="work-move" aria-pressed="false">✥ Grab / Move</button>
+        <button class="mode" data-mode="work-rotate" aria-pressed="false">↻ Rotate 3D</button>
+        <button class="mode" data-mode="work-scale" aria-pressed="false">⤢ Scale 3D</button>
+        <button id="workshopDelete">Delete selected</button>
+      </div>
+      <label class="control-label" for="workshopShape">CREATE A SHAPE</label>
+      <div class="button-row">
+        <select id="workshopShape" aria-label="3D primitive shape"><option value="box">Cube</option><option value="sphere">Sphere</option><option value="cylinder">Cylinder</option><option value="torus">Torus</option><option value="tube">Knot / Tube</option></select>
+        <button id="workshopAdd">+ Add to scene</button>
+      </div>
+      <label class="control-label" for="workshopSnap">GRID SNAP</label>
+      <div class="button-row">
+        <select id="workshopSnap" aria-label="Grid snap in meters"><option value="0">Off</option><option value="0.1">0.10 m</option><option value="0.25" selected>0.25 m</option><option value="0.5">0.50 m</option><option value="1">1.00 m</option></select>
+        <select id="workshopAngle" aria-label="Rotation snap in degrees"><option value="0">Free rotation</option><option value="15" selected>15° rotation</option><option value="45">45° rotation</option><option value="90">90° rotation</option></select>
+      </div>
+      <p id="workshopSelection" class="workshop-selection">No workshop object selected.</p>
+      <div class="workshop-numeric" aria-label="Exact selected object transforms">
+        <label for="workshopX">X (m)<input id="workshopX" type="number" step=".01" min="-25" max="25"></label>
+        <label for="workshopY">Y (m)<input id="workshopY" type="number" step=".01" min="-25" max="25"></label>
+        <label for="workshopZ">Z (m)<input id="workshopZ" type="number" step=".01" min="-25" max="25"></label>
+        <label for="workshopSize">Scale<input id="workshopSize" type="number" step=".05" min=".1" max="8"></label>
+      </div>
+      <div class="workshop-numeric" aria-label="Primitive dimensions in meters">
+        <label for="workshopDimX">Width (m)<input id="workshopDimX" type="number" step=".01" min=".02" max="30"></label>
+        <label for="workshopDimY">Height (m)<input id="workshopDimY" type="number" step=".01" min=".02" max="30"></label>
+        <label for="workshopDimZ">Depth (m)<input id="workshopDimZ" type="number" step=".01" min=".02" max="30"></label>
+      </div>
+      <div class="button-row"><button id="workshopApply">Apply exact values</button><button id="workshopUndo">Undo workshop</button></div>
+      <div class="button-row"><button id="workshopRedo">Redo workshop</button><button id="workshopSave">Save assembly</button></div>
+      <div class="button-row"><button id="workshopExportJson">Export assembly JSON</button><button id="workshopExportGlb">Export scene GLB</button></div>
+      <div class="button-row"><button id="workshopImport">Import assembly JSON</button><button id="workshopClear">Clear assembly</button></div>
+      <input id="workshopFile" type="file" accept=".json,application/json" hidden>
+      <p class="help">In VR, use the central WORKSHOP DECK to create shapes and switch MOVE / ROTATE / SCALE. Pull the trigger while pointing at an editable shape and move your controller. Release to commit and snap. These are independent local objects.</p>
+    </section>
     <h2>Your canvases <span id="boardCount">1 / 12</span></h2>
     <div id="canvasList" class="canvas-list" role="group" aria-label="Canvas selection"></div>
     <div class="button-row"><button id="addBoard">+ New canvas</button><button id="duplicateBoard">Duplicate</button></div>
@@ -59,11 +97,15 @@
       <div class="button-row"><button id="openblueLoad">Load plan JSON</button><button id="openblueClear">Clear CAD preview</button></div>
       <div class="button-row"><button id="openblueVisibility" disabled>Show / hide CAD</button><span id="openblueScale" class="cad-dimensions">No CAD plan loaded</span></div>
       <input id="openblueFile" type="file" accept=".json,application/json" hidden>
+      <label class="control-label" for="workshopCadSource">MAKE EDITABLE COPY OF CAD WALL</label>
+      <div class="button-row"><select id="workshopCadSource" aria-label="OpenBlueprint source wall"><option value="">Load CAD plan first</option></select><button id="workshopCopyCad">Copy selected wall</button></div>
       <p class="help">In OpenBlueprint select <b>Export JSON</b> (a <code>*.openblueprint.json</code> file). Load that project here. Walls appear as shaded 3D geometry and doors/windows/network/outlet symbols as colored markers. Look toward the CAD layout behind the canvases. You can show/hide it from the right-hand XR tool deck. This visual-only preview may be scaled to fit. Not a CAD editor, structural model, or measurements you should build from.</p>
     </section>
     <h2>BPC 3D Preview <span id="bpcPreviewCount">None loaded</span></h2>
     <div class="button-row"><button id="importBpcPreview">Load BPC mesh</button><button id="clearBpcPreview">Clear preview</button></div>
     <input id="bpcPreviewFile" type="file" accept=".json,application/json" hidden>
+    <label class="control-label" for="workshopBpcSource">MAKE EDITABLE COPY OF FRAMEFIELD MODEL</label>
+    <div class="button-row"><select id="workshopBpcSource" aria-label="Framefield source mesh"><option value="">Load BPC first</option></select><button id="workshopCopyBpc">Copy selected mesh</button></div>
     <div class="bpc-timeline">
       <button id="bpcAnimationButton" class="wide" aria-pressed="false" disabled>Play preview</button>
       <label class="control-label" for="bpcTimeline">ANIMATION FRAME <output id="bpcFrameValue">No animation loaded</output></label>

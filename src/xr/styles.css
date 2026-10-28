@@ -29,3 +29,24 @@ background:#183348;border:1px solid #486a85}
 .cad-dimensions{font-size:10px;line-height:1.4;display:grid;place-items:center;color:#acd6e5;text-align:center}
 .workshop-links .help{margin-top:12px}
 .workshop-links button:disabled{opacity:.46;cursor:not-allowed}
+
+/* Spatial Workshop v0.2: focusable precision controls, no hidden cloud UI. */
+.workshop-tools{margin:22px 0;padding:12px;border:1px solid #725d3e;border-radius:13px;
+ background:linear-gradient(160deg,#1d2b36,#22202e)}
+.workshop-tools h2{margin:5px 0 12px;color:#ffe2a7}
+.workshop-tools h2 span{color:#ffb96d}
+.workshop-tools .control-label{margin:13px 0 7px}
+.workshop-tools select,.workshop-tools input[type=number],.workshop-links select{
+ width:100%;min-width:0;padding:9px 7px;color:#e9f5ff;background:#122237;
+ border:1px solid #6b7492;border-radius:8px;font:inherit;font-size:12px}
+.workshop-tools .button-row,.workshop-links .button-row{min-width:0}
+.workshop-tools select:focus-visible,.workshop-links select:focus-visible,
+.workshop-tools input:focus-visible{outline:2px solid #ffdc96;outline-offset:2px}
+.workshop-tools .help{margin-top:14px}
+.workshop-selection{padding:10px;border:1px solid #826e53;border-radius:8px;
+ color:#f5dab8;font-size:11px;line-height:1.5}
+.workshop-numeric{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.workshop-numeric label{font-size:10px;color:#bad4ec}
+.workshop-numeric input{margin-top:4px}
+.workshop-tools button:hover{border-color:#ffd78c}
+.workshop-tools button[disabled],.workshop-tools input[disabled]{opacity:.48;cursor:not-allowed}
