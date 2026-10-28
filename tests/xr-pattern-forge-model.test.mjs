@@ -15,7 +15,7 @@ test('linear array copies are separate, evenly spaced objects and do not mutate 
 test('radial array includes source location and creates ring about offset pivot',()=>{
   const src=createWorkshopObject('sphere','#77ffee',[1,1,-3]);
   const items=radialPattern(src,{copies:3,radius:1,orient:true,snap:0});
-  assert.deepEqual(items.map(o=>o.position.map(x=>+x.toFixed(4))),[
+  assert.deepEqual(items.map(o=>o.position.map(x=>Math.abs(x)<1e-7?0:+x.toFixed(4))),[
     [0,1,-2],[-1,1,-3],[0,1,-4]
   ]);
   assert.equal(+items[0].rotation[1].toFixed(5),+(Math.PI/2).toFixed(5));
