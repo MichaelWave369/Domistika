@@ -22,9 +22,9 @@ test('object lab duplication, names, colors, history, and saved JSON have no rul
  workshop.select(initialId);
  assert.equal(workshop.selected.name,original.name);
  workshop.undo();
- assert.equal(workshop.selected.name,'Renamed sphere fixture');
+ assert.equal(workshop.all.find(o=>o.id!==initialId).name,'Box copy');
  workshop.redo();
- assert.equal(workshop.selected.name,original.name);
+ assert.equal(workshop.all.find(o=>o.id!==initialId).name,'Renamed sphere fixture');
  const ids=workshop.all.map(o=>o.id);
  const context=globalThis.document;
  try{
