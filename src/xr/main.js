@@ -10,6 +10,7 @@ import {buildOpenBluePreview} from './openbluePreview.js';
 import {createWorkshop} from './workshopRuntime.js';
 import {createLocalRhythm} from './rhythmForge.js';
 import {SHOW_PRESETS,sampleShowDemo} from './showForge.js';
+import {createShowrunner,writeShowPack,readShowPack,SHOWPACK_MAX_BYTES} from './showrunner.js';
 import {LIGHT_PALETTES} from './lightForge.js';
 import {WORKSHOP_PAGE_SIZE,workshopPageCount,wrapWorkshopPage} from './workshopDeck.js';
 import './styles.css';
@@ -67,6 +68,7 @@ const rhythm=createLocalRhythm({audio:$('#rhythmAudio'),onChange:state=>{
   $('#rhythmPlay').disabled=!state.loaded;
   updateToolColors();
 }});
+const runner=createShowrunner();
 function textTexture(text,color='#c7ffef') {
   const el=document.createElement('canvas');el.width=512;el.height=120;
   const c=el.getContext('2d');
@@ -386,7 +388,11 @@ const workActions=[
   ['STAGE BLOOM',{type:'work-show-add',value:'orbit-bloom'}],
   ['STAGE CORRIDOR',{type:'work-show-add',value:'neon-corridor'}],
   ['DEMO ON',{type:'work-show-demo'}],
-  ['DEMO OFF',{type:'work-show-stop'}]
+  ['DEMO OFF',{type:'work-show-stop'}],
+  ['PLAY SHOW',{type:'runner-play'}],
+  ['STOP SHOW',{type:'runner-stop'}],
+  ['NEXT ACT',{type:'runner-next'}],
+  ['PREV ACT',{type:'runner-prev'}]
 ];
 const workButtons=[];
 for(const [i,[label,action]] of workActions.entries()){
@@ -459,6 +465,92 @@ function cycleWorkshopMotion(){
     message(mode==='none'?'Selected object now still.':'Selected object motion: '+mode.toUpperCase()+'. Press PLAY / STOP to preview.');
   }catch(e){message('Motion effect rejected: '+e.message);}
 }
+let runnerPrevLight=null,runnerLitCue=-1;
+function renderRunnerEditor(){
+  const state=runner.status;
+  $('#runnerTitle').value=runner.show.title;
+  const selectedIndex=Number($('#runnerCue').value);
+  const index=Number.isInteger(selectedIndex)&&selectedIndex>=0&&selectedIndex<state.count?
+    selectedIndex:state.index;
+  const list=$('#runnerCue');list.replaceChildren();
+  for(const [i,cue] of runner.show.cues.entries()){
+    const opt=document.createElement('option');opt.value=String(i);
+    opt.textContent='Act '+(i+1)+' · '+cue.title;list.append(opt);
+  }
+  list.value=String(index);
+  const cue=runner.show.cues[index];
+  $('#runnerCueName').value=cue.title;$('#runnerDuration').value=String(cue.duration);
+  $('#runnerPalette').value=cue.palette;$('#runnerGain').value=String(cue.gain);
+  $('#runnerEnergy').value=String(cue.energy);
+  syncRunnerUI();
+}
+function syncRunnerUI(){
+  const state=runner.status;
+  $('#runnerProgress').max=state.total;
+  $('#runnerProgress').value=state.elapsed;
+  $('#runnerStatus').textContent='Act '+(state.index+1)+' / '+state.count+
+    ' · '+state.cue.title+' · '+state.elapsed.toFixed(1)+' / '+state.total+' s'+
+    (state.playing?' · PERFORMANCE LIVE':' · STOPPED / PAUSED');
+  $('#runnerPlay').disabled=state.playing;
+  $('#runnerPause').disabled=!state.playing;
+  for(const id of ['runnerCueName','runnerDuration','runnerPalette','runnerGain','runnerEnergy',
+    'runnerTitle','runnerApply'])$('#'+id).disabled=state.playing;
+}
+function runnerCueLighting(force=false){
+  const state=runner.status;
+  if(!force&&runnerLitCue===state.index)return;
+  runnerLitCue=state.index;
+  workshop.setLightSettings({enabled:true,palette:state.cue.palette,gain:state.cue.gain});
+  syncLightUI();
+}
+function stopRunner(reset=true){
+  if(!runner.playing&&!runnerPrevLight&&!reset)return false;
+  if(reset)runner.reset();else runner.pause();
+  workshop.stopMotion();
+  if(runnerPrevLight)workshop.setLightSettings(runnerPrevLight);
+  runnerPrevLight=null;runnerLitCue=-1;
+  syncLightUI();syncRunnerUI();
+  return true;
+}
+function playRunner(){
+  try{
+    if(runner.playing)return;
+    if(!workshop.hasMotion)throw Error('Create a stage or animate a workshop object first.');
+    if(showDemoActive)stopShowDemo();
+    rhythm.pause();workshop.stopMotion();
+    runnerPrevLight=workshop.lightSettings;
+    // Resume visual pose from the authored timeline, never write a motion frame to JSON.
+    workshop.previewMotion(runner.status.elapsed%60);
+    workshop.toggleMotion();
+    runner.play();runnerCueLighting(true);syncRunnerUI();
+    message('Showrunner is performing silent visual cues. No audio is generated.');
+  }catch(error){stopRunner(false);message('Showrunner could not start: '+error.message);}
+}
+function pauseRunner(){
+  if(stopRunner(false))message('Show paused. Cue position preserved and stage returned to rest.');
+}
+function stepRunner(direction){
+  try{
+    if(direction>0)runner.next();else runner.previous();
+    if(runner.playing)runnerCueLighting(true);
+    $('#runnerCue').value=String(runner.status.index);
+    renderRunnerEditor();
+    message('Showrunner now at act '+(runner.status.index+1)+'.');
+  }catch(error){message('Cue change rejected: '+error.message);}
+}
+function saveRunnerCue(){
+  try{
+    const index=Number($('#runnerCue').value);
+    runner.updateCue(index,{
+      title:$('#runnerCueName').value,duration:Number($('#runnerDuration').value),
+      palette:$('#runnerPalette').value,gain:Number($('#runnerGain').value),
+      energy:Number($('#runnerEnergy').value)
+    });
+    if($('#runnerTitle').value!==runner.show.title)runner.rename($('#runnerTitle').value);
+    renderRunnerEditor();
+    message('Cue sheet updated. Export Showpack to keep it with your editable stage.');
+  }catch(error){message('Cue rejected, previous settings preserved: '+error.message);}
+}
 let showDemoActive=false,showDemoClock=0,showPrevLight=null;
 function syncShowUI(){
   $('#showDemoStart').disabled=showDemoActive;
@@ -477,6 +569,7 @@ function stopShowDemo(){
 function startShowDemo(){
   try{
     if(showDemoActive)return;
+    if(runner.playing||runnerPrevLight)stopRunner();
     if(!workshop.hasMotion)throw Error('Add a Show Forge stage or assign a motion effect first.');
     rhythm.pause();
     if(workshop.motionPlaying)workshop.stopMotion();
@@ -503,6 +596,7 @@ function addShowStage(preset){
 }
 function playRhythm(){
   try{
+    if(runner.playing||runnerPrevLight)stopRunner();
     if(showDemoActive)stopShowDemo();
     if(!rhythm.loaded)throw Error('Choose a local audio track in the sidebar before entering VR.');
     if(!workshop.hasMotion)throw Error('Assign a Motion Forge effect to a workshop object first.');
@@ -518,6 +612,7 @@ function playRhythm(){
   }catch(error){message('Rhythm Forge: '+error.message);}
 }
 function stopRhythm(){
+  if(runner.playing||runnerPrevLight)stopRunner();
   if(showDemoActive)stopShowDemo();
   rhythm.pause();workshop.stopMotion();
   $('#rhythmMeter').value=0;$('#rhythmLevel').textContent='0%';
@@ -529,10 +624,11 @@ function stopRhythm(){
 }
 function toggleWorkshopMotion(){
   try{
+    if(runner.playing||runnerPrevLight)stopRunner();
     if(showDemoActive){stopShowDemo();message('Silent demo stopped.');return;}const playing=workshop.toggleMotion();message(playing?'Motion preview playing. Geometry and rest poses unchanged.':'Motion stopped and all objects reset to rest poses.');}
   catch(e){message('Motion preview rejected: '+e.message);}
 }
-function resetWorkshopMotion(){if(showDemoActive)stopShowDemo();if(rhythm.playing)rhythm.pause();workshop.stopMotion();message('Motion stopped and rest poses restored.');}
+function resetWorkshopMotion(){if(runner.playing||runnerPrevLight)stopRunner();if(showDemoActive)stopShowDemo();if(rhythm.playing)rhythm.pause();workshop.stopMotion();message('Motion stopped and rest poses restored.');}
 function addWorkshopShape(kind,position=[0,1.5,-2]){
   try{workshop.add(kind,ink(),position);setMode('work-move');message(kind.toUpperCase()+' created. Point at it and hold trigger to move.');}
   catch(e){message('Workshop create rejected: '+e.message);}
@@ -632,6 +728,10 @@ function startXR(c,index){
     if(a.type==='work-show-add')addShowStage(a.value);
     if(a.type==='work-show-demo')startShowDemo();
     if(a.type==='work-show-stop')stopShowDemo();
+    if(a.type==='runner-play')playRunner();
+    if(a.type==='runner-stop')stopRunner();
+    if(a.type==='runner-next')stepRunner(1);
+    if(a.type==='runner-prev')stepRunner(-1);
     if(a.type==='air-style')setAirStyle(a.value);
     if(a.type==='air-mirror')toggleAirMirror();
     if(a.type==='air-undo')brushStudio.undo();
@@ -742,6 +842,39 @@ $('#gallery').addEventListener('click',gallery);
 $('#save').addEventListener('click',()=>{persist();brushStudio.save();});
 $('#workshopAdd').addEventListener('click',()=>addWorkshopShape($('#workshopShape').value));
 $('#showBuild').addEventListener('click',()=>addShowStage($('#showPreset').value));
+$('#runnerPlay').addEventListener('click',playRunner);
+$('#runnerPause').addEventListener('click',pauseRunner);
+$('#runnerReset').addEventListener('click',()=>{stopRunner();message('Show stopped; all saved poses and prior glow restored.');});
+$('#runnerPrev').addEventListener('click',()=>stepRunner(-1));
+$('#runnerNext').addEventListener('click',()=>stepRunner(1));
+$('#runnerCue').addEventListener('change',e=>{
+  try{runner.jump(Number(e.target.value));renderRunnerEditor();
+    if(runner.playing)runnerCueLighting(true);
+  }catch(error){message('Cue selection rejected: '+error.message);}
+});
+$('#runnerApply').addEventListener('click',saveRunnerCue);
+$('#runnerExport').addEventListener('click',()=>{
+  try{
+    const text=writeShowPack(workshop.exportJson(),runner.show);
+    download('domistika-xr-showpack-v1.json',text,'application/json');
+    message('Showpack exported locally: editable workshop + cue settings, no audio.');
+  }catch(error){message('Showpack export failed: '+error.message);}
+});
+$('#runnerImport').addEventListener('click',()=>$('#runnerFile').click());
+$('#runnerFile').addEventListener('change',async event=>{
+  const file=event.target.files?.[0];event.target.value='';if(!file)return;
+  try{
+    if(file.size>SHOWPACK_MAX_BYTES)throw Error('Showpack exceeds 2.25 MB.');
+    const pack=readShowPack(await file.text());
+    if(workshop.active)throw Error('Release all controllers before importing.');
+    if(!window.confirm('Replace your CURRENT editable workshop with the Showpack? Export your existing work first.'))return;
+    stopRunner();stopShowDemo();rhythm.pause();
+    workshop.importJson(JSON.stringify(pack.workshop));
+    runner.loadShow(pack.show);
+    renderRunnerEditor();syncRunnerUI();
+    message('Showpack loaded locally: '+pack.show.title+' with '+pack.workshop.objects.length+' editable objects.');
+  }catch(error){message('Showpack import rejected, no new data applied: '+error.message);}
+});
 $('#showDemoStart').addEventListener('click',startShowDemo);
 $('#showDemoStop').addEventListener('click',()=>{
   if(stopShowDemo())message('Visual demo stopped, previous glow setting restored.');
@@ -1144,6 +1277,7 @@ renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
 renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
   for(const i of [...xrInteractions.keys()])endXR(i);
   brushStudio.finishAll();
+  stopRunner();
   stopShowDemo();
   rhythm.pause();
   workshop.stopMotion();
@@ -1156,17 +1290,28 @@ function resize(){
   renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
 }
 window.addEventListener('resize',resize);new ResizeObserver(resize).observe($('#render-root'));
-resize();updateToolColors();syncLightUI();syncShowUI();
+resize();updateToolColors();syncLightUI();syncShowUI();renderRunnerEditor();
 syncBpcPlaybackUI();
 let lastMotionFrame=null,lastRhythmBucket=-1;
-document.addEventListener('visibilitychange',()=>{if(document.hidden){stopShowDemo();rhythm.pause();workshop.stopMotion();lastMotionFrame=null;}});
-window.addEventListener('pagehide',()=>{stopShowDemo();rhythm.clear();workshop.stopMotion();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopRunner();stopShowDemo();rhythm.pause();workshop.stopMotion();lastMotionFrame=null;}});
+window.addEventListener('pagehide',()=>{stopRunner();stopShowDemo();rhythm.clear();workshop.stopMotion();});
 renderer.setAnimationLoop(timeMs=>{
   const seconds=lastMotionFrame===null?0:Math.max(0,(timeMs-lastMotionFrame)/1000);
   lastMotionFrame=timeMs;
   if(showDemoActive&&!workshop.motionPlaying)stopShowDemo();
+  if(runner.playing&&!workshop.motionPlaying)pauseRunner();
   if(showDemoActive)showDemoClock+=Math.min(seconds,.1);
-  const frame=showDemoActive?sampleShowDemo(showDemoClock):rhythm.sampleFrame();
+  let showFrame=null;
+  if(runner.playing){
+    const oldCue=runner.status.index;
+    const state=runner.tick(seconds);
+    if(!state.playing){stopRunner();message('Show completed, original scene and glow restored.');}
+    else{
+      if(state.index!==oldCue){runnerCueLighting(true);$('#runnerCue').value=String(state.index);renderRunnerEditor();}
+      showFrame=runner.frame();
+    }
+  }
+  const frame=showFrame??(showDemoActive?sampleShowDemo(showDemoClock):rhythm.sampleFrame());
   const energy=frame.energy;
   workshop.tickMotion(seconds,frame);
   const bucket=Math.floor(timeMs/100);
@@ -1178,7 +1323,9 @@ renderer.setAnimationLoop(timeMs=>{
       $('#'+id).value=Math.round(frame[name]*100);
       $('#'+output).textContent=Math.round(frame[name]*100)+'%';
     }
-    $('#beatPulse').textContent=showDemoActive?'SILENT DEMO · SYNTHETIC PULSE':
+    syncRunnerUI();
+    $('#beatPulse').textContent=runner.playing?'SHOWRUNNER · SILENT VISUAL CUES':
+      showDemoActive?'SILENT DEMO · SYNTHETIC PULSE':
       frame.beat>.6?'BASS ATTACK DETECTED':'Listening for the next bass transient';
   }
   updateBpcPlayback(timeMs);
