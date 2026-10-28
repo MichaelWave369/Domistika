@@ -22,7 +22,7 @@ export function snapAngle(radians,degrees=0){return snapValue(radians,degrees*Ma
 export function createWorkshopObject(kind,color='#68e4ff',position=[0,1.5,-1.5]){
   if(!WORKSHOP_TYPES.includes(kind)||kind==='mesh')throw Error('Unsupported workshop primitive.');
   return {id:makeId(),name:kind[0].toUpperCase()+kind.slice(1),kind,color,
-    position:[...position],rotation:[0,0,0],scale:[1,1,1],source:null};
+    position:[...position],rotation:[0,0,0],scale:[1,1,1],source:null,dimensions:[.6,.6,.6]};
 }
 /** Meshes are explicit local editable COPIES of validated BPC preview triangles.
  *  Source IDs are labels only, never a claim of geometry preservation or rights. */
@@ -41,6 +41,7 @@ export function validateObject(input){
   const position=array(input.position,3,-25,25,'position');
   const rotation=array(input.rotation,3,-Math.PI*8,Math.PI*8,'rotation');
   const scale=array(input.scale,3,.1,8,'scale');
+  const dimensions=array(input.dimensions??[.6,.6,.6],3,.02,30,'dimensions');
   let positions;
   if(input.kind==='mesh'){
     const p=input.positions;
@@ -49,12 +50,12 @@ export function validateObject(input){
   }else if(input.positions!==undefined)throw Error('Unexpected mesh geometry on primitive.');
   let source=null;
   if(input.source!==null&&input.source!==undefined){
-    if(!input.source||input.source.app!=='FramefieldStudio'||typeof input.source.ref!=='string'||input.source.ref.length>80)
+    if(!input.source||!['FramefieldStudio','OpenBlueprintStudio'].includes(input.source.app)||typeof input.source.ref!=='string'||input.source.ref.length>80)
       throw Error('Invalid source label.');
-    source={app:'FramefieldStudio',ref:input.source.ref};
+    source={app:input.source.app,ref:input.source.ref};
   }
   return {id:input.id,name:input.name,kind:input.kind,color:input.color.toLowerCase(),
-    position,rotation,scale,source,...(positions?{positions}:{})};
+    position,rotation,scale,dimensions,source,...(positions?{positions}:{})};
 }
 export function validateWorkshop(input){
   if(!input||input.schema!==WORKSHOP_SCHEMA||!Array.isArray(input.objects)||input.objects.length>WORKSHOP_MAX_OBJECTS)
