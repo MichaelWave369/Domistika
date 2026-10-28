@@ -10,7 +10,7 @@ test('Quest and desktop rhythm controls are live and tied to existing Motion For
     'rhythmSensitivity','rhythmStrength','rhythmPlay','rhythmPause','rhythmMeter','rhythmLevel'])
   assert.ok(html.includes('id="'+id+'"'),'Missing Rhythm Forge control: '+id);
  for(const token of ["type:'rhythm-play'","type:'rhythm-stop'","rhythm.load(file)",
-   "rhythm.play()","rhythm.pause()","rhythm.sample()","workshop.tickMotion(seconds,energy)"])
+   "rhythm.play()","rhythm.pause()","rhythm.sampleFrame()","workshop.tickMotion(seconds,frame)"])
   assert.ok(main.includes(token),'Missing play or input wiring: '+token);
  assert.match(main,/document\.addEventListener\('visibilitychange'/);
  assert.match(main,/window\.addEventListener\('pagehide'/);

@@ -105,3 +105,14 @@ background:#183348;border:1px solid #486a85}
 .rhythm-forge output{font-size:11px;color:#a8ffda}
 .rhythm-forge button:disabled{opacity:.48;cursor:not-allowed}
 .rhythm-forge button:hover{border-color:#86eec9}
+
+/* Beat Forge v0.7: three independent band monitors; no flashing strobe effects. */
+.rhythm-heading{margin:16px 0 8px;font-size:13px;font-weight:700;color:#b8f3ed}
+.rhythm-spectrum{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin:11px 0 9px}
+.rhythm-spectrum label{display:flex;flex-direction:column;gap:6px;min-width:0;
+ color:#ccece8;font-size:10px;letter-spacing:.06em}
+.rhythm-spectrum output{color:#d3ffda;font-size:11px}
+.rhythm-spectrum progress{display:block;width:100%;height:12px;accent-color:#8fd8dc}
+.rhythm-pulse{border-radius:8px;border:1px solid #4b6e6e;padding:7px 9px;
+ color:#a4dcd5;background:#111e2a;font-size:11px}
+.motion-forge #motionBand{margin-bottom:9px}

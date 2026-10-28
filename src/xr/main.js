@@ -184,10 +184,11 @@ function refreshWorkshopObjectLab(data){
   $('#workshopName').value=selection?.name??'';
   const fx=selection?.motion;
   $('#motionEffect').value=fx?.mode??'none';
+  $('#motionBand').value=fx?.band??'full';
   $('#motionSpeed').value=String(fx?.speed??1);
   $('#motionAmplitude').value=String(fx?.amplitude??.4);
   $('#motionPhase').value=String(Math.round((fx?.phase??0)*180/Math.PI));
-  for(const id of ['motionEffect','motionSpeed','motionAmplitude','motionPhase','motionApply'])$('#'+id).disabled=!selection;
+  for(const id of ['motionEffect','motionSpeed','motionAmplitude','motionPhase','motionBand','motionApply'])$('#'+id).disabled=!selection;
   $('#workshopName').disabled=!selection;$('#workshopColor').disabled=!selection;
   $('#workshopColor').value=selection?.color??'#68e4ff';
   for(const id of ['workshopDuplicate','workshopMirror','workshopAppearance'])$('#'+id).disabled=!selection;
@@ -347,12 +348,12 @@ for(const [i,label,action] of [
 }
 // In-world workshop tool deck stays separate from painting and protected source previews.
 const workDeck=new THREE.Group();workDeck.position.set(0,2.0,-2.65);scene.add(workDeck);
-const workBacking=new THREE.Mesh(new THREE.PlaneGeometry(1.53,3.1),
+const workBacking=new THREE.Mesh(new THREE.PlaneGeometry(1.53,3.38),
   new THREE.MeshBasicMaterial({color:0x172e39,side:THREE.DoubleSide,transparent:true,opacity:.9}));
 workBacking.position.z=-.012;workDeck.add(workBacking);
 const workTitle=new THREE.Mesh(new THREE.PlaneGeometry(1.25,.14),
   new THREE.MeshBasicMaterial({map:textTexture('SPATIAL WORKSHOP','#ffe4a6'),side:THREE.DoubleSide}));
-workTitle.position.set(0,1.35,.025);workDeck.add(workTitle);
+workTitle.position.set(0,1.52,.025);workDeck.add(workTitle);
 const workActions=[
   ['ADD CUBE',{type:'work-add',value:'box'}],
   ['ADD SPHERE',{type:'work-add',value:'sphere'}],
@@ -375,12 +376,17 @@ const workActions=[
   ['PLAY / STOP',{type:'work-motion-toggle'}],
   ['RESET MOTION',{type:'work-motion-reset'}],
   ['RHYTHM PLAY',{type:'rhythm-play'}],
-  ['RHYTHM STOP',{type:'rhythm-stop'}]
+  ['RHYTHM STOP',{type:'rhythm-stop'}],
+  ['BAND FX',{type:'work-band-cycle'}]
 ];
 for(const [i,[label,action]] of workActions.entries()){
   const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.68,.19),
     new THREE.MeshBasicMaterial({map:textTexture(label,'#ffedce'),side:THREE.DoubleSide}));
-  mesh.position.set(i%2===0?-.375:.375,.84-Math.floor(i/2)*.215,.026);mesh.userData.action=action;workDeck.add(mesh);controls3d.push(mesh);
+  mesh.position.set(i%2===0?-.375:.375,1.17-Math.floor(i/2)*.215,.026);mesh.userData.action=action;workDeck.add(mesh);controls3d.push(mesh);
+}
+function cycleWorkshopBand(){
+  try{const band=workshop.cycleSelectedBand();message('Selected sculpture now reacts to '+band.toUpperCase()+'.');}
+  catch(error){message('Band change rejected: '+error.message);}
 }
 function cycleWorkshopMotion(){
   try{
@@ -406,6 +412,10 @@ function playRhythm(){
 function stopRhythm(){
   rhythm.pause();workshop.stopMotion();
   $('#rhythmMeter').value=0;$('#rhythmLevel').textContent='0%';
+  for(const [id,output] of [['beatBass','beatBassValue'],['beatMid','beatMidValue'],['beatHigh','beatHighValue']]){
+    $('#'+id).value=0;$('#'+output).textContent='0%';
+  }
+  $('#beatPulse').textContent='Waiting for a local audio transient';
   updateToolColors();message('Local track paused, all objects restored to their rest poses.');
 }
 function toggleWorkshopMotion(){
@@ -504,6 +514,7 @@ function startXR(c,index){
     if(a.type==='work-motion-reset')resetWorkshopMotion();
     if(a.type==='rhythm-play')playRhythm();
     if(a.type==='rhythm-stop')stopRhythm();
+    if(a.type==='work-band-cycle')cycleWorkshopBand();
     if(a.type==='air-style')setAirStyle(a.value);
     if(a.type==='air-mirror')toggleAirMirror();
     if(a.type==='air-undo')brushStudio.undo();
@@ -634,7 +645,7 @@ $('#motionApply').addEventListener('click',()=>{
     const motion=type==='none'?null:{
       mode:type,speed:Number($('#motionSpeed').value),
       amplitude:Number($('#motionAmplitude').value),
-      phase:Number($('#motionPhase').value)*Math.PI/180
+      phase:Number($('#motionPhase').value)*Math.PI/180,band:$('#motionBand').value
     };
     workshop.setSelectedMotion(motion);
     message(type==='none'?'Object motion cleared.':'Applied '+type+' motion to the selected editable object.');
@@ -1020,13 +1031,19 @@ window.addEventListener('pagehide',()=>{rhythm.clear();workshop.stopMotion();});
 renderer.setAnimationLoop(timeMs=>{
   const seconds=lastMotionFrame===null?0:Math.max(0,(timeMs-lastMotionFrame)/1000);
   lastMotionFrame=timeMs;
-  const energy=rhythm.sample();
-  workshop.tickMotion(seconds,energy);
+  const frame=rhythm.sampleFrame();
+  const energy=frame.energy;
+  workshop.tickMotion(seconds,frame);
   const bucket=Math.floor(timeMs/100);
   if(bucket!==lastRhythmBucket){
     lastRhythmBucket=bucket;
     $('#rhythmMeter').value=Math.round(energy*100);
     $('#rhythmLevel').textContent=Math.round(energy*100)+'%';
+    for(const [name,id,output] of [['bass','beatBass','beatBassValue'],['mid','beatMid','beatMidValue'],['high','beatHigh','beatHighValue']]){
+      $('#'+id).value=Math.round(frame[name]*100);
+      $('#'+output).textContent=Math.round(frame[name]*100)+'%';
+    }
+    $('#beatPulse').textContent=frame.beat>.6?'BASS ATTACK DETECTED':'Listening for the next bass transient';
   }
   updateBpcPlayback(timeMs);
   if(renderer.xr.isPresenting)updateXR();else controls.update();renderer.render(scene,camera);

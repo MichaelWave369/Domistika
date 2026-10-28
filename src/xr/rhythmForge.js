@@ -1,4 +1,5 @@
-/** Rhythm Forge v0.6: opt-in local spectrum analysis; no microphone or network. */
+/** Rhythm Forge v0.7: opt-in local spectrum analysis; no microphone or network. */
+import {spectrumBands,createOnsetGate,zeroAudioFrame} from './beatForge.js';
 export const RHYTHM_MAX_BYTES=50_000_000;
 const TYPES=/\.(mp3|wav|ogg|oga|m4a|aac|flac|webm|opus)$/i;
 const clamp=(v,min,max)=>Math.max(min,Math.min(max,v));
@@ -37,9 +38,10 @@ export function createLocalRhythm({audio,AudioContextClass=globalThis.AudioConte
   if(!audio||typeof audio.play!=='function'||typeof audio.pause!=='function')
     throw Error('Local audio element is missing.');
   let objectUrl=null,trackName=null,context=null,analyser=null,bytes=null,smoothed=0,sensitivity=1;
+  let frame=zeroAudioFrame();const onset=createOnsetGate();
   const emit=()=>onChange({loaded:!!trackName,trackName,playing:!audio.paused&&!audio.ended,
     sensitivity,energy:smoothed});
-  const resetMeter=()=>{smoothed=0;emit();};
+  const resetMeter=()=>{smoothed=0;frame=zeroAudioFrame();onset.reset();emit();};
   function disposeSource(){
     audio.pause();audio.removeAttribute('src');audio.load();
     if(objectUrl){revokeURL(objectUrl);objectUrl=null;}
@@ -81,16 +83,21 @@ export function createLocalRhythm({audio,AudioContextClass=globalThis.AudioConte
       throw Error('Sensitivity must be between 0 and 2.');
     sensitivity=value;emit();
   }
-  function sample(){
-    if(audio.paused||audio.ended||!analyser||!bytes){smoothed=0;return 0;}
+  function sampleFrame(){
+    if(audio.paused||audio.ended||!analyser||!bytes){smoothed=0;frame=zeroAudioFrame();return {...frame};}
     analyser.getByteFrequencyData(bytes);
-    const raw=sampleSpectrum(bytes,context.sampleRate,analyser.fftSize,sensitivity).energy;
-    smoothed=smoothed*.6+raw*.4;
-    return smoothed;
+    const raw=spectrumBands(bytes,context.sampleRate,analyser.fftSize,sensitivity);
+    // Retain the 0.6 smoothing behavior while exposing bounded independent channels.
+    smoothed=smoothed*.6+raw.energy*.4;
+    const now=Number.isFinite(audio.currentTime)?audio.currentTime:(context.currentTime||0);
+    const beat=onset.detect(raw.bass,Math.max(0,now));
+    frame={energy:smoothed,bass:raw.bass,mid:raw.mid,high:raw.high,beat};
+    return {...frame};
   }
+  function sample(){return sampleFrame().energy;}
   audio.addEventListener('ended',resetMeter);
   audio.addEventListener('pause',resetMeter);
-  return {load,play,pause,clear,sample,setSensitivity,get loaded(){return !!trackName;},
+  return {load,play,pause,clear,sample,sampleFrame,setSensitivity,get frame(){return {...frame};},get loaded(){return !!trackName;},
     get playing(){return !!trackName&&!audio.paused&&!audio.ended;},
     get name(){return trackName;},get sensitivity(){return sensitivity;},
     get energy(){return smoothed;}};
