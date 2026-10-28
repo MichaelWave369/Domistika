@@ -92,3 +92,16 @@ background:#183348;border:1px solid #486a85}
 .motion-forge .help{margin:12px 0 0}
 .motion-forge button:hover{border-color:#d6a9ee}
 .motion-forge button:disabled,.motion-forge input:disabled,.motion-forge select:disabled{opacity:.55;cursor:not-allowed}
+
+/* Rhythm Forge v0.6: local audio authoring and readable bass meter. */
+.rhythm-forge{padding:12px;margin:18px 0;border:1px solid #4f8e85;border-radius:12px;
+ background:linear-gradient(155deg,#152b34,#24213b)}
+.rhythm-forge h2{margin:3px 0 11px;color:#a5fbe5}
+.rhythm-forge .workshop-copy{color:#b9d9d5}
+.rhythm-forge>.control-label{margin:12px 0 7px}
+.rhythm-forge input[type=range]{width:100%;accent-color:#82edd1}
+.rhythm-forge progress{width:100%;height:15px;accent-color:#8ef3c6}
+.rhythm-forge .help{margin-top:12px}
+.rhythm-forge output{font-size:11px;color:#a8ffda}
+.rhythm-forge button:disabled{opacity:.48;cursor:not-allowed}
+.rhythm-forge button:hover{border-color:#86eec9}
