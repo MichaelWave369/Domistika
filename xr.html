@@ -42,7 +42,7 @@
       <p class="help">Desktop preview: select Paint in 3D and drag anywhere in the scene. Quest: pull either trigger to paint freely in space; release to finish. Mirroring uses the room's center plane. Existing 2D canvases stay separate.</p>
     </section>
     <section class="workshop-tools" aria-label="Spatial Workshop editable objects">
-      <h2>Spatial Workshop v0.4 <span id="workshopCount">0 / 48</span></h2>
+      <h2>Spatial Workshop v0.5 <span id="workshopCount">0 / 48</span></h2>
       <p class="workshop-copy">Create 3D shapes, grab them with Quest triggers, snap transforms, and assemble alongside airbrush paintings. Source CAD/BPC previews stay read-only until you explicitly copy an object.</p>
       <div class="mode-grid" role="group" aria-label="Workshop manipulation mode">
         <button class="mode" data-mode="work-move" aria-pressed="false">✥ Grab / Move</button>
@@ -93,6 +93,31 @@
         </select><button id="patternAlign">Align selected</button></div>
         <button id="patternFloor" class="wide">Place selected on grid floor (Y = 0)</button>
         <p class="help">Floor contact uses the rendered object's transformed bounding box. It can bypass the position grid to put the lowest visible point at Y=0. Not physical room anchoring or as-built CAD.</p>
+      </section>
+      <section class="motion-forge" aria-label="Motion Forge animation effects">
+        <h2>Motion Forge · Living Geometry</h2>
+        <p class="workshop-copy">Add reversible motion to any editable workshop object, including copies of Framefield models. The original rest pose and source previews stay untouched.</p>
+        <label class="control-label" for="motionEffect">SELECTED OBJECT EFFECT</label>
+        <select id="motionEffect" aria-label="Selected object's motion effect">
+          <option value="none">Still / no animation</option>
+          <option value="spin">Spin in place</option>
+          <option value="bob">Float up and down</option>
+          <option value="orbit">Orbit in XZ plane</option>
+          <option value="pulse">Pulse / breathe</option>
+        </select>
+        <div class="button-row">
+          <label class="control-label" for="motionSpeed">SPEED (cycles/s)
+            <input id="motionSpeed" type="number" min=".1" max="3" step=".1" value="1"></label>
+          <label class="control-label" for="motionAmplitude">AMPLITUDE (m / factor)
+            <input id="motionAmplitude" type="number" min="0" max="1.5" step=".05" value=".4"></label>
+        </div>
+        <label class="control-label" for="motionPhase">PHASE OFFSET (degrees)
+          <input id="motionPhase" type="number" min="0" max="360" step="15" value="0"></label>
+        <button id="motionApply" class="wide">Apply effect to selected object</button>
+        <div class="button-row"><button id="motionPlay">Play motion</button><button id="motionStop">Stop & reset</button></div>
+        <label class="control-label" for="motionScrub">PREVIEW TIME <output id="motionTime">0.0 s · stopped</output></label>
+        <input id="motionScrub" type="range" min="0" max="8" step=".05" value="0" aria-label="Preview animation at time">
+        <p class="help">Quest: use MOTION FX to cycle effects on your selected object, then PLAY / STOP to preview. Effects are visual, deterministic, and apply to editable workshop copies only. Exported GLB uses saved rest poses; assembly JSON includes the effect settings. No microphone, live beat detection, keyframed timeline, or audio playback.</p>
       </section>
       <h2>3D Center-to-Center Ruler</h2>
       <p class="workshop-copy">Select two editable object centers, or use the MEASURE button in VR and trigger-select two different objects. Measures layout distance, not surface clearance.</p>
