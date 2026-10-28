@@ -142,3 +142,26 @@ background:#183348;border:1px solid #486a85}
 .show-forge button:hover{border-color:#f3cf8b}
 .show-forge button:disabled{opacity:.52;cursor:not-allowed}
 .show-forge .help{margin-top:12px}
+
+/* Showrunner 1.0: legible act sheet and safe local archive controls. */
+.showrunner-studio{position:relative;padding:14px;margin:18px 0;border:1px solid #d5ac72;
+ border-radius:14px;background:linear-gradient(150deg,#1b263d 0%,#33263c 58%,#1d343b 100%)}
+.showrunner-studio .showrunner-eyebrow{letter-spacing:.2em;color:#f5c88a;font-size:9px;font-weight:800}
+.showrunner-studio h2{margin:9px 0 12px;color:#ffe4bd;font-size:16px}
+.showrunner-studio .workshop-copy{color:#e3d9e7;line-height:1.6}
+.showrunner-studio>.control-label{display:block;margin:13px 0 7px;font-size:10px;color:#f5dabc}
+.showrunner-studio input,.showrunner-studio select{min-width:0;width:100%;padding:10px;
+ border:1px solid #8f8090;border-radius:8px;background:#131f32;color:#f6f7ff;font:inherit;font-size:12px}
+.showrunner-studio .button-row{gap:7px}
+.showrunner-studio .button-row>*{min-width:0}
+.showrunner-studio .button-row button{flex:1}
+.showrunner-studio .button-row .control-label{font-size:9px;flex:1;color:#e3d9ed}
+.showrunner-studio .button-row .control-label input{margin-top:5px}
+.showrunner-studio button:hover{border-color:#ffd49c}
+.showrunner-studio button:disabled,.showrunner-studio input:disabled,.showrunner-studio select:disabled{
+ opacity:.55;cursor:not-allowed}
+.showrunner-studio input:focus-visible,.showrunner-studio select:focus-visible{
+ outline:2px solid #ffd393;outline-offset:2px}
+.showrunner-studio progress{height:12px;width:100%;accent-color:#f4b981}
+.showrunner-studio .workshop-selection{font-variant-numeric:tabular-nums;color:#ffe2bb}
+.showrunner-studio .help{margin-top:12px}
