@@ -5,6 +5,7 @@ import {duplicateObject,measureObjectCenters} from './objectLab.js';
 import {linearPattern,radialPattern,alignObjectCenter} from './patternForge.js';
 import {sampleMotion,validateMotion,defaultMotion} from './motionForge.js';
 import {lightSample,defaultLightSettings,validateLightSettings} from './lightForge.js';
+import {buildShowPreset} from './showForge.js';
 
 const clamp=THREE.MathUtils.clamp;
 function shapeGeometry(o){
@@ -265,6 +266,11 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     save();
     return objects.length;
   }
+  function addShowPreset(preset){
+    if(active.size)throw Error('Release held objects before creating a stage.');
+    // Reuse the existing transactional capacity and undo path, never a separate schema.
+    return appendMany(buildShowPreset(preset));
+  }
   function patternSelected(type,options={}){
     if(active.size)throw Error('Release held objects before making patterns.');
     const source=get(selectedId);
@@ -489,7 +495,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     get lightSettings(){return {...lightSettings};},setLightSettings,
     add,select,insert,hit,beginController,updateController,beginMouse,updateMouse,finish,
     promoteFramefield,promoteCad,patchSelected,removeSelected,duplicateSelected,setSelectedAppearance,
-    appendMany,patternSelected,alignSelected,floorSelected,
+    appendMany,addShowPreset,patternSelected,alignSelected,floorSelected,
     setSelectedMotion,cycleSelectedMotion,cycleSelectedBand,toggleMotion,stopMotion,previewMotion,tickMotion,
     setMeasurement,clearMeasurement,measurePick,undo,redo,clear,save,importJson,
     exportJson:()=>writeWorkshop(data),exportGLB};
