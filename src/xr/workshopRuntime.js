@@ -4,6 +4,7 @@ import {emptyWorkshop,createWorkshopObject,createWorkshopMesh,validateWorkshop,r
 import {duplicateObject,measureObjectCenters} from './objectLab.js';
 import {linearPattern,radialPattern,alignObjectCenter} from './patternForge.js';
 import {sampleMotion,validateMotion,defaultMotion} from './motionForge.js';
+import {lightSample,defaultLightSettings,validateLightSettings} from './lightForge.js';
 
 const clamp=THREE.MathUtils.clamp;
 function shapeGeometry(o){
@@ -55,6 +56,8 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
   scene.add(root);
   let data=emptyWorkshop(),selectedId=null,gridStep=.25,angleStep=15;
   let motionPlaying=false,motionSeconds=0;
+  let lightSettings=defaultLightSettings(),lastAudioFrame=0;
+  const lightEnvelopes=new Map();
   const meshes=new Map(),active=new Map();
   let selectionBox=null,measurementPair=null,pendingMeasureId=null;
   const ruler=new THREE.Group();ruler.name='Workshop measurement overlay (not part of export)';scene.add(ruler);
@@ -117,6 +120,30 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     root.add(mesh);meshes.set(o.id,mesh);
     return mesh;
   }
+  function resetLightVisuals(){
+    lightEnvelopes.clear();lastAudioFrame=0;
+    for(const mesh of meshes.values()){
+      mesh.material.emissive.set(0x000000);
+      mesh.material.emissiveIntensity=0;
+    }
+  }
+  function updateLightVisuals(frame,deltaSeconds){
+    lastAudioFrame=frame;
+    if(!lightSettings.enabled){resetLightVisuals();return;}
+    for(const item of data.objects){
+      const mesh=meshes.get(item.id);if(!mesh)continue;
+      const result=lightSample(item,frame,lightSettings,lightEnvelopes.get(item.id)||0,deltaSeconds);
+      lightEnvelopes.set(item.id,result.envelope);
+      mesh.material.emissive.set(result.color);
+      mesh.material.emissiveIntensity=result.intensity;
+    }
+  }
+  function setLightSettings(input){
+    lightSettings=validateLightSettings(input);
+    if(!lightSettings.enabled||!motionPlaying)resetLightVisuals();
+    else updateLightVisuals(lastAudioFrame,.016);
+    return {...lightSettings};
+  }
   function drawPose(time=motionSeconds,audioEnergy=0){
     for(const item of data.objects){
       const mesh=meshes.get(item.id);if(!mesh)continue;
@@ -129,7 +156,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
   }
   function stopMotion(){
     motionPlaying=false;motionSeconds=0;
-    drawPose(0);ruler.visible=true;onMotion({playing:false,time:0});
+    drawPose(0);resetLightVisuals();ruler.visible=true;onMotion({playing:false,time:0});
   }
   function previewMotion(seconds){
     if(active.size)throw Error('Release the trigger before previewing motion.');
@@ -155,6 +182,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     const previous=motionSeconds;
     motionSeconds=(motionSeconds+Math.min(deltaSeconds,.1))%60;
     drawPose(motionSeconds,audioEnergy);
+    updateLightVisuals(audioEnergy,deltaSeconds);
     if(Math.floor(previous*10)!==Math.floor(motionSeconds*10))onMotion({playing:true,time:motionSeconds});
   }
   function setSelectedMotion(settings){
@@ -183,7 +211,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     return next;
   }
   function rebuild(){
-    motionPlaying=false;motionSeconds=0;ruler.visible=true;onMotion({playing:false,time:0});
+    motionPlaying=false;motionSeconds=0;ruler.visible=true;resetLightVisuals();onMotion({playing:false,time:0});
     if(active.size)throw Error('Release the controller trigger first.');
     if(selectionBox){scene.remove(selectionBox);selectionBox.geometry.dispose();selectionBox.material.dispose();selectionBox=null;}
     for(const mesh of meshes.values()){root.remove(mesh);disposeMesh(mesh);}
@@ -431,6 +459,14 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     if(!data.objects.length)throw Error('Add a workshop object first.');
     const assembly=new THREE.Group();
     const copy=root.clone(true);
+    // Clone materials before clearing preview-only emissive state; never mutate the live sculpture.
+    copy.traverse(node=>{
+      if(node.isMesh&&node.material?.clone){
+        node.material=node.material.clone();
+        node.material.emissive?.set(0x000000);
+        node.material.emissiveIntensity=0;
+      }
+    });
     // Export canonical rest-pose transforms, NOT whatever motion frame is playing.
     for(const mesh of copy.children){
       const item=get(mesh.userData.workshopId);
@@ -450,6 +486,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     get measure(){return measureInfo;},get pendingMeasureId(){return pendingMeasureId;},
     get motionPlaying(){return motionPlaying;},get motionSeconds(){return motionSeconds;},
     get hasMotion(){return data.objects.some(o=>o.motion&&o.motion.mode!=='none');},
+    get lightSettings(){return {...lightSettings};},setLightSettings,
     add,select,insert,hit,beginController,updateController,beginMouse,updateMouse,finish,
     promoteFramefield,promoteCad,patchSelected,removeSelected,duplicateSelected,setSelectedAppearance,
     appendMany,patternSelected,alignSelected,floorSelected,

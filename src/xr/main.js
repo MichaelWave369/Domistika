@@ -9,6 +9,8 @@ import {parseOpenBluePreview,OPENBLUE_MAX_BYTES} from './openblueModel.js';
 import {buildOpenBluePreview} from './openbluePreview.js';
 import {createWorkshop} from './workshopRuntime.js';
 import {createLocalRhythm} from './rhythmForge.js';
+import {LIGHT_PALETTES} from './lightForge.js';
+import {WORKSHOP_PAGE_SIZE,workshopPageCount,wrapWorkshopPage} from './workshopDeck.js';
 import './styles.css';
 
 const $ = (s) => document.querySelector(s);
@@ -348,12 +350,12 @@ for(const [i,label,action] of [
 }
 // In-world workshop tool deck stays separate from painting and protected source previews.
 const workDeck=new THREE.Group();workDeck.position.set(0,2.0,-2.65);scene.add(workDeck);
-const workBacking=new THREE.Mesh(new THREE.PlaneGeometry(1.53,3.38),
+const workBacking=new THREE.Mesh(new THREE.PlaneGeometry(1.53,2.25),
   new THREE.MeshBasicMaterial({color:0x172e39,side:THREE.DoubleSide,transparent:true,opacity:.9}));
 workBacking.position.z=-.012;workDeck.add(workBacking);
 const workTitle=new THREE.Mesh(new THREE.PlaneGeometry(1.25,.14),
   new THREE.MeshBasicMaterial({map:textTexture('SPATIAL WORKSHOP','#ffe4a6'),side:THREE.DoubleSide}));
-workTitle.position.set(0,1.52,.025);workDeck.add(workTitle);
+workTitle.position.set(0,.88,.025);workDeck.add(workTitle);
 const workActions=[
   ['ADD CUBE',{type:'work-add',value:'box'}],
   ['ADD SPHERE',{type:'work-add',value:'sphere'}],
@@ -377,12 +379,70 @@ const workActions=[
   ['RESET MOTION',{type:'work-motion-reset'}],
   ['RHYTHM PLAY',{type:'rhythm-play'}],
   ['RHYTHM STOP',{type:'rhythm-stop'}],
-  ['BAND FX',{type:'work-band-cycle'}]
+  ['BAND FX',{type:'work-band-cycle'}],
+  ['LIGHT ON/OFF',{type:'work-light-toggle'}],
+  ['PALETTE',{type:'work-light-palette'}]
 ];
+const workButtons=[];
 for(const [i,[label,action]] of workActions.entries()){
-  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.68,.19),
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.68,.18),
     new THREE.MeshBasicMaterial({map:textTexture(label,'#ffedce'),side:THREE.DoubleSide}));
-  mesh.position.set(i%2===0?-.375:.375,1.17-Math.floor(i/2)*.215,.026);mesh.userData.action=action;workDeck.add(mesh);controls3d.push(mesh);
+  const slot=i%WORKSHOP_PAGE_SIZE;
+  mesh.position.set(slot%2===0?-.375:.375,.57-Math.floor(slot/2)*.20,.026);
+  mesh.userData.action=action;
+  workDeck.add(mesh);controls3d.push(mesh);workButtons.push(mesh);
+}
+const navActions=[
+  ['PREV PAGE',{type:'work-page',delta:-1}],
+  ['NEXT PAGE',{type:'work-page',delta:1}]
+];
+for(const [i,[label,action]] of navActions.entries()){
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.68,.17),
+    new THREE.MeshBasicMaterial({map:textTexture(label,'#abfff0'),side:THREE.DoubleSide}));
+  mesh.position.set(i===0?-.375:.375,-.73,.03);
+  mesh.userData.action=action;workDeck.add(mesh);controls3d.push(mesh);
+}
+const workPageInfo=new THREE.Mesh(new THREE.PlaneGeometry(.67,.13),
+  new THREE.MeshBasicMaterial({map:textTexture('PAGE 1 / 3','#a4f6ce'),side:THREE.DoubleSide}));
+workPageInfo.position.set(0,-.99,.025);workDeck.add(workPageInfo);
+let workPage=0;
+function changeWorkPage(delta=0){
+  workPage=wrapWorkshopPage(workPage,delta,workActions.length);
+  for(const [i,mesh] of workButtons.entries()){
+    const enabled=Math.floor(i/WORKSHOP_PAGE_SIZE)===workPage;
+    // Raycaster and XR camera both use layer 0. Hidden buttons use layer 1.
+    mesh.visible=enabled;mesh.layers.set(enabled?0:1);
+  }
+  const old=workPageInfo.material.map;
+  workPageInfo.material.map=textTexture('PAGE '+(workPage+1)+' / '+workshopPageCount(workActions.length),'#a4f6ce');
+  old?.dispose();
+  workPageInfo.material.needsUpdate=true;
+}
+changeWorkPage();
+function syncLightUI(){
+  const settings=workshop.lightSettings;
+  $('#lightPalette').value=settings.palette;
+  $('#lightGain').value=String(settings.gain);
+  $('#lightGainLabel').textContent=settings.gain.toFixed(1)+'×';
+  $('#lightToggle').textContent=settings.enabled?'Disable reactive glow':'Enable reactive glow';
+  $('#lightToggle').setAttribute('aria-pressed',String(settings.enabled));
+  $('#lightStatus').textContent=settings.enabled?
+    'Glow armed. Play local music with Motion Forge to illuminate your sculptures.':
+    'Glow off. Original colors preserved.';
+  updateToolColors();
+}
+function toggleLight(){
+  const state=workshop.lightSettings;
+  workshop.setLightSettings({...state,enabled:!state.enabled});
+  syncLightUI();
+  message('Light Forge '+(workshop.lightSettings.enabled?'enabled':'disabled')+'. Materials and saved geometry untouched.');
+}
+function nextLightPalette(){
+  const state=workshop.lightSettings;
+  const names=Object.keys(LIGHT_PALETTES),i=names.indexOf(state.palette);
+  workshop.setLightSettings({...state,palette:names[(i+1)%names.length]});
+  syncLightUI();
+  message('Light Forge palette: '+workshop.lightSettings.palette+'.');
 }
 function cycleWorkshopBand(){
   try{const band=workshop.cycleSelectedBand();message('Selected sculpture now reacts to '+band.toUpperCase()+'.');}
@@ -464,6 +524,7 @@ function updateToolColors(){
     if(a.type==='openblue-toggle')mesh.material.color.setHex(openBluePreview?.group.visible?0x79f4ae:0xffffff);
     if(a.type==='work-grid')mesh.material.color.setHex(workshop.grid?0xffda87:0xffffff);
     if(a.type==='rhythm-play')mesh.material.color.setHex(rhythm.playing?0xb2f7c0:0xffffff);
+    if(a.type==='work-light-toggle')mesh.material.color.setHex(workshop.lightSettings.enabled?0xb2f7c0:0xffffff);
     if(a.type==='air-style')mesh.material.color.setHex(airStyle===a.value?0xff82d4:0xffffff);
     if(a.type==='air-mirror')mesh.material.color.setHex(airMirror?0xff82d4:0xffffff);
   }
@@ -515,6 +576,9 @@ function startXR(c,index){
     if(a.type==='rhythm-play')playRhythm();
     if(a.type==='rhythm-stop')stopRhythm();
     if(a.type==='work-band-cycle')cycleWorkshopBand();
+    if(a.type==='work-page')changeWorkPage(a.delta);
+    if(a.type==='work-light-toggle')toggleLight();
+    if(a.type==='work-light-palette')nextLightPalette();
     if(a.type==='air-style')setAirStyle(a.value);
     if(a.type==='air-mirror')toggleAirMirror();
     if(a.type==='air-undo')brushStudio.undo();
@@ -670,6 +734,16 @@ $('#rhythmSensitivity').addEventListener('input',event=>{
   }catch(error){message(error.message);}
 });
 $('#rhythmPlay').addEventListener('click',playRhythm);
+$('#lightToggle').addEventListener('click',toggleLight);
+$('#lightNextPalette').addEventListener('click',nextLightPalette);
+$('#lightPalette').addEventListener('change',event=>{
+  workshop.setLightSettings({...workshop.lightSettings,palette:event.target.value});
+  syncLightUI();
+});
+$('#lightGain').addEventListener('input',event=>{
+  workshop.setLightSettings({...workshop.lightSettings,gain:Number(event.target.value)});
+  syncLightUI();
+});
 $('#rhythmPause').addEventListener('click',stopRhythm);
 $('#rhythmAudio').addEventListener('ended',()=>{
   workshop.stopMotion();updateToolColors();message('Local track finished. Workshop returned to rest pose.');
@@ -1023,7 +1097,7 @@ function resize(){
   renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
 }
 window.addEventListener('resize',resize);new ResizeObserver(resize).observe($('#render-root'));
-resize();updateToolColors();
+resize();updateToolColors();syncLightUI();
 syncBpcPlaybackUI();
 let lastMotionFrame=null,lastRhythmBucket=-1;
 document.addEventListener('visibilitychange',()=>{if(document.hidden){rhythm.pause();workshop.stopMotion();lastMotionFrame=null;}});
