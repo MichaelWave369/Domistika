@@ -16,7 +16,9 @@ test('live Three.js motion changes view only; pause restores authoritative rest 
  const initialJson=ws.exportJson();
  assert.equal(ws.toggleMotion(),true);
  ws.tickMotion(.25);
- assert.ok(Math.abs(ws.meshes.get(id).position.y-1.9)<1e-8);
+ // A suspended-frame delta is deliberately capped at 100 ms for XR comfort.
+ assert.ok(Math.abs(ws.motionSeconds-.1)<1e-10);
+ assert.ok(Math.abs(ws.meshes.get(id).position.y-(1.5+.4*Math.sin(.1*2*Math.PI)))<1e-8);
  assert.deepEqual(ws.selected.position,rest);
  assert.equal(ws.exportJson(),initialJson);
  assert.equal(ws.toggleMotion(),false);
