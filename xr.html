@@ -42,7 +42,7 @@
       <p class="help">Desktop preview: select Paint in 3D and drag anywhere in the scene. Quest: pull either trigger to paint freely in space; release to finish. Mirroring uses the room's center plane. Existing 2D canvases stay separate.</p>
     </section>
     <section class="workshop-tools" aria-label="Spatial Workshop editable objects">
-      <h2>Spatial Workshop v0.8 <span id="workshopCount">0 / 48</span></h2>
+      <h2>Spatial Workshop v0.9 <span id="workshopCount">0 / 48</span></h2>
       <p class="workshop-copy">Create 3D shapes, grab them with Quest triggers, snap transforms, and assemble alongside airbrush paintings. Source CAD/BPC previews stay read-only until you explicitly copy an object.</p>
       <div class="mode-grid" role="group" aria-label="Workshop manipulation mode">
         <button class="mode" data-mode="work-move" aria-pressed="false">✥ Grab / Move</button>
@@ -69,6 +69,20 @@
         <input id="workshopColor" type="color" value="#68e4ff" aria-label="Object material color"></div>
       <button id="workshopAppearance" class="wide">Apply name & color</button>
       <p id="workshopSelection" class="workshop-selection">No workshop object selected.</p>
+      <section class="show-forge" aria-label="One-click editable audiovisual stage presets">
+        <h2>Show Forge · Instant 3D Stage</h2>
+        <p class="workshop-copy">Build a complete, editable music-reactive installation in one click, then customize every object. Presets append to your existing scene and obey the normal 48-object limit.</p>
+        <label class="control-label" for="showPreset">CHOOSE STAGE RECIPE</label>
+        <select id="showPreset" aria-label="Show Forge stage preset">
+          <option value="orbit-bloom">Orbit Bloom · 13 pieces</option>
+          <option value="neon-corridor">Neon Corridor · 16 pieces</option>
+          <option value="bass-cathedral">Bass Cathedral · 15 pieces</option>
+        </select>
+        <div class="button-row"><button id="showBuild">Add editable stage</button><button id="showDemoStart">Start silent visual demo</button></div>
+        <button id="showDemoStop" class="wide">Stop visual demo & reset</button>
+        <p id="showStatus" class="workshop-selection" role="status" aria-live="polite">No visual demo running.</p>
+        <p class="help">The visual demo generates a gentle, silent synthetic spectrum with bass, mids, highs and pulse, so you can try Motion Forge and Light Forge without a music file. It does not output music, detect BPM, save demo settings or upload anything. Quest: STAGE BLOOM, STAGE CORRIDOR, DEMO ON and DEMO OFF on the performance page. Undo removes a whole stage in one step.</p>
+      </section>
       <section class="pattern-forge" aria-label="Pattern Forge procedural layout">
         <h2>Pattern Forge · Arrays & Alignment</h2>
         <p class="workshop-copy">Make independent repeated pieces from the selected object. Original geometry and source files remain untouched; each pattern is one undoable operation.</p>
