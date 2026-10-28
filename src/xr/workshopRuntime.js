@@ -165,6 +165,14 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     // Authoring remains an ordinary undoable property of THIS workshop copy.
     patchSelected({motion});
   }
+  function cycleSelectedBand(){
+    const item=get(selectedId);
+    if(!item?.motion||item.motion.mode==='none')throw Error('Assign a Motion Forge effect before choosing a sound band.');
+    const bands=['full','bass','mid','high','beat'];
+    const next=bands[(bands.indexOf(item.motion.band??'full')+1)%bands.length];
+    setSelectedMotion({...item.motion,band:next});
+    return next;
+  }
   function cycleSelectedMotion(){
     const item=get(selectedId);
     if(!item)throw Error('Select an editable workshop object first.');
@@ -445,7 +453,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     add,select,insert,hit,beginController,updateController,beginMouse,updateMouse,finish,
     promoteFramefield,promoteCad,patchSelected,removeSelected,duplicateSelected,setSelectedAppearance,
     appendMany,patternSelected,alignSelected,floorSelected,
-    setSelectedMotion,cycleSelectedMotion,toggleMotion,stopMotion,previewMotion,tickMotion,
+    setSelectedMotion,cycleSelectedMotion,cycleSelectedBand,toggleMotion,stopMotion,previewMotion,tickMotion,
     setMeasurement,clearMeasurement,measurePick,undo,redo,clear,save,importJson,
     exportJson:()=>writeWorkshop(data),exportGLB};
 }
