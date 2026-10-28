@@ -486,7 +486,12 @@ function startShowDemo(){
     showDemoClock=0;showDemoActive=true;
     syncShowUI();syncLightUI();updateToolColors();
     message('Silent visual demo playing. Load a local music track for actual audio.');
-  }catch(error){showPrevLight=null;message('Show demo rejected: '+error.message);}
+  }catch(error){
+    workshop.stopMotion();
+    if(showPrevLight)workshop.setLightSettings(showPrevLight);
+    showPrevLight=null;showDemoActive=false;syncShowUI();syncLightUI();
+    message('Show demo rejected: '+error.message);
+  }
 }
 function addShowStage(preset){
   try{
