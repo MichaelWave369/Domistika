@@ -1,6 +1,7 @@
 import * as THREE from 'three';
 import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {emptyWorkshop,createWorkshopObject,createWorkshopMesh,validateWorkshop,readWorkshop,writeWorkshop,withTransform,snapPosition,snapAngle,WORKSHOP_STORE_KEY,WORKSHOP_MAX_OBJECTS} from './workshopModel.js';
+import {duplicateObject,measureObjectCenters} from './objectLab.js';
 
 const clamp=THREE.MathUtils.clamp;
 function shapeGeometry(o){
@@ -20,13 +21,41 @@ function shapeGeometry(o){
   }
 }
 function disposeMesh(mesh){mesh.geometry.dispose();mesh.material.dispose();}
+function mirroredGeometry(geometry){
+  geometry.scale(-1,1,1);
+  const index=geometry.getIndex();
+  if(index){
+    for(let i=0;i<index.count;i+=3){
+      const a=index.getX(i+1),b=index.getX(i+2);
+      index.setX(i+1,b);index.setX(i+2,a);
+    }
+    index.needsUpdate=true;
+  }else{
+    const attrs=Object.values(geometry.attributes);
+    for(const attr of attrs){
+      for(let i=0;i<attr.count;i+=3){
+        for(let k=0;k<attr.itemSize;k++){
+          const a=attr.array[(i+1)*attr.itemSize+k],b=attr.array[(i+2)*attr.itemSize+k];
+          attr.array[(i+1)*attr.itemSize+k]=b;
+          attr.array[(i+2)*attr.itemSize+k]=a;
+        }
+      }
+      attr.needsUpdate=true;
+    }
+  }
+  geometry.computeVertexNormals();
+  geometry.computeBoundingSphere();
+  return geometry;
+}
 const rotationFromMesh=mesh=>[mesh.rotation.x,mesh.rotation.y,mesh.rotation.z];
 export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=()=>{},onChange=()=>{},paintRoot=()=>null}){
   const root=new THREE.Group();root.name='Editable Domistika XR Workshop assembly';
   scene.add(root);
   let data=emptyWorkshop(),selectedId=null,gridStep=.25,angleStep=15;
   const meshes=new Map(),active=new Map();
-  let selectionBox=null;
+  let selectionBox=null,measurementPair=null,pendingMeasureId=null;
+  const ruler=new THREE.Group();ruler.name='Workshop measurement overlay (not part of export)';scene.add(ruler);
+  let measureInfo=null;
   const history=[],future=[];
   const get=id=>data.objects.find(o=>o.id===id);
   function selection(){
@@ -34,9 +63,46 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     const mesh=meshes.get(selectedId);
     if(mesh){selectionBox=new THREE.BoxHelper(mesh,0xffd477);scene.add(selectionBox);}
   }
-  function notify(){onChange({count:data.objects.length,selected:get(selectedId)||null,gridStep,angleStep});}
+  function updateRuler(){
+    while(ruler.children.length){
+      const child=ruler.children[0];ruler.remove(child);
+      child.geometry?.dispose();child.material?.map?.dispose();child.material?.dispose();
+    }
+    measureInfo=null;
+    if(!measurementPair)return;
+    const a=get(measurementPair[0]),b=get(measurementPair[1]);
+    if(!a||!b){measurementPair=null;return;}
+    measureInfo=measureObjectCenters(a,b);
+    const first=new THREE.Vector3(...a.position),second=new THREE.Vector3(...b.position);
+    const line=new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([first,second]),
+      new THREE.LineBasicMaterial({color:0xffe49c,depthTest:false,transparent:true,opacity:.95}));
+    line.renderOrder=10;ruler.add(line);
+    const markerGeometry=new THREE.SphereGeometry(.035,8,6);
+    const markerMaterial=new THREE.MeshBasicMaterial({color:0xffb970,depthTest:false});
+    for(const pos of [first,second]){
+      const marker=new THREE.Mesh(markerGeometry.clone(),markerMaterial.clone());
+      marker.position.copy(pos);marker.renderOrder=11;ruler.add(marker);
+    }
+    markerGeometry.dispose();markerMaterial.dispose();
+    const canvas=document.createElement('canvas');canvas.width=512;canvas.height=128;
+    const ctx=canvas.getContext('2d');
+    if(ctx){
+      ctx.fillStyle='#0c1728';ctx.fillRect(0,0,512,128);
+      ctx.strokeStyle='#ffc77b';ctx.lineWidth=5;ctx.strokeRect(3,3,506,122);
+      ctx.fillStyle='#fff3d4';ctx.font='bold 43px system-ui';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText(measureInfo.distance.toFixed(3)+' m',256,64,475);
+      const texture=new THREE.CanvasTexture(canvas);texture.colorSpace=THREE.SRGBColorSpace;
+      const badge=new THREE.Mesh(new THREE.PlaneGeometry(.72,.18),
+        new THREE.MeshBasicMaterial({map:texture,transparent:true,depthTest:false,side:THREE.DoubleSide}));
+      badge.position.copy(first).add(second).multiplyScalar(.5).add(new THREE.Vector3(0,.17,0));
+      badge.renderOrder=12;ruler.add(badge);
+    }
+  }
+  function notify(){onChange({count:data.objects.length,objects:data.objects,
+    selected:get(selectedId)||null,gridStep,angleStep,measure:measureInfo,pendingMeasureId});}
   function renderObject(o){
-    const mesh=new THREE.Mesh(shapeGeometry(o),new THREE.MeshStandardMaterial({
+    const mesh=new THREE.Mesh(o.mirroredX?mirroredGeometry(shapeGeometry(o)):shapeGeometry(o),new THREE.MeshStandardMaterial({
       color:o.color,roughness:.56,metalness:.19,side:THREE.DoubleSide
     }));
     mesh.name=o.name;
@@ -55,7 +121,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     meshes.clear();
     for(const item of data.objects)renderObject(item);
     if(!meshes.has(selectedId))selectedId=data.objects.at(-1)?.id||null;
-    selection();notify();
+    selection();updateRuler();notify();
   }
   function save(){
     try{storage?.setItem(WORKSHOP_STORE_KEY,writeWorkshop(data));return true;}
@@ -66,6 +132,33 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
   rebuild();
   function snapshot(){history.push(writeWorkshop(data));if(history.length>25)history.shift();future.length=0;}
   function select(id){selectedId=meshes.has(id)?id:null;selection();notify();}
+  function setMeasurement(a,b){
+    if(active.size)throw Error('Release held objects before measuring.');
+    if(!get(a)||!get(b)||a===b)throw Error('Choose two different workshop objects.');
+    pendingMeasureId=null;measurementPair=[a,b];
+    updateRuler();notify();
+    return measureInfo;
+  }
+  function clearMeasurement(){
+    measurementPair=null;pendingMeasureId=null;updateRuler();notify();
+  }
+  function measurePick(id){
+    if(active.size)throw Error('Release held objects before measuring.');
+    if(!get(id))throw Error('Point at an editable workshop object.');
+    select(id);
+    if(!pendingMeasureId){pendingMeasureId=id;measurementPair=null;updateRuler();notify();return null;}
+    if(id===pendingMeasureId){onStatus('Now select a DIFFERENT object center.');return null;}
+    return setMeasurement(pendingMeasureId,id);
+  }
+  function duplicateSelected(mirrorX=false){
+    if(active.size)throw Error('Release held objects before duplicating.');
+    const source=get(selectedId);if(!source)throw Error('Select a workshop object first.');
+    return insert(duplicateObject(source,{mirrorX,snap:gridStep,offset:Math.max(.5,gridStep)}));
+  }
+  function setSelectedAppearance({name,color}){
+    const old=get(selectedId);if(!old)throw Error('Select a workshop object first.');
+    patchSelected({name,color});
+  }
   function insert(object){
     if(active.size)throw Error('Release held objects before adding.');
     if(data.objects.length>=WORKSHOP_MAX_OBJECTS)throw Error('Workshop object limit (48) reached.');
@@ -182,7 +275,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
       writeWorkshop(newScene);
       if(state.dirty){snapshot();data=newScene;}
       mesh.position.fromArray(candidate.position);mesh.rotation.set(...candidate.rotation);mesh.scale.fromArray(candidate.scale);
-      save();notify();
+      updateRuler();save();notify();
     }catch(error){
       mesh.position.fromArray(original.position);mesh.rotation.set(...original.rotation);mesh.scale.fromArray(original.scale);
       onStatus('Transform rejected; reverted: '+error.message);
@@ -234,7 +327,9 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     get all(){return data.objects.map(o=>({...o}));},
     get meshes(){return meshes;},get active(){return active.size>0;},
     setSnap(step,degrees){gridStep=step;angleStep=degrees;notify();},
+    get measure(){return measureInfo;},get pendingMeasureId(){return pendingMeasureId;},
     add,select,insert,hit,beginController,updateController,beginMouse,updateMouse,finish,
-    promoteFramefield,promoteCad,patchSelected,removeSelected,undo,redo,clear,save,importJson,
+    promoteFramefield,promoteCad,patchSelected,removeSelected,duplicateSelected,setSelectedAppearance,
+    setMeasurement,clearMeasurement,measurePick,undo,redo,clear,save,importJson,
     exportJson:()=>writeWorkshop(data),exportGLB};
 }
