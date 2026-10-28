@@ -50,6 +50,17 @@
     <div class="button-row"><button id="save">Save local</button><button id="downloadPng">Export PNG</button></div>
     <div class="button-row"><button id="exportScene">Export scene</button><button id="importScene">Import scene</button></div>
     <input id="sceneFile" type="file" accept=".json,application/json" hidden>
+    <section class="workshop-links" aria-label="Connected creative studios">
+      <h2>Connected 3D Workbench</h2>
+      <p class="workshop-copy">Keep editable masters in their original studios. Use explicit local exports and imports; neither site can silently read another site's browser storage.</p>
+      <div class="button-row"><a class="studio-link" href="https://michaelwave369.github.io/FramefieldStudio/" target="_blank" rel="noopener noreferrer">Open Framefield Studio</a><a class="studio-link" href="https://michaelwave369.github.io/OpenBlueprintStudio/" target="_blank" rel="noopener noreferrer">OpenBlueprint Studio</a></div>
+      <p class="workshop-copy"><b>Modeling:</b> Export <b>BPC XR</b> from Framefield, then choose <b>Load BPC mesh</b> below. Framefield animation previews remain read-only.</p>
+      <h2>OpenBlue CAD Preview <span id="openblueCount">None loaded</span></h2>
+      <div class="button-row"><button id="openblueLoad">Load plan JSON</button><button id="openblueClear">Clear CAD preview</button></div>
+      <div class="button-row"><button id="openblueVisibility" disabled>Show / hide CAD</button><span id="openblueScale" class="cad-dimensions">No CAD plan loaded</span></div>
+      <input id="openblueFile" type="file" accept=".json,application/json" hidden>
+      <p class="help">In OpenBlueprint select <b>Export JSON</b> (a <code>*.openblueprint.json</code> file). Load that project here. Walls appear as shaded 3D geometry and doors/windows/network/outlet symbols as colored markers. Look toward the CAD layout behind the canvases. You can show/hide it from the right-hand XR tool deck. This visual-only preview may be scaled to fit. Not a CAD editor, structural model, or measurements you should build from.</p>
+    </section>
     <h2>BPC 3D Preview <span id="bpcPreviewCount">None loaded</span></h2>
     <div class="button-row"><button id="importBpcPreview">Load BPC mesh</button><button id="clearBpcPreview">Clear preview</button></div>
     <input id="bpcPreviewFile" type="file" accept=".json,application/json" hidden>
