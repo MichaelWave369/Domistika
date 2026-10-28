@@ -7,6 +7,7 @@ import {readBpcFramefieldPreview, sampleFramefieldPose, FRAMEFIELD_EULER_ORDER, 
 import {createBrushStudio} from './brushStudio.js';
 import {parseOpenBluePreview,OPENBLUE_MAX_BYTES} from './openblueModel.js';
 import {buildOpenBluePreview} from './openbluePreview.js';
+import {createWorkshop} from './workshopRuntime.js';
 import './styles.css';
 
 const $ = (s) => document.querySelector(s);
@@ -50,6 +51,9 @@ const ink=()=>$('#brushColor').value;
 const size=()=>Number($('#brushWidth').value);
 const message=(text)=>status(text);
 const brushStudio=createBrushStudio({scene,onStatus:message,onCount:n=>{$('#spatialCount').textContent=n+' / 160';}});
+const workshop=createWorkshop({scene,onStatus:message,paintRoot:()=>brushStudio.root,onChange:data=>{
+  $('#workshopCount').textContent=data.count+' / 48';refreshWorkshopSelection(data.selected);
+}});
 function textTexture(text,color='#c7ffef') {
   const el=document.createElement('canvas');el.width=512;el.height=120;
   const c=el.getContext('2d');
@@ -169,6 +173,12 @@ function startMouse(e){
     e.preventDefault();renderer.domElement.setPointerCapture(e.pointerId);controls.enabled=false;
     pointerState={id:e.pointerId,kind:'airbrush'};return;
   }
+  if(mode.startsWith('work-')){
+    const ray=mouseRay(e);
+    if(!workshop.beginMouse('mouse',ray,camera,mode.slice(5),e))return;
+    e.preventDefault();renderer.domElement.setPointerCapture(e.pointerId);controls.enabled=false;
+    pointerState={id:e.pointerId,kind:'workshop'};return;
+  }
   const ray=mouseRay(e),hit=hitBoard(ray);if(!hit)return;
   e.preventDefault();renderer.domElement.setPointerCapture(e.pointerId);controls.enabled=false;
   selectBoard(hit.board.id);const r=renderedBoards.get(hit.board.id);
@@ -187,6 +197,7 @@ function moveMouse(e){
   if(s.kind==='airbrush'){
     brushStudio.extend('mouse',mouseRay(e).ray.at(2.4,new THREE.Vector3()).toArray());return;
   }
+  if(s.kind==='workshop'){workshop.updateMouse('mouse',mouseRay(e),e);return;}
   const dx=e.clientX-s.x,dy=e.clientY-s.y;s.x=e.clientX;s.y=e.clientY;
   if(s.kind==='draw'){const hit=hitBoard(mouseRay(e));if(hit?.board?.id===s.board.id)continueStroke(s.board,s.stroke,uv(hit.hit.uv));}
   if(s.kind==='move'){
@@ -198,6 +209,7 @@ function moveMouse(e){
 function endMouse(e){
   if(!pointerState||pointerState.id!==e.pointerId)return;
   if(pointerState.kind==='airbrush')brushStudio.end('mouse');
+  if(pointerState.kind==='workshop')workshop.finish('mouse');
   pointerState=null;controls.enabled=true;
   if(renderer.domElement.hasPointerCapture(e.pointerId))renderer.domElement.releasePointerCapture(e.pointerId);
   persist();
@@ -206,7 +218,7 @@ renderer.domElement.addEventListener('pointerdown',startMouse);
 renderer.domElement.addEventListener('pointermove',moveMouse);
 renderer.domElement.addEventListener('pointerup',endMouse);
 renderer.domElement.addEventListener('pointercancel',endMouse);
-window.addEventListener('blur',()=>{if(pointerState){if(pointerState.kind==='airbrush')brushStudio.end('mouse');pointerState=null;controls.enabled=true;persist();}});
+window.addEventListener('blur',()=>{if(pointerState){if(pointerState.kind==='airbrush')brushStudio.end('mouse');if(pointerState.kind==='workshop')workshop.finish('mouse');pointerState=null;controls.enabled=true;persist();}});
 
 // An actual 3D toolbar, not an HTML overlay that disappears inside XR.
 const toolPanel=new THREE.Group();toolPanel.position.set(1.8,1.65,-1.25);toolPanel.rotation.y=-.3;scene.add(toolPanel);
@@ -255,6 +267,40 @@ for(const [i,label,action] of [
     new THREE.MeshBasicMaterial({map:textTexture(label,'#ffd6f2'),side:THREE.DoubleSide}));
   mesh.position.set(0,.54-i*.22,.024);mesh.userData.action=action;airDeck.add(mesh);controls3d.push(mesh);
 }
+// In-world workshop tool deck stays separate from painting and protected source previews.
+const workDeck=new THREE.Group();workDeck.position.set(0,2.15,-2.65);scene.add(workDeck);
+const workBacking=new THREE.Mesh(new THREE.PlaneGeometry(.92,2.36),
+  new THREE.MeshBasicMaterial({color:0x172e39,side:THREE.DoubleSide,transparent:true,opacity:.9}));
+workBacking.position.z=-.012;workDeck.add(workBacking);
+const workTitle=new THREE.Mesh(new THREE.PlaneGeometry(.8,.14),
+  new THREE.MeshBasicMaterial({map:textTexture('SPATIAL WORKSHOP','#ffe4a6'),side:THREE.DoubleSide}));
+workTitle.position.set(0,.99,.025);workDeck.add(workTitle);
+const workActions=[
+  ['ADD CUBE',{type:'work-add',value:'box'}],
+  ['ADD SPHERE',{type:'work-add',value:'sphere'}],
+  ['ADD CYLINDER',{type:'work-add',value:'cylinder'}],
+  ['ADD TORUS',{type:'work-add',value:'torus'}],
+  ['GRAB / MOVE',{type:'mode',value:'work-move'}],
+  ['ROTATE',{type:'mode',value:'work-rotate'}],
+  ['SCALE',{type:'mode',value:'work-scale'}],
+  ['SNAP GRID',{type:'work-grid'}],
+  ['UNDO WORKSHOP',{type:'work-undo'}],
+  ['SAVE WORKSHOP',{type:'work-save'}]
+];
+for(const [i,[label,action]] of workActions.entries()){
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.77,.16),
+    new THREE.MeshBasicMaterial({map:textTexture(label,'#ffedce'),side:THREE.DoubleSide}));
+  mesh.position.set(0,.76-i*.185,.026);mesh.userData.action=action;workDeck.add(mesh);controls3d.push(mesh);
+}
+function addWorkshopShape(kind,position=[0,1.5,-2]){
+  try{workshop.add(kind,ink(),position);setMode('work-move');message(kind.toUpperCase()+' created. Point at it and hold trigger to move.');}
+  catch(e){message('Workshop create rejected: '+e.message);}
+}
+function cycleWorkshopGrid(){
+  const choices=[0,.1,.25,.5,1],next=choices[(choices.indexOf(workshop.grid)+1)%choices.length];
+  workshop.setSnap(next,workshop.rotationSnap);$('#workshopSnap').value=String(next);
+  message('Workshop snap '+(next?next+' meters':'OFF')+'.');
+}
 function updateToolColors(){
   for(const mesh of controls3d){
     const a=mesh.userData.action;
@@ -262,6 +308,7 @@ function updateToolColors(){
     if(a.type==='erase')mesh.material.color.setHex(erasing?0xffaaaa:0xffffff);
     if(a.type==='bpc-playback')mesh.material.color.setHex(bpcMotion?.playing?0x79f4ae:0xffffff);
     if(a.type==='openblue-toggle')mesh.material.color.setHex(openBluePreview?.group.visible?0x79f4ae:0xffffff);
+    if(a.type==='work-grid')mesh.material.color.setHex(workshop.grid?0xffda87:0xffffff);
     if(a.type==='air-style')mesh.material.color.setHex(airStyle===a.value?0xff82d4:0xffffff);
     if(a.type==='air-mirror')mesh.material.color.setHex(airMirror?0xff82d4:0xffffff);
   }
@@ -291,18 +338,26 @@ const controllers=[0,1].map(i=>{
 });
 function startXR(c,index){
   if(xrInteractions.has(index))return;
-  const ray=controllerRay(c),tool=ray.intersectObjects(controls3d,false)[0],boardHit=hitBoard(ray);
-  if(tool&&(!boardHit||tool.distance<boardHit.hit.distance)){
+  const ray=controllerRay(c),tool=ray.intersectObjects(controls3d,false)[0],boardHit=hitBoard(ray),workHit=workshop.hit(ray);
+  if(tool&&(!boardHit||tool.distance<boardHit.hit.distance)&&(!workHit||tool.distance<workHit.hit.distance)){
     const a=tool.object.userData.action;
     if(a.type==='mode')setMode(a.value);
     if(a.type==='erase')toggleEraser();
     if(a.type==='bpc-playback')toggleBpcPlayback();
     if(a.type==='openblue-toggle')toggleOpenBluePreview();
+    if(a.type==='work-add')addWorkshopShape(a.value,controllerTip(c));
+    if(a.type==='work-grid')cycleWorkshopGrid();
+    if(a.type==='work-undo'){try{workshop.undo();}catch(e){message(e.message);}}
+    if(a.type==='work-save'){if(workshop.save())message('Workshop assembly saved locally.');}
     if(a.type==='air-style')setAirStyle(a.value);
     if(a.type==='air-mirror')toggleAirMirror();
     if(a.type==='air-undo')brushStudio.undo();
     if(a.type==='air-save'){brushStudio.save();message('Spatial sketch saved on this headset.');}
     if(a.type==='color'){$('#brushColor').value=a.value;$('#colorValue').textContent=a.value.toUpperCase();erasing=false;$('#eraser').textContent='◌ Eraser: OFF';$('#eraser').setAttribute('aria-pressed','false');updateToolColors();}
+    return;
+  }
+  if(mode.startsWith('work-')){
+    if(workshop.beginController(index,c,ray,mode.slice(5)))xrInteractions.set(index,{kind:'workshop'});
     return;
   }
   if(mode==='airbrush'){
@@ -320,6 +375,7 @@ function startXR(c,index){
 function endXR(index){
   const state=xrInteractions.get(index);if(!state)return;
   if(state.kind==='airbrush')brushStudio.end(index);
+  if(state.kind==='workshop')workshop.finish(index);
   if(state.kind==='move'||state.kind==='rotate')scene.attach(state.render.group);
   xrInteractions.delete(index);persist();
 }
@@ -331,6 +387,7 @@ function updateXR(){
     item.laser.scale.z=mode==='airbrush'&&!tool? .16 :Math.max(.08,Math.min(tool?.distance??6,hit?.hit?.distance??6,6));
     const state=xrInteractions.get(index);if(!state)continue;
     if(state.kind==='airbrush'){brushStudio.extend(index,controllerTip(item.controller));continue;}
+    if(state.kind==='workshop'){workshop.updateController(index);continue;}
     if(state.kind==='draw'&&hit?.board?.id===state.board.id)continueStroke(state.board,state.stroke,uv(hit.hit.uv));
     if(state.kind==='scale'){
       const p=new THREE.Vector3().setFromMatrixPosition(state.controller.matrixWorld);
