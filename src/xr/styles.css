@@ -16,3 +16,16 @@
 .air-tools .air-danger{color:#ffc1c1;border-color:#75404e;background:#361c2e}
 .air-intro{font-size:11px;color:#d2bedd;line-height:1.55;margin:5px 0 15px}
 .air-tools .help{margin-top:10px}
+
+/* Local file-based links to FramefieldStudio and OpenBlueprintStudio. */
+.workshop-links{margin-top:25px;padding:12px;background:#101c30;border:1px solid #37536b;border-radius:13px}
+.workshop-links h2{margin:8px 0 12px;color:#b6e4ff}
+.workshop-links h2 span{color:#91c8e8}
+.workshop-copy{margin:10px 0;color:#b5cce2;font-size:11px;line-height:1.55}
+.studio-link{min-height:42px;display:grid;place-items:center;text-align:center;text-decoration:none;
+font-size:11px;font-weight:650;padding:8px;border-radius:9px;color:#deffff;
+background:#183348;border:1px solid #486a85}
+.studio-link:hover{background:#23506b;border-color:#88e0ff}
+.cad-dimensions{font-size:10px;line-height:1.4;display:grid;place-items:center;color:#acd6e5;text-align:center}
+.workshop-links .help{margin-top:12px}
+.workshop-links button:disabled{opacity:.46;cursor:not-allowed}

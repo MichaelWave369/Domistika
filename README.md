@@ -1,3 +1,7 @@
+## Domistika XR · Connected 3D Workbench v0.1
+
+The [XR studio](https://michaelwave369.github.io/Domistika/xr.html) now connects the existing [FramefieldStudio](https://michaelwave369.github.io/FramefieldStudio/) **Export BPC XR** animated mesh preview and a new read-only [OpenBlueprintStudio](https://michaelwave369.github.io/OpenBlueprintStudio/) **Export JSON** architectural plan preview, alongside free-air painting. Both imports are explicit local files; neither replaces the original source scene. See [the contract and Quest playtest guide](docs/XR_CONNECTED_WORKBENCH_V01.md).
+
 ## Domistika XR · Air Brush Studio v0.1
 
 [Paint in free air in Domistika XR](https://michaelwave369.github.io/Domistika/xr.html) with original neon, ribbon, and spark brushes, mirrored 3D strokes, independent local JSON backups, and GLB export. The existing 2D canvas studio and BPC preview remain in place. **Quest 3 controller/hardware testing is still pending.** See [Air Brush Studio Guide](docs/DOMISTIKA_XR_AIR_BRUSH_V01.md).

@@ -5,6 +5,8 @@ import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { MAX_BOARDS, MAX_STROKES, makeBoard, makeScene, newStroke, extendStroke, readScene, writeScene } from './model.js';
 import {readBpcFramefieldPreview, sampleFramefieldPose, FRAMEFIELD_EULER_ORDER, BPC_PREVIEW_MAX_BYTES} from './framefieldPreview.js';
 import {createBrushStudio} from './brushStudio.js';
+import {parseOpenBluePreview,OPENBLUE_MAX_BYTES} from './openblueModel.js';
+import {buildOpenBluePreview} from './openbluePreview.js';
 import './styles.css';
 
 const $ = (s) => document.querySelector(s);
@@ -18,6 +20,7 @@ const scene=new THREE.Scene();
 // Read-only BPC objects are deliberately outside sceneData and its localStorage schema.
 const bpcMeshRoot=new THREE.Group();
 scene.add(bpcMeshRoot);
+let openBluePreview=null;
 let bpcMotion=null,bpcLastTick=null; // Ephemeral, never serialized into the XR canvas project.
 const bgColor=0x091125;
 scene.background=new THREE.Color(bgColor);
@@ -207,7 +210,7 @@ window.addEventListener('blur',()=>{if(pointerState){if(pointerState.kind==='air
 
 // An actual 3D toolbar, not an HTML overlay that disappears inside XR.
 const toolPanel=new THREE.Group();toolPanel.position.set(1.8,1.65,-1.25);toolPanel.rotation.y=-.3;scene.add(toolPanel);
-const backing=new THREE.Mesh(new THREE.PlaneGeometry(.93,1.85),new THREE.MeshBasicMaterial({color:0x102238,side:THREE.DoubleSide}));
+const backing=new THREE.Mesh(new THREE.PlaneGeometry(.93,2.15),new THREE.MeshBasicMaterial({color:0x102238,side:THREE.DoubleSide}));
 backing.position.z=-.01;toolPanel.add(backing);
 const controls3d=[];
 const headingTex=textTexture('XR TOOL DECK');
@@ -229,6 +232,8 @@ const bpcControlTex=textTexture('BPC ANIMATION');
 const bpcControl=new THREE.Mesh(new THREE.PlaneGeometry(.75,.16),new THREE.MeshBasicMaterial({map:bpcControlTex,side:THREE.DoubleSide}));
 bpcControl.position.set(0,-.79,.025);bpcControl.userData.action={type:'bpc-playback'};
 toolPanel.add(bpcControl);controls3d.push(bpcControl);
+const cadToggle=new THREE.Mesh(new THREE.PlaneGeometry(.75,.16),new THREE.MeshBasicMaterial({map:textTexture('SHOW / HIDE CAD'),side:THREE.DoubleSide}));
+cadToggle.position.set(0,-.98,.025);cadToggle.userData.action={type:'openblue-toggle'};toolPanel.add(cadToggle);controls3d.push(cadToggle);
 // Open-air painting deck lives in VR, not in a desktop-only overlay.
 const airDeck=new THREE.Group();airDeck.position.set(-1.8,1.65,-1.25);airDeck.rotation.y=.3;scene.add(airDeck);
 const airBacking=new THREE.Mesh(new THREE.PlaneGeometry(.96,2.05),
@@ -256,6 +261,7 @@ function updateToolColors(){
     if(a.type==='mode')mesh.material.color.setHex(a.value===mode?0x7ef7e7:0xffffff);
     if(a.type==='erase')mesh.material.color.setHex(erasing?0xffaaaa:0xffffff);
     if(a.type==='bpc-playback')mesh.material.color.setHex(bpcMotion?.playing?0x79f4ae:0xffffff);
+    if(a.type==='openblue-toggle')mesh.material.color.setHex(openBluePreview?.group.visible?0x79f4ae:0xffffff);
     if(a.type==='air-style')mesh.material.color.setHex(airStyle===a.value?0xff82d4:0xffffff);
     if(a.type==='air-mirror')mesh.material.color.setHex(airMirror?0xff82d4:0xffffff);
   }
@@ -291,6 +297,7 @@ function startXR(c,index){
     if(a.type==='mode')setMode(a.value);
     if(a.type==='erase')toggleEraser();
     if(a.type==='bpc-playback')toggleBpcPlayback();
+    if(a.type==='openblue-toggle')toggleOpenBluePreview();
     if(a.type==='air-style')setAirStyle(a.value);
     if(a.type==='air-mirror')toggleAirMirror();
     if(a.type==='air-undo')brushStudio.undo();
@@ -553,6 +560,55 @@ $('#bpcPreviewFile').addEventListener('change',async event=>{
     message('BPC imported '+preview.assets.length+' read-only mesh(es). Scrub or play Framefield transform keyframes; not saved in XR scene.');
   }catch(error){message('BPC preview rejected: '+error.message);}
 });
+
+// OpenBlueprint Studio uses its own project schema and is NEVER merged into 2D canvas or 3D stroke backups.
+function updateOpenBlueControls(){
+  const loaded=!!openBluePreview;
+  $('#openblueCount').textContent=loaded?
+    openBluePreview.summary.walls+' walls · '+openBluePreview.summary.symbols+' symbols':'None loaded';
+  $('#openblueVisibility').disabled=!loaded;
+  $('#openblueVisibility').textContent=!loaded?'Show / hide CAD':openBluePreview.group.visible?'Hide CAD preview':'Show CAD preview';
+  $('#openblueScale').textContent=!loaded?'No CAD plan loaded':
+    openBluePreview.summary.width+' × '+openBluePreview.summary.depth+' '+openBluePreview.summary.units+
+    (openBluePreview.summary.notOneToOne?' · fit-to-view scaled':' · 1:1 visual units');
+  updateToolColors();
+}
+function toggleOpenBluePreview(){
+  if(!openBluePreview){message('Load an OpenBlueprint project JSON before toggling CAD.');return;}
+  openBluePreview.group.visible=!openBluePreview.group.visible;
+  updateOpenBlueControls();
+  message(openBluePreview.group.visible?'OpenBlue plan shown. Visual preview only.':'OpenBlue plan hidden. Your strokes remain intact.');
+}
+function clearOpenBluePreview(){
+  if(openBluePreview){
+    scene.remove(openBluePreview.group);openBluePreview.dispose();openBluePreview=null;
+  }
+  updateOpenBlueControls();
+}
+$('#openblueLoad').addEventListener('click',()=>$('#openblueFile').click());
+$('#openblueFile').addEventListener('change',async e=>{
+  const file=e.target.files?.[0];e.target.value='';if(!file)return;
+  let candidate=null;
+  try{
+    if(file.size>OPENBLUE_MAX_BYTES)throw Error('Project exceeds 2 MB preview limit.');
+    const plan=parseOpenBluePreview(await file.text());
+    candidate=buildOpenBluePreview(plan); // build completely before touching prior preview
+    const old=openBluePreview;
+    openBluePreview=candidate;
+    scene.add(candidate.group);
+    candidate=null;
+    if(old){scene.remove(old.group);old.dispose();}
+    updateOpenBlueControls();
+    message('OpenBlue plan preview loaded: '+plan.walls.length+' walls, '+plan.symbols.length+
+      ' symbols. '+(openBluePreview.summary.notOneToOne?'Scaled to fit XR. ':'')+'Read-only; source untouched.');
+  }catch(error){
+    candidate?.dispose();
+    message('OpenBlue preview rejected: '+error.message);
+  }
+});
+$('#openblueClear').addEventListener('click',()=>{clearOpenBluePreview();message('OpenBlue plan preview cleared; art and other projects untouched.');});
+$('#openblueVisibility').addEventListener('click',toggleOpenBluePreview);
+updateOpenBlueControls();
 
 $('#downloadPng').addEventListener('click',()=>{
   const r=renderedBoards.get(selectedId),b=selected();if(!r||!b)return;
