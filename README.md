@@ -1,3 +1,7 @@
+## Domistika XR · Beat Forge v0.7
+
+Music-responsive sculpture now has **independent Bass, Mids, Highs, and transient Beat channels**. Choose each editable object's response band in Motion Forge, or cycle with **BAND FX** in the Quest in-world deck. Rhythm Forge displays three local spectrum meters and bass pulse detection. Existing local file-only operation remains; no microphone, cloud upload, BPM or exact beat-grid claim. Older project JSON defaults to Full energy; exported GLB still contains static rest poses. [Beat Forge acceptance and limitations](docs/XR_BEAT_FORGE_V07.md).
+
 ## Domistika XR · Rhythm Forge v0.6
 
 Bring your own local track into the [Spatial Workshop](https://michaelwave369.github.io/Domistika/xr.html). **Rhythm Forge** uses browser-native Web Audio spectrum analysis to make existing Motion Forge spins, bobs, orbits and pulses respond to bass/energy. Files remain local and ephemeral, with no microphone, uploads, network audio, or file storage. Quest has RHYTHM PLAY/STOP controls once a track is selected in the sidebar. Workshop JSON stores only the author's original object motion settings, never sound; GLB stays a static rest-pose export. Physical Quest audio and gesture acceptance remains pending. [v0.6 playtest and feature boundaries](docs/XR_RHYTHM_FORGE_V06.md).
