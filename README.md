@@ -1,3 +1,7 @@
+## Domistika XR · Air Brush Studio v0.1
+
+[Paint in free air in Domistika XR](https://michaelwave369.github.io/Domistika/xr.html) with original neon, ribbon, and spark brushes, mirrored 3D strokes, independent local JSON backups, and GLB export. The existing 2D canvas studio and BPC preview remain in place. **Quest 3 controller/hardware testing is still pending.** See [Air Brush Studio Guide](docs/DOMISTIKA_XR_AIR_BRUSH_V01.md).
+
 ## Silicon Louvre Creative Handoff Receiver v1
 
 Domistika can now **receive** a 5-minute browser-local SVG handoff from the museum's Creative Studio at `https://michaelwave369.github.io/SiliconLouvre/` using the matching sender release.
