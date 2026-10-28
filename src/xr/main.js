@@ -9,6 +9,7 @@ import {parseOpenBluePreview,OPENBLUE_MAX_BYTES} from './openblueModel.js';
 import {buildOpenBluePreview} from './openbluePreview.js';
 import {createWorkshop} from './workshopRuntime.js';
 import {createLocalRhythm} from './rhythmForge.js';
+import {SHOW_PRESETS,sampleShowDemo} from './showForge.js';
 import {LIGHT_PALETTES} from './lightForge.js';
 import {WORKSHOP_PAGE_SIZE,workshopPageCount,wrapWorkshopPage} from './workshopDeck.js';
 import './styles.css';
@@ -381,7 +382,11 @@ const workActions=[
   ['RHYTHM STOP',{type:'rhythm-stop'}],
   ['BAND FX',{type:'work-band-cycle'}],
   ['LIGHT ON/OFF',{type:'work-light-toggle'}],
-  ['PALETTE',{type:'work-light-palette'}]
+  ['PALETTE',{type:'work-light-palette'}],
+  ['STAGE BLOOM',{type:'work-show-add',value:'orbit-bloom'}],
+  ['STAGE CORRIDOR',{type:'work-show-add',value:'neon-corridor'}],
+  ['DEMO ON',{type:'work-show-demo'}],
+  ['DEMO OFF',{type:'work-show-stop'}]
 ];
 const workButtons=[];
 for(const [i,[label,action]] of workActions.entries()){
@@ -454,8 +459,51 @@ function cycleWorkshopMotion(){
     message(mode==='none'?'Selected object now still.':'Selected object motion: '+mode.toUpperCase()+'. Press PLAY / STOP to preview.');
   }catch(e){message('Motion effect rejected: '+e.message);}
 }
+let showDemoActive=false,showDemoClock=0,showPrevLight=null;
+function syncShowUI(){
+  $('#showDemoStart').disabled=showDemoActive;
+  $('#showDemoStop').disabled=!showDemoActive;
+  $('#showStatus').textContent=showDemoActive?
+    'Silent visual demo playing. No music output or external file is needed.':
+    'No visual demo running.';
+}
+function stopShowDemo(){
+  if(!showDemoActive)return false;
+  showDemoActive=false;showDemoClock=0;workshop.stopMotion();
+  if(showPrevLight)workshop.setLightSettings(showPrevLight);
+  showPrevLight=null;syncShowUI();syncLightUI();updateToolColors();
+  return true;
+}
+function startShowDemo(){
+  try{
+    if(showDemoActive)return;
+    if(!workshop.hasMotion)throw Error('Add a Show Forge stage or assign a motion effect first.');
+    rhythm.pause();
+    if(workshop.motionPlaying)workshop.stopMotion();
+    showPrevLight=workshop.lightSettings;
+    workshop.setLightSettings({...showPrevLight,enabled:true});
+    workshop.toggleMotion();
+    showDemoClock=0;showDemoActive=true;
+    syncShowUI();syncLightUI();updateToolColors();
+    message('Silent visual demo playing. Load a local music track for actual audio.');
+  }catch(error){
+    workshop.stopMotion();
+    if(showPrevLight)workshop.setLightSettings(showPrevLight);
+    showPrevLight=null;showDemoActive=false;syncShowUI();syncLightUI();
+    message('Show demo rejected: '+error.message);
+  }
+}
+function addShowStage(preset){
+  try{
+    if(stopShowDemo())message('Demo reset before editing the stage.');
+    const n=workshop.addShowPreset(preset);
+    setMode('work-move');
+    message(SHOW_PRESETS[preset].name+' added '+n+' independent editable sculptures. Undo removes the stage together.');
+  }catch(error){message('Stage rejected; existing scene unchanged: '+error.message);}
+}
 function playRhythm(){
   try{
+    if(showDemoActive)stopShowDemo();
     if(!rhythm.loaded)throw Error('Choose a local audio track in the sidebar before entering VR.');
     if(!workshop.hasMotion)throw Error('Assign a Motion Forge effect to a workshop object first.');
     if(!workshop.motionPlaying)workshop.toggleMotion();
@@ -470,6 +518,7 @@ function playRhythm(){
   }catch(error){message('Rhythm Forge: '+error.message);}
 }
 function stopRhythm(){
+  if(showDemoActive)stopShowDemo();
   rhythm.pause();workshop.stopMotion();
   $('#rhythmMeter').value=0;$('#rhythmLevel').textContent='0%';
   for(const [id,output] of [['beatBass','beatBassValue'],['beatMid','beatMidValue'],['beatHigh','beatHighValue']]){
@@ -479,10 +528,11 @@ function stopRhythm(){
   updateToolColors();message('Local track paused, all objects restored to their rest poses.');
 }
 function toggleWorkshopMotion(){
-  try{const playing=workshop.toggleMotion();message(playing?'Motion preview playing. Geometry and rest poses unchanged.':'Motion stopped and all objects reset to rest poses.');}
+  try{
+    if(showDemoActive){stopShowDemo();message('Silent demo stopped.');return;}const playing=workshop.toggleMotion();message(playing?'Motion preview playing. Geometry and rest poses unchanged.':'Motion stopped and all objects reset to rest poses.');}
   catch(e){message('Motion preview rejected: '+e.message);}
 }
-function resetWorkshopMotion(){if(rhythm.playing)rhythm.pause();workshop.stopMotion();message('Motion stopped and rest poses restored.');}
+function resetWorkshopMotion(){if(showDemoActive)stopShowDemo();if(rhythm.playing)rhythm.pause();workshop.stopMotion();message('Motion stopped and rest poses restored.');}
 function addWorkshopShape(kind,position=[0,1.5,-2]){
   try{workshop.add(kind,ink(),position);setMode('work-move');message(kind.toUpperCase()+' created. Point at it and hold trigger to move.');}
   catch(e){message('Workshop create rejected: '+e.message);}
@@ -579,6 +629,9 @@ function startXR(c,index){
     if(a.type==='work-page')changeWorkPage(a.delta);
     if(a.type==='work-light-toggle')toggleLight();
     if(a.type==='work-light-palette')nextLightPalette();
+    if(a.type==='work-show-add')addShowStage(a.value);
+    if(a.type==='work-show-demo')startShowDemo();
+    if(a.type==='work-show-stop')stopShowDemo();
     if(a.type==='air-style')setAirStyle(a.value);
     if(a.type==='air-mirror')toggleAirMirror();
     if(a.type==='air-undo')brushStudio.undo();
@@ -688,6 +741,11 @@ $('#redo').addEventListener('click',redo);
 $('#gallery').addEventListener('click',gallery);
 $('#save').addEventListener('click',()=>{persist();brushStudio.save();});
 $('#workshopAdd').addEventListener('click',()=>addWorkshopShape($('#workshopShape').value));
+$('#showBuild').addEventListener('click',()=>addShowStage($('#showPreset').value));
+$('#showDemoStart').addEventListener('click',startShowDemo);
+$('#showDemoStop').addEventListener('click',()=>{
+  if(stopShowDemo())message('Visual demo stopped, previous glow setting restored.');
+});
 $('#workshopObjects').addEventListener('change',e=>workshop.select(e.target.value));
 $('#workshopDuplicate').addEventListener('click',()=>duplicateWorkshop());
 $('#patternLinear').addEventListener('click',()=>applyPattern('linear',{
@@ -1086,6 +1144,7 @@ renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
 renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
   for(const i of [...xrInteractions.keys()])endXR(i);
   brushStudio.finishAll();
+  stopShowDemo();
   rhythm.pause();
   workshop.stopMotion();
   workshop.save();
@@ -1097,15 +1156,17 @@ function resize(){
   renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
 }
 window.addEventListener('resize',resize);new ResizeObserver(resize).observe($('#render-root'));
-resize();updateToolColors();syncLightUI();
+resize();updateToolColors();syncLightUI();syncShowUI();
 syncBpcPlaybackUI();
 let lastMotionFrame=null,lastRhythmBucket=-1;
-document.addEventListener('visibilitychange',()=>{if(document.hidden){rhythm.pause();workshop.stopMotion();lastMotionFrame=null;}});
-window.addEventListener('pagehide',()=>{rhythm.clear();workshop.stopMotion();});
+document.addEventListener('visibilitychange',()=>{if(document.hidden){stopShowDemo();rhythm.pause();workshop.stopMotion();lastMotionFrame=null;}});
+window.addEventListener('pagehide',()=>{stopShowDemo();rhythm.clear();workshop.stopMotion();});
 renderer.setAnimationLoop(timeMs=>{
   const seconds=lastMotionFrame===null?0:Math.max(0,(timeMs-lastMotionFrame)/1000);
   lastMotionFrame=timeMs;
-  const frame=rhythm.sampleFrame();
+  if(showDemoActive&&!workshop.motionPlaying)stopShowDemo();
+  if(showDemoActive)showDemoClock+=Math.min(seconds,.1);
+  const frame=showDemoActive?sampleShowDemo(showDemoClock):rhythm.sampleFrame();
   const energy=frame.energy;
   workshop.tickMotion(seconds,frame);
   const bucket=Math.floor(timeMs/100);
@@ -1117,7 +1178,8 @@ renderer.setAnimationLoop(timeMs=>{
       $('#'+id).value=Math.round(frame[name]*100);
       $('#'+output).textContent=Math.round(frame[name]*100)+'%';
     }
-    $('#beatPulse').textContent=frame.beat>.6?'BASS ATTACK DETECTED':'Listening for the next bass transient';
+    $('#beatPulse').textContent=showDemoActive?'SILENT DEMO · SYNTHETIC PULSE':
+      frame.beat>.6?'BASS ATTACK DETECTED':'Listening for the next bass transient';
   }
   updateBpcPlayback(timeMs);
   if(renderer.xr.isPresenting)updateXR();else controls.update();renderer.render(scene,camera);

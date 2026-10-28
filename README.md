@@ -1,3 +1,7 @@
+## Domistika XR · Show Forge v0.9
+
+The [Domistika XR workshop](https://michaelwave369.github.io/Domistika/xr.html) now has **one-click stage installations**: Orbit Bloom, Neon Corridor and Bass Cathedral. The generated pieces are independent and editable with per-object Motion Forge and Beat Forge settings. **Start silent visual demo** to preview animated lighting with an internally generated, soundless signal, without loading an audio file. Quest controls include stage shortcuts and DEMO ON / DEMO OFF on the existing paged workshop deck. Stage creation is one atomic undo step. Saved JSON contains only the editable objects and motions, while GLB keeps static rest-pose materials. No microphone, upload or new authoring schema. [v0.9 test and Quest acceptance guide](docs/XR_SHOW_FORGE_V09.md).
+
 ## Domistika XR · Light Forge v0.8
 
 The [immersive workshop](https://michaelwave369.github.io/Domistika/xr.html) now supports opt-in **audio-reactive emissive glow** with Outrun, Aurora, Ember and Ice palettes, bounded intensity and smooth transitions. Workshop objects keep their source colors and original rest poses; no real spotlights, strobes, or microphone recording. The Quest floating workshop menu is finally **paginated** into three smaller two-column pages with permanent NEXT/PREV actions and safe hit-testing. JSON exports preserve authoring data, and GLB exports use static rest-pose materials with no preview glow. [Read v0.8 acceptance, limitations and Quest checklist](docs/XR_LIGHT_FORGE_V08.md).
