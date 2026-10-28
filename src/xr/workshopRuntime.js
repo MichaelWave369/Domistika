@@ -3,6 +3,7 @@ import {GLTFExporter} from 'three/addons/exporters/GLTFExporter.js';
 import {emptyWorkshop,createWorkshopObject,createWorkshopMesh,validateWorkshop,readWorkshop,writeWorkshop,withTransform,snapPosition,snapAngle,WORKSHOP_STORE_KEY,WORKSHOP_MAX_OBJECTS} from './workshopModel.js';
 import {duplicateObject,measureObjectCenters} from './objectLab.js';
 import {linearPattern,radialPattern,alignObjectCenter} from './patternForge.js';
+import {sampleMotion,validateMotion,defaultMotion} from './motionForge.js';
 
 const clamp=THREE.MathUtils.clamp;
 function shapeGeometry(o){
@@ -49,10 +50,11 @@ function mirroredGeometry(geometry){
   return geometry;
 }
 const rotationFromMesh=mesh=>[mesh.rotation.x,mesh.rotation.y,mesh.rotation.z];
-export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=()=>{},onChange=()=>{},paintRoot=()=>null}){
+export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=()=>{},onChange=()=>{},onMotion=()=>{},paintRoot=()=>null}){
   const root=new THREE.Group();root.name='Editable Domistika XR Workshop assembly';
   scene.add(root);
   let data=emptyWorkshop(),selectedId=null,gridStep=.25,angleStep=15;
+  let motionPlaying=false,motionSeconds=0;
   const meshes=new Map(),active=new Map();
   let selectionBox=null,measurementPair=null,pendingMeasureId=null;
   const ruler=new THREE.Group();ruler.name='Workshop measurement overlay (not part of export)';scene.add(ruler);
@@ -115,7 +117,64 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     root.add(mesh);meshes.set(o.id,mesh);
     return mesh;
   }
+  function drawPose(time=motionSeconds){
+    for(const item of data.objects){
+      const mesh=meshes.get(item.id);if(!mesh)continue;
+      const pose=sampleMotion(item,time);
+      mesh.position.fromArray(pose.position);
+      mesh.rotation.set(...pose.rotation);
+      mesh.scale.fromArray(pose.scale);
+    }
+    if(selectionBox)selectionBox.update();
+  }
+  function stopMotion(){
+    motionPlaying=false;motionSeconds=0;
+    drawPose(0);ruler.visible=true;onMotion({playing:false,time:0});
+  }
+  function previewMotion(seconds){
+    if(active.size)throw Error('Release the trigger before previewing motion.');
+    if(typeof seconds!=='number'||!Number.isFinite(seconds)||seconds<0||seconds>60)
+      throw Error('Motion preview time must be 0..60 seconds.');
+    motionPlaying=false;motionSeconds=seconds;
+    drawPose(seconds);ruler.visible=!seconds;
+    onMotion({playing:false,time:seconds});
+  }
+  function toggleMotion(){
+    if(active.size)throw Error('Release a held object before playback.');
+    if(motionPlaying){stopMotion();return false;}
+    if(!data.objects.some(o=>o.motion&&o.motion.mode!=='none'))
+      throw Error('Assign a motion effect to a workshop object first.');
+    motionPlaying=true;ruler.visible=false;
+    onMotion({playing:true,time:motionSeconds});
+    return true;
+  }
+  function tickMotion(deltaSeconds){
+    if(!motionPlaying)return;
+    if(typeof deltaSeconds!=='number'||!Number.isFinite(deltaSeconds)||deltaSeconds<0)
+      throw Error('Invalid motion frame delta.');
+    motionSeconds=(motionSeconds+Math.min(deltaSeconds,.1))%60;
+    drawPose(motionSeconds);
+    onMotion({playing:true,time:motionSeconds});
+  }
+  function setSelectedMotion(settings){
+    if(active.size)throw Error('Release held objects before changing motion.');
+    const item=get(selectedId);
+    if(!item)throw Error('Select an editable workshop object first.');
+    const motion=validateMotion(settings);
+    // Authoring remains an ordinary undoable property of THIS workshop copy.
+    patchSelected({motion});
+  }
+  function cycleSelectedMotion(){
+    const item=get(selectedId);
+    if(!item)throw Error('Select an editable workshop object first.');
+    const choices=['none','spin','bob','orbit','pulse'];
+    const current=item.motion?.mode??'none';
+    const next=choices[(choices.indexOf(current)+1)%choices.length];
+    setSelectedMotion(next==='none'?null:{...defaultMotion(),mode:next});
+    return next;
+  }
   function rebuild(){
+    motionPlaying=false;motionSeconds=0;ruler.visible=true;onMotion({playing:false,time:0});
     if(active.size)throw Error('Release the controller trigger first.');
     if(selectionBox){scene.remove(selectionBox);selectionBox.geometry.dispose();selectionBox.material.dispose();selectionBox=null;}
     for(const mesh of meshes.values()){root.remove(mesh);disposeMesh(mesh);}
@@ -132,7 +191,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
   catch(error){onStatus('Workshop save was invalid, started empty: '+error.message);}
   rebuild();
   function snapshot(){history.push(writeWorkshop(data));if(history.length>25)history.shift();future.length=0;}
-  function select(id){selectedId=meshes.has(id)?id:null;selection();notify();}
+  function select(id){if(motionPlaying||motionSeconds)stopMotion();selectedId=meshes.has(id)?id:null;selection();notify();}
   function setMeasurement(a,b){
     if(active.size)throw Error('Release held objects before measuring.');
     if(!get(a)||!get(b)||a===b)throw Error('Choose two different workshop objects.');
@@ -247,6 +306,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     return intersection?{hit:intersection,id:intersection.object.userData.workshopId}:null;
   }
   function beginController(key,controller,raycaster,tool){
+    if(motionPlaying||motionSeconds)stopMotion();
     if(active.has(key)||[...active.values()].some(s=>s.mode&&s.id===selectedId))return false;
     const found=hit(raycaster);if(!found)return false;
     const id=found.id;
@@ -280,6 +340,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     state.dirty=true;if(selectionBox)selectionBox.update();
   }
   function beginMouse(key,raycaster,camera,tool,point){
+    if(motionPlaying||motionSeconds)stopMotion();
     if(active.size)return false;
     const found=hit(raycaster);if(!found)return false;
     const id=found.id;select(id);
@@ -360,7 +421,13 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     if(active.size)throw Error('Release the trigger before GLB export.');
     if(!data.objects.length)throw Error('Add a workshop object first.');
     const assembly=new THREE.Group();
-    const copy=root.clone(true);assembly.add(copy);
+    const copy=root.clone(true);
+    // Export canonical rest-pose transforms, NOT whatever motion frame is playing.
+    for(const mesh of copy.children){
+      const item=get(mesh.userData.workshopId);
+      if(item){mesh.position.fromArray(item.position);mesh.rotation.set(...item.rotation);mesh.scale.fromArray(item.scale);}
+    }
+    assembly.add(copy);
     // Include independent air-brush strokes as a visual copy, not in the workshop editable JSON.
     const paint=paintRoot();
     if(paint)assembly.add(paint.clone(true));
@@ -372,9 +439,11 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     get meshes(){return meshes;},get active(){return active.size>0;},
     setSnap(step,degrees){gridStep=step;angleStep=degrees;notify();},
     get measure(){return measureInfo;},get pendingMeasureId(){return pendingMeasureId;},
+    get motionPlaying(){return motionPlaying;},get motionSeconds(){return motionSeconds;},
     add,select,insert,hit,beginController,updateController,beginMouse,updateMouse,finish,
     promoteFramefield,promoteCad,patchSelected,removeSelected,duplicateSelected,setSelectedAppearance,
     appendMany,patternSelected,alignSelected,floorSelected,
+    setSelectedMotion,cycleSelectedMotion,toggleMotion,stopMotion,previewMotion,tickMotion,
     setMeasurement,clearMeasurement,measurePick,undo,redo,clear,save,importJson,
     exportJson:()=>writeWorkshop(data),exportGLB};
 }
