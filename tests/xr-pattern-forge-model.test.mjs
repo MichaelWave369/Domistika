@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import {createWorkshopObject,createWorkshopMesh,validateWorkshop,emptyWorkshop,readWorkshop,writeWorkshop} from '../src/xr/workshopModel.js';
 import {linearPattern,radialPattern,alignObjectCenter} from '../src/xr/patternForge.js';
-test('linear array copies are separate, evenly spaced objects and don't mutate source',()=>{
+test('linear array copies are separate, evenly spaced objects and do not mutate source',()=>{
   const src=createWorkshopObject('box','#88aaff',[1,1,-2]);src.dimensions=[2,.7,.5];
   const baseline=JSON.stringify(src),items=linearPattern(src,{copies:3,axis:'x',spacing:.5,snap:0});
   assert.deepEqual(items.map(o=>o.position),[[1.5,1,-2],[2,1,-2],[2.5,1,-2]]);
