@@ -50,3 +50,13 @@ background:#183348;border:1px solid #486a85}
 .workshop-numeric input{margin-top:4px}
 .workshop-tools button:hover{border-color:#ffd78c}
 .workshop-tools button[disabled],.workshop-tools input[disabled]{opacity:.48;cursor:not-allowed}
+
+/* Object Lab v0.3: accessible inventory, material editor and non-authoritative 3D ruler. */
+.workshop-tools>select{width:100%;margin:4px 0 8px}
+.workshop-tools input[type=text]{width:100%;min-width:0;color:#fff4e6;background:#142234;
+ border:1px solid #79654c;border-radius:8px;padding:10px;font:inherit;font-size:12px}
+.workshop-tools input[type=color]{width:100%;min-height:42px;cursor:pointer;border:1px solid #79654c;border-radius:8px;padding:4px}
+.workshop-tools select:focus-visible,.workshop-tools input[type=text]:focus-visible,.workshop-tools input[type=color]:focus-visible{
+ outline:2px solid #ffd891;outline-offset:3px}
+.workshop-tools #workshopDistance{font-variant-numeric:tabular-nums;line-height:1.6;color:#ffe1a9}
+.workshop-tools h2{gap:10px}

@@ -1,3 +1,7 @@
+## Domistika XR · Object Lab v0.3
+
+The [Spatial Workshop](https://michaelwave369.github.io/Domistika/xr.html) adds an editable object inventory, independent duplicate and true X-mirrored geometry copies, undoable renaming and recoloring, and a 3D in-world center-to-center distance ruler. Quest controllers use a compact two-column workshop menu. Measurements are visual annotations, not certified CAD dimensions, and are excluded from JSON/GLB exports; imported Framefield and OpenBlue sources remain read-only. [Quest playtest and contracts](docs/XR_OBJECT_LAB_V03.md).
+
 ## Domistika XR · Spatial Workshop v0.2
 
 [Open the VR Workshop](https://michaelwave369.github.io/Domistika/xr.html) to make cubes, spheres, cylinders, toruses and knots, grab/rotate/scale with Quest controllers, snap to a meter grid, set exact measurements, and export a separate editable JSON assembly or combined GLB with spatial paintings. Operator-approved copies of Framefield BPC mesh previews and OpenBlueprint CAD walls can become independent workshop objects; **original projects and preview-only assets remain untouched**. Hardware acceptance for this upgrade is pending. See [Spatial Workshop v0.2 guide](docs/XR_SPATIAL_WORKSHOP_V02.md).
