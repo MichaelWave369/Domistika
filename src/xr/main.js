@@ -169,6 +169,9 @@ function refreshWorkshopSelection(item){
   }
   $('#workshopSize').disabled=!item;
   $('#workshopSize').value=item?Number(item.scale[0].toFixed(4)):'';
+  for(const [id,i] of [['workshopDimX',0],['workshopDimY',1],['workshopDimZ',2]]){
+    const input=$('#'+id);input.disabled=!item||item.kind==='mesh';input.value=item?Number(item.dimensions[i].toFixed(4)):'';
+  }
 }
 function setMode(next){
   mode=next;$('#modeName').textContent='/ '+next.toUpperCase();
@@ -471,7 +474,8 @@ $('#workshopApply').addEventListener('click',()=>{
   try{
     const position=['workshopX','workshopY','workshopZ'].map(id=>Number($('#'+id).value));
     const scalar=Number($('#workshopSize').value);
-    workshop.patchSelected({position,scale:[scalar,scalar,scalar]});
+    const dimensions=['workshopDimX','workshopDimY','workshopDimZ'].map(id=>Number($('#'+id).value));
+    workshop.patchSelected({position,scale:[scalar,scalar,scalar],...(workshop.selected?.kind!=='mesh'?{dimensions}:{})});
     message('Exact transform applied in meters. Workshop data saved.');
   }catch(e){message('Exact transform rejected: '+e.message);}
 });
