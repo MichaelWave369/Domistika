@@ -1,3 +1,7 @@
+## Domistika XR · Motion Forge v0.5
+
+Animate editable 3D workshop objects with **Spin, Bob, Orbit, or Pulse** visual effects. Set speed/amplitude/phase, preview in desktop or Quest VR, scrub a timeline, and reset instantly to the saved rest poses. Motion settings live in backward-compatible `domistika.xr.workshop.v1` JSON; GLB exports remain **static rest-pose geometry**. Existing OpenBlueprint CAD and Framefield BPC previews remain protected and unmodified. No live music or microphone integration is claimed. [Test plan and capability boundaries](docs/XR_MOTION_FORGE_V05.md).
+
 ## Domistika XR · Pattern Forge v0.4
 
 The [immersive Domistika workshop](https://michaelwave369.github.io/Domistika/xr.html) now has **linear arrays** and **radial rings** of independent editable objects, origin alignment between workshop objects, and transformed-mesh **floor contact**. All repeating copies are one-step undoable and capacity-checked before applying. Quest gets LINE +3, RING +5, and TO FLOOR on the in-world tool deck. FramefieldStudio and OpenBlueprintStudio originals remain read-only. [Read the v0.4 qualification and headset playtest guide](docs/XR_PATTERN_FORGE_V04.md).
