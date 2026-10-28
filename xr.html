@@ -42,7 +42,7 @@
       <p class="help">Desktop preview: select Paint in 3D and drag anywhere in the scene. Quest: pull either trigger to paint freely in space; release to finish. Mirroring uses the room's center plane. Existing 2D canvases stay separate.</p>
     </section>
     <section class="workshop-tools" aria-label="Spatial Workshop editable objects">
-      <h2>Spatial Workshop v0.9 <span id="workshopCount">0 / 48</span></h2>
+      <h2>Spatial Workshop v1.0 <span id="workshopCount">0 / 48</span></h2>
       <p class="workshop-copy">Create 3D shapes, grab them with Quest triggers, snap transforms, and assemble alongside airbrush paintings. Source CAD/BPC previews stay read-only until you explicitly copy an object.</p>
       <div class="mode-grid" role="group" aria-label="Workshop manipulation mode">
         <button class="mode" data-mode="work-move" aria-pressed="false">✥ Grab / Move</button>
@@ -69,6 +69,33 @@
         <input id="workshopColor" type="color" value="#68e4ff" aria-label="Object material color"></div>
       <button id="workshopAppearance" class="wide">Apply name & color</button>
       <p id="workshopSelection" class="workshop-selection">No workshop object selected.</p>
+      <section class="showrunner-studio" aria-label="Showrunner v1.0 performance and portable projects">
+        <div class="showrunner-eyebrow">DOMISTIKA XR · V1.0</div>
+        <h2>Showrunner · Visual Performance</h2>
+        <p class="workshop-copy">Make a complete three-act performance from your editable stage. Play, pause, skip between acts, change palettes and intensity, and save one portable Showpack. The built-in show is silent and never uploads music or scene data.</p>
+        <label class="control-label" for="runnerTitle">SHOW TITLE</label>
+        <input id="runnerTitle" type="text" value="Enter the Field · Opening Night" maxlength="65" aria-label="Show title">
+        <label class="control-label" for="runnerCue">EDIT VISUAL ACT</label>
+        <select id="runnerCue" aria-label="Showrunner visual act selector"></select>
+        <div class="button-row"><input id="runnerCueName" type="text" maxlength="45" aria-label="Act title" placeholder="Act title">
+          <input id="runnerDuration" type="number" min="4" max="120" step="1" value="12" aria-label="Act duration seconds"></div>
+        <div class="button-row">
+          <select id="runnerPalette" aria-label="Act light palette">
+            <option value="outrun">Outrun</option><option value="aurora">Aurora</option>
+            <option value="ember">Ember</option><option value="ice">Ice</option>
+          </select>
+          <label class="control-label" for="runnerGain">GLOW <input id="runnerGain" type="number" min="0" max="1.5" step=".05" value=".55"></label>
+          <label class="control-label" for="runnerEnergy">ENERGY <input id="runnerEnergy" type="number" min=".25" max="1.5" step=".05" value=".65"></label>
+        </div>
+        <button id="runnerApply" class="wide">Save selected act settings</button>
+        <p id="runnerStatus" class="workshop-selection" role="status" aria-live="polite">Act 1 of 3 · Ready</p>
+        <progress id="runnerProgress" max="44" value="0" aria-label="Show elapsed time"></progress>
+        <div class="button-row"><button id="runnerPlay">Play silent show</button><button id="runnerPause">Pause show</button><button id="runnerReset">Stop & reset</button></div>
+        <div class="button-row"><button id="runnerPrev">Previous act</button><button id="runnerNext">Next act</button></div>
+        <div class="button-row"><button id="runnerExport">Export Showpack JSON</button><button id="runnerImport">Import Showpack JSON</button></div>
+        <input id="runnerFile" type="file" accept=".json,application/json" hidden>
+        <p class="help">The Showpack includes editable workshop objects, per-object motion/bands, and this cue sheet. It does not contain music, audio recordings, glows in progress, controller state, or imported CAD/BPC source files. Import replaces the current editable workshop after a confirmation, so export your current work first. Quest: PLAY SHOW / STOP SHOW / NEXT ACT / PREV ACT on the paged workshop deck.</p>
+      </section>
       <section class="show-forge" aria-label="One-click editable audiovisual stage presets">
         <h2>Show Forge · Instant 3D Stage</h2>
         <p class="workshop-copy">Build a complete, editable music-reactive installation in one click, then customize every object. Presets append to your existing scene and obey the normal 48-object limit.</p>
