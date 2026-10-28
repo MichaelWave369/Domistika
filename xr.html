@@ -42,7 +42,7 @@
       <p class="help">Desktop preview: select Paint in 3D and drag anywhere in the scene. Quest: pull either trigger to paint freely in space; release to finish. Mirroring uses the room's center plane. Existing 2D canvases stay separate.</p>
     </section>
     <section class="workshop-tools" aria-label="Spatial Workshop editable objects">
-      <h2>Spatial Workshop v0.3 <span id="workshopCount">0 / 48</span></h2>
+      <h2>Spatial Workshop v0.4 <span id="workshopCount">0 / 48</span></h2>
       <p class="workshop-copy">Create 3D shapes, grab them with Quest triggers, snap transforms, and assemble alongside airbrush paintings. Source CAD/BPC previews stay read-only until you explicitly copy an object.</p>
       <div class="mode-grid" role="group" aria-label="Workshop manipulation mode">
         <button class="mode" data-mode="work-move" aria-pressed="false">✥ Grab / Move</button>
@@ -69,6 +69,31 @@
         <input id="workshopColor" type="color" value="#68e4ff" aria-label="Object material color"></div>
       <button id="workshopAppearance" class="wide">Apply name & color</button>
       <p id="workshopSelection" class="workshop-selection">No workshop object selected.</p>
+      <section class="pattern-forge" aria-label="Pattern Forge procedural layout">
+        <h2>Pattern Forge · Arrays & Alignment</h2>
+        <p class="workshop-copy">Make independent repeated pieces from the selected object. Original geometry and source files remain untouched; each pattern is one undoable operation.</p>
+        <div class="button-row">
+          <label class="control-label" for="patternCopies">NEW COPIES
+            <input id="patternCopies" type="number" min="2" max="8" step="1" value="3"></label>
+          <label class="control-label" for="patternAxis">LINE DIRECTION
+            <select id="patternAxis"><option value="x">X axis</option><option value="y">Y axis</option><option value="z">Z axis</option></select></label>
+        </div>
+        <div class="button-row">
+          <label class="control-label" for="patternSpacing">LINE STEP (m)
+            <input id="patternSpacing" type="number" min=".1" max="3" step=".05" value=".75"></label>
+          <label class="control-label" for="patternRadius">RING RADIUS (m)
+            <input id="patternRadius" type="number" min=".25" max="4" step=".05" value="1.25"></label>
+        </div>
+        <div class="button-row"><button id="patternLinear">Make linear array</button><button id="patternRadial">Make radial ring</button></div>
+        <p class="help">Radial ring uses selected object as first member and makes the new copies around an XZ circle. Array output is made of separate editable objects, not instances or parent-child groups.</p>
+        <label class="control-label" for="patternAlignTarget">ALIGN TO ANOTHER OBJECT CENTER</label>
+        <select id="patternAlignTarget" aria-label="Reference object for alignment"><option value="">Choose reference object</option></select>
+        <div class="button-row"><select id="patternAlignAxis" aria-label="Axes to align">
+          <option value="x">Align X</option><option value="y">Align Y</option><option value="z">Align Z</option><option value="xz" selected>Align XZ</option><option value="xyz">Align XYZ</option>
+        </select><button id="patternAlign">Align selected</button></div>
+        <button id="patternFloor" class="wide">Place selected on grid floor (Y = 0)</button>
+        <p class="help">Floor contact uses the rendered object's transformed bounding box. It can bypass the position grid to put the lowest visible point at Y=0. Not physical room anchoring or as-built CAD.</p>
+      </section>
       <h2>3D Center-to-Center Ruler</h2>
       <p class="workshop-copy">Select two editable object centers, or use the MEASURE button in VR and trigger-select two different objects. Measures layout distance, not surface clearance.</p>
       <div class="button-row"><select id="workshopMeasureA" aria-label="Ruler first object"><option value="">First object</option></select>
