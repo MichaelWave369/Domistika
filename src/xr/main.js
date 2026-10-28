@@ -4,6 +4,7 @@ import { VRButton } from 'three/addons/webxr/VRButton.js';
 import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { MAX_BOARDS, MAX_STROKES, makeBoard, makeScene, newStroke, extendStroke, readScene, writeScene } from './model.js';
 import {readBpcFramefieldPreview, sampleFramefieldPose, FRAMEFIELD_EULER_ORDER, BPC_PREVIEW_MAX_BYTES} from './framefieldPreview.js';
+import {createBrushStudio} from './brushStudio.js';
 import './styles.css';
 
 const $ = (s) => document.querySelector(s);
@@ -12,6 +13,7 @@ const W=1024, H=720, BOARD_W=1.6, BOARD_H=BOARD_W*H/W;
 const STORE_KEY='domistika.xr.scene.v1';
 const renderedBoards=new Map(), xrInteractions=new Map();
 let sceneData=makeScene(), selectedId=sceneData.selectedId, mode='draw', erasing=false, pointerState=null;
+let airStyle='neon',airMirror=false;
 const scene=new THREE.Scene();
 // Read-only BPC objects are deliberately outside sceneData and its localStorage schema.
 const bpcMeshRoot=new THREE.Group();
@@ -44,6 +46,7 @@ const selected=()=>byId(selectedId);
 const ink=()=>$('#brushColor').value;
 const size=()=>Number($('#brushWidth').value);
 const message=(text)=>status(text);
+const brushStudio=createBrushStudio({scene,onStatus:message,onCount:n=>{$('#spatialCount').textContent=n+' / 160';}});
 function textTexture(text,color='#c7ffef') {
   const el=document.createElement('canvas');el.width=512;el.height=120;
   const c=el.getContext('2d');
@@ -157,6 +160,12 @@ function setMode(next){
 }
 function startMouse(e){
   if(e.button!==0||renderer.xr.isPresenting||pointerState)return;
+  if(mode==='airbrush'){
+    const p=mouseRay(e).ray.at(2.4,new THREE.Vector3());
+    if(!brushStudio.start('mouse',p.toArray(),ink(),size(),airStyle,airMirror))return;
+    e.preventDefault();renderer.domElement.setPointerCapture(e.pointerId);controls.enabled=false;
+    pointerState={id:e.pointerId,kind:'airbrush'};return;
+  }
   const ray=mouseRay(e),hit=hitBoard(ray);if(!hit)return;
   e.preventDefault();renderer.domElement.setPointerCapture(e.pointerId);controls.enabled=false;
   selectBoard(hit.board.id);const r=renderedBoards.get(hit.board.id);
@@ -172,6 +181,9 @@ function startMouse(e){
 }
 function moveMouse(e){
   const s=pointerState;if(!s||s.id!==e.pointerId)return;
+  if(s.kind==='airbrush'){
+    brushStudio.extend('mouse',mouseRay(e).ray.at(2.4,new THREE.Vector3()).toArray());return;
+  }
   const dx=e.clientX-s.x,dy=e.clientY-s.y;s.x=e.clientX;s.y=e.clientY;
   if(s.kind==='draw'){const hit=hitBoard(mouseRay(e));if(hit?.board?.id===s.board.id)continueStroke(s.board,s.stroke,uv(hit.hit.uv));}
   if(s.kind==='move'){
@@ -182,6 +194,7 @@ function moveMouse(e){
 }
 function endMouse(e){
   if(!pointerState||pointerState.id!==e.pointerId)return;
+  if(pointerState.kind==='airbrush')brushStudio.end('mouse');
   pointerState=null;controls.enabled=true;
   if(renderer.domElement.hasPointerCapture(e.pointerId))renderer.domElement.releasePointerCapture(e.pointerId);
   persist();
@@ -190,7 +203,7 @@ renderer.domElement.addEventListener('pointerdown',startMouse);
 renderer.domElement.addEventListener('pointermove',moveMouse);
 renderer.domElement.addEventListener('pointerup',endMouse);
 renderer.domElement.addEventListener('pointercancel',endMouse);
-window.addEventListener('blur',()=>{if(pointerState){pointerState=null;controls.enabled=true;persist();}});
+window.addEventListener('blur',()=>{if(pointerState){if(pointerState.kind==='airbrush')brushStudio.end('mouse');pointerState=null;controls.enabled=true;persist();}});
 
 // An actual 3D toolbar, not an HTML overlay that disappears inside XR.
 const toolPanel=new THREE.Group();toolPanel.position.set(1.8,1.65,-1.25);toolPanel.rotation.y=-.3;scene.add(toolPanel);
@@ -216,14 +229,48 @@ const bpcControlTex=textTexture('BPC ANIMATION');
 const bpcControl=new THREE.Mesh(new THREE.PlaneGeometry(.75,.16),new THREE.MeshBasicMaterial({map:bpcControlTex,side:THREE.DoubleSide}));
 bpcControl.position.set(0,-.79,.025);bpcControl.userData.action={type:'bpc-playback'};
 toolPanel.add(bpcControl);controls3d.push(bpcControl);
+// Open-air painting deck lives in VR, not in a desktop-only overlay.
+const airDeck=new THREE.Group();airDeck.position.set(-1.8,1.65,-1.25);airDeck.rotation.y=.3;scene.add(airDeck);
+const airBacking=new THREE.Mesh(new THREE.PlaneGeometry(.96,2.05),
+  new THREE.MeshBasicMaterial({color:0x16223d,side:THREE.DoubleSide}));
+airBacking.position.z=-.012;airDeck.add(airBacking);
+const airHeading=new THREE.Mesh(new THREE.PlaneGeometry(.84,.16),
+  new THREE.MeshBasicMaterial({map:textTexture('AIR BRUSH STUDIO','#ffb5dc'),side:THREE.DoubleSide}));
+airHeading.position.set(0,.81,.022);airDeck.add(airHeading);
+for(const [i,label,action] of [
+  ['PAINT IN 3D',{type:'mode',value:'airbrush'}],
+  ['NEON',{type:'air-style',value:'neon'}],
+  ['RIBBON',{type:'air-style',value:'ribbon'}],
+  ['SPARK',{type:'air-style',value:'spark'}],
+  ['MIRROR ON / OFF',{type:'air-mirror'}],
+  ['UNDO 3D',{type:'air-undo'}],
+  ['SAVE 3D',{type:'air-save'}]
+].map(([label,action],i)=>[i,label,action])){
+  const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.79,.175),
+    new THREE.MeshBasicMaterial({map:textTexture(label,'#ffd6f2'),side:THREE.DoubleSide}));
+  mesh.position.set(0,.54-i*.22,.024);mesh.userData.action=action;airDeck.add(mesh);controls3d.push(mesh);
+}
 function updateToolColors(){
   for(const mesh of controls3d){
     const a=mesh.userData.action;
     if(a.type==='mode')mesh.material.color.setHex(a.value===mode?0x7ef7e7:0xffffff);
     if(a.type==='erase')mesh.material.color.setHex(erasing?0xffaaaa:0xffffff);
     if(a.type==='bpc-playback')mesh.material.color.setHex(bpcMotion?.playing?0x79f4ae:0xffffff);
+    if(a.type==='air-style')mesh.material.color.setHex(airStyle===a.value?0xff82d4:0xffffff);
+    if(a.type==='air-mirror')mesh.material.color.setHex(airMirror?0xff82d4:0xffffff);
   }
 }
+function setAirStyle(value){
+  if(!['neon','ribbon','spark'].includes(value))return;
+  airStyle=value;setMode('airbrush');syncAirControls();
+}
+function syncAirControls(){
+  document.querySelectorAll('[data-air-style]').forEach(b=>{b.classList.toggle('active',b.dataset.airStyle===airStyle);b.setAttribute('aria-pressed',String(b.dataset.airStyle===airStyle));});
+  $('#airMirror').textContent='Symmetry mirror: '+(airMirror?'ON':'OFF');
+  $('#airMirror').setAttribute('aria-pressed',String(airMirror));updateToolColors();
+}
+function toggleAirMirror(){airMirror=!airMirror;syncAirControls();message('3D mirror '+(airMirror?'enabled':'disabled')+' for new strokes.');}
+function controllerTip(controller){controller.updateWorldMatrix(true,false);return new THREE.Vector3(0,0,-.12).applyMatrix4(controller.matrixWorld).toArray();}
 function toggleEraser(){
   erasing=!erasing;$('#eraser').textContent='◌ Eraser: '+(erasing?'ON':'OFF');
   $('#eraser').setAttribute('aria-pressed',String(erasing));updateToolColors();
@@ -244,7 +291,15 @@ function startXR(c,index){
     if(a.type==='mode')setMode(a.value);
     if(a.type==='erase')toggleEraser();
     if(a.type==='bpc-playback')toggleBpcPlayback();
+    if(a.type==='air-style')setAirStyle(a.value);
+    if(a.type==='air-mirror')toggleAirMirror();
+    if(a.type==='air-undo')brushStudio.undo();
+    if(a.type==='air-save'){brushStudio.save();message('Spatial sketch saved on this headset.');}
     if(a.type==='color'){$('#brushColor').value=a.value;$('#colorValue').textContent=a.value.toUpperCase();erasing=false;$('#eraser').textContent='◌ Eraser: OFF';$('#eraser').setAttribute('aria-pressed','false');updateToolColors();}
+    return;
+  }
+  if(mode==='airbrush'){
+    if(brushStudio.start(index,controllerTip(c),ink(),size(),airStyle,airMirror))xrInteractions.set(index,{kind:'airbrush',controller:c});
     return;
   }
   if(!boardHit)return;
@@ -257,6 +312,7 @@ function startXR(c,index){
 }
 function endXR(index){
   const state=xrInteractions.get(index);if(!state)return;
+  if(state.kind==='airbrush')brushStudio.end(index);
   if(state.kind==='move'||state.kind==='rotate')scene.attach(state.render.group);
   xrInteractions.delete(index);persist();
 }
@@ -265,8 +321,9 @@ function updateXR(){
   for(const [index,item] of controllers.entries()){
     const ray=controllerRay(item.controller);
     const tool=ray.intersectObjects(controls3d,false)[0],hit=hitBoard(ray);
-    item.laser.scale.z=Math.max(.08,Math.min(tool?.distance??6,hit?.hit?.distance??6,6));
+    item.laser.scale.z=mode==='airbrush'&&!tool? .16 :Math.max(.08,Math.min(tool?.distance??6,hit?.hit?.distance??6,6));
     const state=xrInteractions.get(index);if(!state)continue;
+    if(state.kind==='airbrush'){brushStudio.extend(index,controllerTip(item.controller));continue;}
     if(state.kind==='draw'&&hit?.board?.id===state.board.id)continueStroke(state.board,state.stroke,uv(hit.hit.uv));
     if(state.kind==='scale'){
       const p=new THREE.Vector3().setFromMatrixPosition(state.controller.matrixWorld);
@@ -330,7 +387,26 @@ $('#removeBoard').addEventListener('click',removeBoard);
 $('#undo').addEventListener('click',undo);
 $('#redo').addEventListener('click',redo);
 $('#gallery').addEventListener('click',gallery);
-$('#save').addEventListener('click',persist);
+$('#save').addEventListener('click',()=>{persist();brushStudio.save();});
+document.querySelectorAll('[data-air-style]').forEach(b=>b.addEventListener('click',()=>setAirStyle(b.dataset.airStyle)));
+$('#airMirror').addEventListener('click',toggleAirMirror);
+$('#airUndo').addEventListener('click',()=>brushStudio.undo());
+$('#airRedo').addEventListener('click',()=>brushStudio.redo());
+$('#airSave').addEventListener('click',()=>{if(brushStudio.save())message('3D sketch saved locally. Export JSON as backup.');});
+$('#airExport').addEventListener('click',()=>{try{download('domistika-xr-spatial.json',brushStudio.exportJson(),'application/json');}catch(e){message('3D export failed: '+e.message);}});
+$('#airExportGLB').addEventListener('click',async()=>{try{const data=await brushStudio.exportGLB();download('domistika-xr-spatial.glb',data,'model/gltf-binary');message('3D GLB downloaded.');}catch(e){message('GLB export failed: '+e.message);}});
+$('#airImport').addEventListener('click',()=>$('#spatialFile').click());
+$('#spatialFile').addEventListener('change',async event=>{
+  const file=event.target.files?.[0];event.target.value='';if(!file)return;
+  try{if(file.size>2_000_000)throw Error('File exceeds 2 MB.');brushStudio.importJson(await file.text());message('3D sketch restored.');}
+  catch(e){message('3D import rejected: '+e.message);}
+});
+$('#airClear').addEventListener('click',()=>{
+  if(window.confirm('Delete all 3D spatial strokes on this device? Export a backup first.')){
+    try{brushStudio.clear();message('3D space cleared. Canvas drawings are unchanged.');}catch(e){message(e.message);}
+  }
+});
+syncAirControls();
 $('#exportScene').addEventListener('click',()=>download('domistika-xr-scene.json',serialize(),'application/json'));
 $('#importScene').addEventListener('click',()=>$('#sceneFile').click());
 $('#sceneFile').addEventListener('change',async e=>{
@@ -488,7 +564,7 @@ $('#resetView').addEventListener('click',()=>{
 window.addEventListener('keydown',e=>{
   if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||''))return;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();if(e.shiftKey)redo();else undo();}
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();persist();}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();persist();brushStudio.save();}
 });
 try{
   const vr=VRButton.createButton(renderer,{optionalFeatures:['local-floor','hand-tracking']});
@@ -507,6 +583,7 @@ renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
 });
 renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
   for(const i of [...xrInteractions.keys()])endXR(i);
+  brushStudio.finishAll();
   scene.background=new THREE.Color(bgColor);scene.fog=new THREE.Fog(bgColor,7,19);
   grid.visible=true;floor.visible=true;controls.enabled=true;persist();
 });

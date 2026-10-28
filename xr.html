@@ -18,12 +18,29 @@
       <button class="mode" data-mode="move" aria-pressed="false">✥ Move</button>
       <button class="mode" data-mode="rotate" aria-pressed="false">↻ Rotate</button>
       <button class="mode" data-mode="scale" aria-pressed="false">⤢ Scale</button>
+      <button class="mode" data-mode="airbrush" aria-pressed="false">✦ Paint in 3D</button>
     </div>
     <label class="control-label" for="brushColor">BRUSH COLOR</label>
     <div class="color-wrap"><input id="brushColor" type="color" value="#68e4ff"><span id="colorValue">#68E4FF</span></div>
     <label class="control-label" for="brushWidth">BRUSH SIZE <output id="widthValue">12</output></label>
     <input id="brushWidth" type="range" min="2" max="80" value="12">
     <button id="eraser" class="wide" aria-pressed="false">◌ Eraser: OFF</button>
+    <section class="air-tools" aria-label="Free-air Brush Studio">
+      <h2>Air Brush Studio <span id="spatialCount">0 / 160</span></h2>
+      <p class="air-intro">Draw in open 3D space with your Quest trigger. Choose a brush below or on the floating AIR BRUSH deck in VR.</p>
+      <div class="mode-grid" role="group" aria-label="Spatial paint brush style">
+        <button data-air-style="neon" class="active" aria-pressed="true">✧ Neon glow</button>
+        <button data-air-style="ribbon" aria-pressed="false">〰 Ribbon</button>
+        <button data-air-style="spark" aria-pressed="false">✦ Spark</button>
+        <button id="airMirror" aria-pressed="false">Symmetry mirror: OFF</button>
+      </div>
+      <div class="button-row"><button id="airUndo">Undo 3D</button><button id="airRedo">Redo 3D</button></div>
+      <div class="button-row"><button id="airSave">Save 3D</button><button id="airExport">Export 3D JSON</button></div>
+      <div class="button-row"><button id="airExportGLB">Export 3D GLB</button><button id="airImport">Import 3D JSON</button></div>
+      <button class="wide air-danger" id="airClear">Clear 3D strokes</button>
+      <input id="spatialFile" type="file" accept=".json,application/json" hidden>
+      <p class="help">Desktop preview: select Paint in 3D and drag anywhere in the scene. Quest: pull either trigger to paint freely in space; release to finish. Mirroring uses the room's center plane. Existing 2D canvases stay separate.</p>
+    </section>
     <h2>Your canvases <span id="boardCount">1 / 12</span></h2>
     <div id="canvasList" class="canvas-list" role="group" aria-label="Canvas selection"></div>
     <div class="button-row"><button id="addBoard">+ New canvas</button><button id="duplicateBoard">Duplicate</button></div>
@@ -42,7 +59,7 @@
       <input id="bpcTimeline" type="range" min="0" max="120" value="0" step="1" disabled>
     </div>
     <p class="help bpc-help">Use <a href="https://michaelwave369.github.io/BackyardProductionCompany/" target="_blank" rel="noopener noreferrer">BPC Bridge Lab</a> to export a Framefield mesh preview. Read-only 3D mesh with Framefield transform-keyframe playback and scrubbing. You can play/pause with the BPC button inside VR. Meshes are never added to drawing scenes or local backups.</p>
-    <p class="help"><b>DESKTOP:</b> Drag to paint or transform; background drag orbits; scroll zooms.<br><br><b>QUEST:</b> Trigger draws or grabs. Point at the in-world tool panel to change modes. Actual headset testing required.</p>
+    <p class="help"><b>DESKTOP:</b> Drag to paint or transform. Choose Paint in 3D to paint open-air strokes.<br><br><b>QUEST:</b> Two in-world tool decks let you select canvas tools or spatial brushes. Physical headset verification is still required.</p>
   </aside>
   <main class="stage" aria-label="3D drawing studio">
     <div class="stage-top">SPATIAL SKETCH STUDIO <span id="modeName">/ DRAW</span></div>
