@@ -1,3 +1,7 @@
+## Domistika XR · Light Forge v0.8
+
+The [immersive workshop](https://michaelwave369.github.io/Domistika/xr.html) now supports opt-in **audio-reactive emissive glow** with Outrun, Aurora, Ember and Ice palettes, bounded intensity and smooth transitions. Workshop objects keep their source colors and original rest poses; no real spotlights, strobes, or microphone recording. The Quest floating workshop menu is finally **paginated** into three smaller two-column pages with permanent NEXT/PREV actions and safe hit-testing. JSON exports preserve authoring data, and GLB exports use static rest-pose materials with no preview glow. [Read v0.8 acceptance, limitations and Quest checklist](docs/XR_LIGHT_FORGE_V08.md).
+
 ## Domistika XR · Beat Forge v0.7
 
 Music-responsive sculpture now has **independent Bass, Mids, Highs, and transient Beat channels**. Choose each editable object's response band in Motion Forge, or cycle with **BAND FX** in the Quest in-world deck. Rhythm Forge displays three local spectrum meters and bass pulse detection. Existing local file-only operation remains; no microphone, cloud upload, BPM or exact beat-grid claim. Older project JSON defaults to Full energy; exported GLB still contains static rest poses. [Beat Forge acceptance and limitations](docs/XR_BEAT_FORGE_V07.md).
