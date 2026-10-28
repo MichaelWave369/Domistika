@@ -187,6 +187,17 @@ function refreshWorkshopObjectLab(data){
   $('#workshopMeasureA').value=data.measure?.from??(ids.has(activeA)?activeA:'');
   $('#workshopMeasureB').value=data.measure?.to??(ids.has(activeB)?activeB:'');
   $('#workshopMeasure').disabled=objs.length<2;
+  const align=$('#patternAlignTarget'),previous=align.value;
+  align.replaceChildren();
+  const prompt=document.createElement('option');prompt.value='';prompt.textContent='Choose reference object';align.append(prompt);
+  for(const o of objs.filter(o=>o.id!==selection?.id)){
+    const option=document.createElement('option');option.value=o.id;option.textContent=o.name;align.append(option);
+  }
+  align.value=objs.some(o=>o.id===previous&&o.id!==selection?.id)?previous:'';
+  $('#patternAlign').disabled=!selection||objs.length<2;
+  $('#patternFloor').disabled=!selection;
+  $('#patternLinear').disabled=!selection;
+  $('#patternRadial').disabled=!selection;
   const m=data.measure;
   $('#workshopDistance').textContent=m?
     'Center distance: '+m.distance.toFixed(3)+' m · ΔX '+m.delta[0].toFixed(3)+
@@ -320,12 +331,12 @@ for(const [i,label,action] of [
 }
 // In-world workshop tool deck stays separate from painting and protected source previews.
 const workDeck=new THREE.Group();workDeck.position.set(0,2.0,-2.65);scene.add(workDeck);
-const workBacking=new THREE.Mesh(new THREE.PlaneGeometry(1.53,2.05),
+const workBacking=new THREE.Mesh(new THREE.PlaneGeometry(1.53,2.57),
   new THREE.MeshBasicMaterial({color:0x172e39,side:THREE.DoubleSide,transparent:true,opacity:.9}));
 workBacking.position.z=-.012;workDeck.add(workBacking);
 const workTitle=new THREE.Mesh(new THREE.PlaneGeometry(1.25,.14),
   new THREE.MeshBasicMaterial({map:textTexture('SPATIAL WORKSHOP','#ffe4a6'),side:THREE.DoubleSide}));
-workTitle.position.set(0,.86,.025);workDeck.add(workTitle);
+workTitle.position.set(0,1.1,.025);workDeck.add(workTitle);
 const workActions=[
   ['ADD CUBE',{type:'work-add',value:'box'}],
   ['ADD SPHERE',{type:'work-add',value:'sphere'}],
@@ -340,16 +351,32 @@ const workActions=[
   ['DUPLICATE',{type:'work-duplicate'}],
   ['MIRROR X',{type:'work-mirror'}],
   ['MEASURE',{type:'mode',value:'work-measure'}],
-  ['DELETE',{type:'work-delete'}]
+  ['DELETE',{type:'work-delete'}],
+  ['LINE +3',{type:'work-pattern',value:'linear'}],
+  ['RING +5',{type:'work-pattern',value:'radial'}],
+  ['TO FLOOR',{type:'work-floor'}]
 ];
 for(const [i,[label,action]] of workActions.entries()){
   const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.68,.19),
     new THREE.MeshBasicMaterial({map:textTexture(label,'#ffedce'),side:THREE.DoubleSide}));
-  mesh.position.set(i%2===0?-.375:.375,.62-Math.floor(i/2)*.23,.026);mesh.userData.action=action;workDeck.add(mesh);controls3d.push(mesh);
+  mesh.position.set(i%2===0?-.375:.375,.84-Math.floor(i/2)*.232,.026);mesh.userData.action=action;workDeck.add(mesh);controls3d.push(mesh);
 }
 function addWorkshopShape(kind,position=[0,1.5,-2]){
   try{workshop.add(kind,ink(),position);setMode('work-move');message(kind.toUpperCase()+' created. Point at it and hold trigger to move.');}
   catch(e){message('Workshop create rejected: '+e.message);}
+}
+function applyPattern(kind,options){
+  try{
+    const n=workshop.patternSelected(kind,options);
+    setMode('work-move');
+    message((kind==='linear'?'Linear array':'Radial ring')+' created '+n+' independent editable copies. Undo removes them together.');
+  }catch(e){message('Pattern rejected, scene unchanged: '+e.message);}
+}
+function floorWorkshop(){
+  try{
+    if(workshop.floorSelected())message('Selected object placed with its lowest visible point at Y=0.');
+    else message('Selected object already touches the grid floor.');
+  }catch(e){message('Floor alignment rejected: '+e.message);}
 }
 function duplicateWorkshop(mirror=false){
   try{
@@ -417,6 +444,8 @@ function startXR(c,index){
     if(a.type==='work-duplicate')duplicateWorkshop();
     if(a.type==='work-mirror')duplicateWorkshop(true);
     if(a.type==='work-delete')deleteWorkshop();
+    if(a.type==='work-pattern')applyPattern(a.value,a.value==='linear'?{copies:3,axis:'x',spacing:.75}:{copies:5,radius:1.25});
+    if(a.type==='work-floor')floorWorkshop();
     if(a.type==='air-style')setAirStyle(a.value);
     if(a.type==='air-mirror')toggleAirMirror();
     if(a.type==='air-undo')brushStudio.undo();
@@ -528,6 +557,19 @@ $('#save').addEventListener('click',()=>{persist();brushStudio.save();});
 $('#workshopAdd').addEventListener('click',()=>addWorkshopShape($('#workshopShape').value));
 $('#workshopObjects').addEventListener('change',e=>workshop.select(e.target.value));
 $('#workshopDuplicate').addEventListener('click',()=>duplicateWorkshop());
+$('#patternLinear').addEventListener('click',()=>applyPattern('linear',{
+  copies:Number($('#patternCopies').value),axis:$('#patternAxis').value,spacing:Number($('#patternSpacing').value)
+}));
+$('#patternRadial').addEventListener('click',()=>applyPattern('radial',{
+  copies:Number($('#patternCopies').value),radius:Number($('#patternRadius').value),orient:true
+}));
+$('#patternAlign').addEventListener('click',()=>{
+  try{
+    workshop.alignSelected($('#patternAlignTarget').value,$('#patternAlignAxis').value);
+    message('Selected workshop object aligned to the reference center. Undo available.');
+  }catch(e){message('Alignment rejected: '+e.message);}
+});
+$('#patternFloor').addEventListener('click',floorWorkshop);
 $('#workshopMirror').addEventListener('click',()=>duplicateWorkshop(true));
 $('#workshopAppearance').addEventListener('click',()=>{
   try{
