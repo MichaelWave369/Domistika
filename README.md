@@ -1,3 +1,7 @@
+## Domistika XR · Pattern Forge v0.4
+
+The [immersive Domistika workshop](https://michaelwave369.github.io/Domistika/xr.html) now has **linear arrays** and **radial rings** of independent editable objects, origin alignment between workshop objects, and transformed-mesh **floor contact**. All repeating copies are one-step undoable and capacity-checked before applying. Quest gets LINE +3, RING +5, and TO FLOOR on the in-world tool deck. FramefieldStudio and OpenBlueprintStudio originals remain read-only. [Read the v0.4 qualification and headset playtest guide](docs/XR_PATTERN_FORGE_V04.md).
+
 ## Domistika XR · Object Lab v0.3
 
 The [Spatial Workshop](https://michaelwave369.github.io/Domistika/xr.html) adds an editable object inventory, independent duplicate and true X-mirrored geometry copies, undoable renaming and recoloring, and a 3D in-world center-to-center distance ruler. Quest controllers use a compact two-column workshop menu. Measurements are visual annotations, not certified CAD dimensions, and are excluded from JSON/GLB exports; imported Framefield and OpenBlue sources remain read-only. [Quest playtest and contracts](docs/XR_OBJECT_LAB_V03.md).
