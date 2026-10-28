@@ -5,3 +5,14 @@
 
 /* Framefield animation preview stays within the BPC sidebar section. */
 .bpc-timeline{padding:12px;background:#12283a;border:1px solid #42577c;border-radius:9px;margin:13px 0}.bpc-timeline .wide{margin:0}.bpc-timeline .control-label{margin:13px 0 8px;gap:9px;flex-wrap:wrap}.bpc-timeline output{font-size:10px;color:#8ff2d8;letter-spacing:0;text-transform:none}.bpc-timeline input[type=range]{margin:2px 0 4px}.bpc-timeline button:disabled,.bpc-timeline input:disabled{opacity:.55;cursor:not-allowed}
+
+/* Spatial brush controls are deliberately separate from flat-canvas controls. */
+.air-tools{margin-top:25px;padding:4px 12px 16px;background:linear-gradient(145deg,#211b3c,#0c1a30);border:1px solid #59416d;border-radius:14px}
+.air-tools h2{margin-top:15px;color:#f6b9e3}
+.air-tools h2 span{color:#ff92d2}
+.air-tools .mode-grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+.air-tools button{border-color:#59416d}
+.air-tools button:hover,.air-tools button.active{border-color:#ff92d2;background:#542a57}
+.air-tools .air-danger{color:#ffc1c1;border-color:#75404e;background:#361c2e}
+.air-intro{font-size:11px;color:#d2bedd;line-height:1.55;margin:5px 0 15px}
+.air-tools .help{margin-top:10px}
