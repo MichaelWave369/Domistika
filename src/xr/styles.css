@@ -130,3 +130,15 @@ background:#183348;border:1px solid #486a85}
 .light-forge .help{margin-top:12px}
 .light-forge select:focus-visible,.light-forge input:focus-visible{outline:2px solid #a3ebff;outline-offset:3px}
 .light-forge button:hover{border-color:#b7eaff}
+
+/* Show Forge v0.9: one-click local installations and silent testing controls. */
+.show-forge{padding:12px;margin:18px 0;border:1px solid #657da4;border-radius:12px;
+ background:linear-gradient(150deg,#14293e,#312145)}
+.show-forge h2{color:#ffe1aa;margin:3px 0 11px}
+.show-forge .workshop-copy{color:#d8d5ea}
+.show-forge .control-label{display:block;margin:12px 0 7px}
+.show-forge select{width:100%;min-width:0;color:#ecf8ff;background:#13213c;
+ border:1px solid #768ca9;border-radius:8px;padding:10px}
+.show-forge button:hover{border-color:#f3cf8b}
+.show-forge button:disabled{opacity:.52;cursor:not-allowed}
+.show-forge .help{margin-top:12px}
