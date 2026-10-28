@@ -117,10 +117,10 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     root.add(mesh);meshes.set(o.id,mesh);
     return mesh;
   }
-  function drawPose(time=motionSeconds){
+  function drawPose(time=motionSeconds,audioEnergy=0){
     for(const item of data.objects){
       const mesh=meshes.get(item.id);if(!mesh)continue;
-      const pose=sampleMotion(item,time);
+      const pose=sampleMotion(item,time,audioEnergy);
       mesh.position.fromArray(pose.position);
       mesh.rotation.set(...pose.rotation);
       mesh.scale.fromArray(pose.scale);
@@ -148,13 +148,13 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     onMotion({playing:true,time:motionSeconds});
     return true;
   }
-  function tickMotion(deltaSeconds){
+  function tickMotion(deltaSeconds,audioEnergy=0){
     if(!motionPlaying)return;
     if(typeof deltaSeconds!=='number'||!Number.isFinite(deltaSeconds)||deltaSeconds<0)
       throw Error('Invalid motion frame delta.');
     const previous=motionSeconds;
     motionSeconds=(motionSeconds+Math.min(deltaSeconds,.1))%60;
-    drawPose(motionSeconds);
+    drawPose(motionSeconds,audioEnergy);
     if(Math.floor(previous*10)!==Math.floor(motionSeconds*10))onMotion({playing:true,time:motionSeconds});
   }
   function setSelectedMotion(settings){
@@ -441,6 +441,7 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     setSnap(step,degrees){gridStep=step;angleStep=degrees;notify();},
     get measure(){return measureInfo;},get pendingMeasureId(){return pendingMeasureId;},
     get motionPlaying(){return motionPlaying;},get motionSeconds(){return motionSeconds;},
+    get hasMotion(){return data.objects.some(o=>o.motion&&o.motion.mode!=='none');},
     add,select,insert,hit,beginController,updateController,beginMouse,updateMouse,finish,
     promoteFramefield,promoteCad,patchSelected,removeSelected,duplicateSelected,setSelectedAppearance,
     appendMany,patternSelected,alignSelected,floorSelected,

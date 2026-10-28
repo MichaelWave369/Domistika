@@ -13,7 +13,7 @@ test('Motion Forge desktop controls and Quest tool actions are wired',()=>{
  assert.match(js,/document\.addEventListener\('visibilitychange'/);
 });
 test('motion preview never serializes visual transform or overlays into saved workshop JSON',()=>{
- assert.match(rt,/sampleMotion\(item,time\)/);
+ assert.match(rt,/sampleMotion\(item,time(?:,audioEnergy)?\)/);
  assert.match(rt,/const copy=root\.clone\(true\)/);
  assert.match(rt,/mesh\.position\.fromArray\(item\.position\)/);
  assert.match(rt,/setSelectedMotion\(settings\)/);

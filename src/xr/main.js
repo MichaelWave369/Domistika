@@ -8,6 +8,7 @@ import {createBrushStudio} from './brushStudio.js';
 import {parseOpenBluePreview,OPENBLUE_MAX_BYTES} from './openblueModel.js';
 import {buildOpenBluePreview} from './openbluePreview.js';
 import {createWorkshop} from './workshopRuntime.js';
+import {createLocalRhythm} from './rhythmForge.js';
 import './styles.css';
 
 const $ = (s) => document.querySelector(s);
@@ -57,6 +58,11 @@ const workshop=createWorkshop({scene,onStatus:message,paintRoot:()=>brushStudio.
   $('#motionPlay').textContent=playing?'Pause & reset motion':'Play motion';
   $('#motionTime').textContent=time.toFixed(1)+' s · '+(playing?'playing':'stopped');
   $('#motionScrub').value=String(Math.min(8,time));
+}});
+const rhythm=createLocalRhythm({audio:$('#rhythmAudio'),onChange:state=>{
+  $('#rhythmTrack').textContent=state.loaded?state.trackName+' · '+(state.playing?'playing':'ready'):'No local track loaded.';
+  $('#rhythmPlay').disabled=!state.loaded;
+  updateToolColors();
 }});
 function textTexture(text,color='#c7ffef') {
   const el=document.createElement('canvas');el.width=512;el.height=120;
@@ -341,12 +347,12 @@ for(const [i,label,action] of [
 }
 // In-world workshop tool deck stays separate from painting and protected source previews.
 const workDeck=new THREE.Group();workDeck.position.set(0,2.0,-2.65);scene.add(workDeck);
-const workBacking=new THREE.Mesh(new THREE.PlaneGeometry(1.53,2.57),
+const workBacking=new THREE.Mesh(new THREE.PlaneGeometry(1.53,3.1),
   new THREE.MeshBasicMaterial({color:0x172e39,side:THREE.DoubleSide,transparent:true,opacity:.9}));
 workBacking.position.z=-.012;workDeck.add(workBacking);
 const workTitle=new THREE.Mesh(new THREE.PlaneGeometry(1.25,.14),
   new THREE.MeshBasicMaterial({map:textTexture('SPATIAL WORKSHOP','#ffe4a6'),side:THREE.DoubleSide}));
-workTitle.position.set(0,1.1,.025);workDeck.add(workTitle);
+workTitle.position.set(0,1.35,.025);workDeck.add(workTitle);
 const workActions=[
   ['ADD CUBE',{type:'work-add',value:'box'}],
   ['ADD SPHERE',{type:'work-add',value:'sphere'}],
@@ -367,12 +373,14 @@ const workActions=[
   ['TO FLOOR',{type:'work-floor'}],
   ['MOTION FX',{type:'work-motion-cycle'}],
   ['PLAY / STOP',{type:'work-motion-toggle'}],
-  ['RESET MOTION',{type:'work-motion-reset'}]
+  ['RESET MOTION',{type:'work-motion-reset'}],
+  ['RHYTHM PLAY',{type:'rhythm-play'}],
+  ['RHYTHM STOP',{type:'rhythm-stop'}]
 ];
 for(const [i,[label,action]] of workActions.entries()){
   const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.68,.19),
     new THREE.MeshBasicMaterial({map:textTexture(label,'#ffedce'),side:THREE.DoubleSide}));
-  mesh.position.set(i%2===0?-.375:.375,.84-Math.floor(i/2)*.232,.026);mesh.userData.action=action;workDeck.add(mesh);controls3d.push(mesh);
+  mesh.position.set(i%2===0?-.375:.375,.84-Math.floor(i/2)*.215,.026);mesh.userData.action=action;workDeck.add(mesh);controls3d.push(mesh);
 }
 function cycleWorkshopMotion(){
   try{
@@ -380,11 +388,31 @@ function cycleWorkshopMotion(){
     message(mode==='none'?'Selected object now still.':'Selected object motion: '+mode.toUpperCase()+'. Press PLAY / STOP to preview.');
   }catch(e){message('Motion effect rejected: '+e.message);}
 }
+function playRhythm(){
+  try{
+    if(!rhythm.loaded)throw Error('Choose a local audio track in the sidebar before entering VR.');
+    if(!workshop.hasMotion)throw Error('Assign a Motion Forge effect to a workshop object first.');
+    if(!workshop.motionPlaying)workshop.toggleMotion();
+    // play() begins within this click or Quest controller user gesture.
+    rhythm.play().then(()=>{
+      message('Local music playing; bass is modulating your workshop motion.');
+      updateToolColors();
+    }).catch(error=>{
+      rhythm.pause();workshop.stopMotion();
+      message('Local audio could not play: '+error.message);
+    });
+  }catch(error){message('Rhythm Forge: '+error.message);}
+}
+function stopRhythm(){
+  rhythm.pause();workshop.stopMotion();
+  $('#rhythmMeter').value=0;$('#rhythmLevel').textContent='0%';
+  updateToolColors();message('Local track paused, all objects restored to their rest poses.');
+}
 function toggleWorkshopMotion(){
   try{const playing=workshop.toggleMotion();message(playing?'Motion preview playing. Geometry and rest poses unchanged.':'Motion stopped and all objects reset to rest poses.');}
   catch(e){message('Motion preview rejected: '+e.message);}
 }
-function resetWorkshopMotion(){workshop.stopMotion();message('Motion stopped and rest poses restored.');}
+function resetWorkshopMotion(){if(rhythm.playing)rhythm.pause();workshop.stopMotion();message('Motion stopped and rest poses restored.');}
 function addWorkshopShape(kind,position=[0,1.5,-2]){
   try{workshop.add(kind,ink(),position);setMode('work-move');message(kind.toUpperCase()+' created. Point at it and hold trigger to move.');}
   catch(e){message('Workshop create rejected: '+e.message);}
@@ -425,6 +453,7 @@ function updateToolColors(){
     if(a.type==='bpc-playback')mesh.material.color.setHex(bpcMotion?.playing?0x79f4ae:0xffffff);
     if(a.type==='openblue-toggle')mesh.material.color.setHex(openBluePreview?.group.visible?0x79f4ae:0xffffff);
     if(a.type==='work-grid')mesh.material.color.setHex(workshop.grid?0xffda87:0xffffff);
+    if(a.type==='rhythm-play')mesh.material.color.setHex(rhythm.playing?0xb2f7c0:0xffffff);
     if(a.type==='air-style')mesh.material.color.setHex(airStyle===a.value?0xff82d4:0xffffff);
     if(a.type==='air-mirror')mesh.material.color.setHex(airMirror?0xff82d4:0xffffff);
   }
@@ -473,6 +502,8 @@ function startXR(c,index){
     if(a.type==='work-motion-cycle')cycleWorkshopMotion();
     if(a.type==='work-motion-toggle')toggleWorkshopMotion();
     if(a.type==='work-motion-reset')resetWorkshopMotion();
+    if(a.type==='rhythm-play')playRhythm();
+    if(a.type==='rhythm-stop')stopRhythm();
     if(a.type==='air-style')setAirStyle(a.value);
     if(a.type==='air-mirror')toggleAirMirror();
     if(a.type==='air-undo')brushStudio.undo();
@@ -610,6 +641,28 @@ $('#motionApply').addEventListener('click',()=>{
   }catch(e){message('Motion rejected: '+e.message);}
 });
 $('#motionPlay').addEventListener('click',toggleWorkshopMotion);
+$('#rhythmLoad').addEventListener('click',()=>$('#rhythmFile').click());
+$('#rhythmFile').addEventListener('change',event=>{
+  const file=event.target.files?.[0];event.target.value='';if(!file)return;
+  try{
+    stopRhythm();const track=rhythm.load(file);
+    message('Loaded local track '+track.name+'. Playback uses this browser only.');
+  }catch(error){message('Track rejected: '+error.message);}
+});
+$('#rhythmClear').addEventListener('click',()=>{
+  stopRhythm();rhythm.clear();message('Local audio reference cleared, no workshop objects changed.');
+});
+$('#rhythmSensitivity').addEventListener('input',event=>{
+  try{
+    const value=Number(event.target.value);rhythm.setSensitivity(value);
+    $('#rhythmStrength').textContent=value.toFixed(1)+'×';
+  }catch(error){message(error.message);}
+});
+$('#rhythmPlay').addEventListener('click',playRhythm);
+$('#rhythmPause').addEventListener('click',stopRhythm);
+$('#rhythmAudio').addEventListener('ended',()=>{
+  workshop.stopMotion();updateToolColors();message('Local track finished. Workshop returned to rest pose.');
+});
 $('#motionStop').addEventListener('click',resetWorkshopMotion);
 $('#motionScrub').addEventListener('input',e=>{
   try{workshop.previewMotion(Number(e.target.value));}
@@ -948,6 +1001,7 @@ renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
 renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
   for(const i of [...xrInteractions.keys()])endXR(i);
   brushStudio.finishAll();
+  rhythm.pause();
   workshop.stopMotion();
   workshop.save();
   scene.background=new THREE.Color(bgColor);scene.fog=new THREE.Fog(bgColor,7,19);
@@ -960,12 +1014,20 @@ function resize(){
 window.addEventListener('resize',resize);new ResizeObserver(resize).observe($('#render-root'));
 resize();updateToolColors();
 syncBpcPlaybackUI();
-let lastMotionFrame=null;
-document.addEventListener('visibilitychange',()=>{if(document.hidden){workshop.stopMotion();lastMotionFrame=null;}});
+let lastMotionFrame=null,lastRhythmBucket=-1;
+document.addEventListener('visibilitychange',()=>{if(document.hidden){rhythm.pause();workshop.stopMotion();lastMotionFrame=null;}});
+window.addEventListener('pagehide',()=>{rhythm.clear();workshop.stopMotion();});
 renderer.setAnimationLoop(timeMs=>{
   const seconds=lastMotionFrame===null?0:Math.max(0,(timeMs-lastMotionFrame)/1000);
   lastMotionFrame=timeMs;
-  workshop.tickMotion(seconds);
+  const energy=rhythm.sample();
+  workshop.tickMotion(seconds,energy);
+  const bucket=Math.floor(timeMs/100);
+  if(bucket!==lastRhythmBucket){
+    lastRhythmBucket=bucket;
+    $('#rhythmMeter').value=Math.round(energy*100);
+    $('#rhythmLevel').textContent=Math.round(energy*100)+'%';
+  }
   updateBpcPlayback(timeMs);
   if(renderer.xr.isPresenting)updateXR();else controls.update();renderer.render(scene,camera);
 });

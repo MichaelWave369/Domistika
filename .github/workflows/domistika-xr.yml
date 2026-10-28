@@ -37,11 +37,12 @@ jobs:
       - run: node --check src/xr/brushStudio.js
       - run: node --check src/xr/openblueModel.js
       - run: node --check src/xr/openbluePreview.js
+      - run: node --check src/xr/rhythmForge.js
       - run: node --check src/xr/motionForge.js
       - run: node --check src/xr/patternForge.js
       - run: node --check src/xr/objectLab.js
       - run: node --check src/xr/workshopModel.js
       - run: node --check src/xr/workshopRuntime.js
-      - run: node --test tests/xr-motion-forge-model.test.mjs tests/xr-motion-forge-runtime.test.mjs tests/xr-motion-forge-integration.test.mjs tests/xr-pattern-forge-model.test.mjs tests/xr-pattern-forge-runtime.test.mjs tests/xr-pattern-forge-integration.test.mjs tests/xr-object-lab-model.test.mjs tests/xr-object-lab-runtime.test.mjs tests/xr-object-lab-integration.test.mjs tests/xr-workshop-model.test.mjs tests/xr-workshop-integration.test.mjs tests/xr-openblue-model.test.mjs tests/xr-connected-workbench.test.mjs tests/xr-brush-model.test.mjs tests/xr-brush-integration.test.mjs tests/xr-model.test.mjs tests/xr-integration.test.mjs tests/xr-framefield-preview.test.mjs tests/xr-bpc-integration.test.mjs tests/xr-bpc-animation.test.mjs tests/xr-framefield-euler-parity.test.mjs tests/xr-entry-link.test.mjs
+      - run: node --test tests/xr-rhythm-forge-model.test.mjs tests/xr-rhythm-forge-runtime.test.mjs tests/xr-rhythm-forge-integration.test.mjs tests/xr-motion-forge-model.test.mjs tests/xr-motion-forge-runtime.test.mjs tests/xr-motion-forge-integration.test.mjs tests/xr-pattern-forge-model.test.mjs tests/xr-pattern-forge-runtime.test.mjs tests/xr-pattern-forge-integration.test.mjs tests/xr-object-lab-model.test.mjs tests/xr-object-lab-runtime.test.mjs tests/xr-object-lab-integration.test.mjs tests/xr-workshop-model.test.mjs tests/xr-workshop-integration.test.mjs tests/xr-openblue-model.test.mjs tests/xr-connected-workbench.test.mjs tests/xr-brush-model.test.mjs tests/xr-brush-integration.test.mjs tests/xr-model.test.mjs tests/xr-integration.test.mjs tests/xr-framefield-preview.test.mjs tests/xr-bpc-integration.test.mjs tests/xr-bpc-animation.test.mjs tests/xr-framefield-euler-parity.test.mjs tests/xr-entry-link.test.mjs
       - run: npm run build
       - run: test -f dist/index.html && test -f dist/xr.html

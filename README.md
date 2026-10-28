@@ -1,3 +1,7 @@
+## Domistika XR · Rhythm Forge v0.6
+
+Bring your own local track into the [Spatial Workshop](https://michaelwave369.github.io/Domistika/xr.html). **Rhythm Forge** uses browser-native Web Audio spectrum analysis to make existing Motion Forge spins, bobs, orbits and pulses respond to bass/energy. Files remain local and ephemeral, with no microphone, uploads, network audio, or file storage. Quest has RHYTHM PLAY/STOP controls once a track is selected in the sidebar. Workshop JSON stores only the author's original object motion settings, never sound; GLB stays a static rest-pose export. Physical Quest audio and gesture acceptance remains pending. [v0.6 playtest and feature boundaries](docs/XR_RHYTHM_FORGE_V06.md).
+
 ## Domistika XR · Motion Forge v0.5
 
 Animate editable 3D workshop objects with **Spin, Bob, Orbit, or Pulse** visual effects. Set speed/amplitude/phase, preview in desktop or Quest VR, scrub a timeline, and reset instantly to the saved rest poses. Motion settings live in backward-compatible `domistika.xr.workshop.v1` JSON; GLB exports remain **static rest-pose geometry**. Existing OpenBlueprint CAD and Framefield BPC previews remain protected and unmodified. No live music or microphone integration is claimed. [Test plan and capability boundaries](docs/XR_MOTION_FORGE_V05.md).
