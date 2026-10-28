@@ -533,6 +533,7 @@ function stepRunner(direction){
   try{
     if(direction>0)runner.next();else runner.previous();
     if(runner.playing)runnerCueLighting(true);
+    $('#runnerCue').value=String(runner.status.index);
     renderRunnerEditor();
     message('Showrunner now at act '+(runner.status.index+1)+'.');
   }catch(error){message('Cue change rejected: '+error.message);}
@@ -1306,7 +1307,7 @@ renderer.setAnimationLoop(timeMs=>{
     const state=runner.tick(seconds);
     if(!state.playing){stopRunner();message('Show completed, original scene and glow restored.');}
     else{
-      if(state.index!==oldCue)runnerCueLighting(true);
+      if(state.index!==oldCue){runnerCueLighting(true);$('#runnerCue').value=String(state.index);renderRunnerEditor();}
       showFrame=runner.frame();
     }
   }
