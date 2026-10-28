@@ -160,6 +160,16 @@ function beginStroke(board,p){
   board.strokes.push(s);renderedBoards.get(board.id).undo.length=0;paintBoard(board);return s;
 }
 function continueStroke(board,s,p){if(s&&extendStroke(s,p))paintBoard(board);}
+function refreshWorkshopSelection(item){
+  $('#workshopSelection').textContent=item?
+    'Selected: '+item.name+' · '+item.kind+' · '+item.position.map(v=>v.toFixed(2)).join(', ')+' m':
+    'No workshop object selected.';
+  for(const [id,i] of [['workshopX',0],['workshopY',1],['workshopZ',2]]){
+    const input=$('#'+id);input.disabled=!item;input.value=item?Number(item.position[i].toFixed(4)):'';
+  }
+  $('#workshopSize').disabled=!item;
+  $('#workshopSize').value=item?Number(item.scale[0].toFixed(4)):'';
+}
 function setMode(next){
   mode=next;$('#modeName').textContent='/ '+next.toUpperCase();
   document.querySelectorAll('[data-mode]').forEach(b=>{b.classList.toggle('active',b.dataset.mode===next);b.setAttribute('aria-pressed',String(b.dataset.mode===next));});
@@ -452,6 +462,76 @@ $('#undo').addEventListener('click',undo);
 $('#redo').addEventListener('click',redo);
 $('#gallery').addEventListener('click',gallery);
 $('#save').addEventListener('click',()=>{persist();brushStudio.save();});
+$('#workshopAdd').addEventListener('click',()=>addWorkshopShape($('#workshopShape').value));
+for(const id of ['workshopSnap','workshopAngle'])$('#'+id).addEventListener('change',()=>{
+  workshop.setSnap(Number($('#workshopSnap').value),Number($('#workshopAngle').value));
+  updateToolColors();message('Workshop snap set: '+workshop.grid+'m / '+workshop.rotationSnap+'°.');
+});
+$('#workshopApply').addEventListener('click',()=>{
+  try{
+    const position=['workshopX','workshopY','workshopZ'].map(id=>Number($('#'+id).value));
+    const scalar=Number($('#workshopSize').value);
+    workshop.patchSelected({position,scale:[scalar,scalar,scalar]});
+    message('Exact transform applied in meters. Workshop data saved.');
+  }catch(e){message('Exact transform rejected: '+e.message);}
+});
+$('#workshopDelete').addEventListener('click',()=>{try{workshop.removeSelected();}catch(e){message(e.message);}});
+$('#workshopUndo').addEventListener('click',()=>{try{workshop.undo();}catch(e){message(e.message);}});
+$('#workshopRedo').addEventListener('click',()=>{try{workshop.redo();}catch(e){message(e.message);}});
+$('#workshopSave').addEventListener('click',()=>{if(workshop.save())message('Workshop saved in this browser. Export an independent backup.');});
+$('#workshopExportJson').addEventListener('click',()=>{
+  try{download('domistika-xr-workshop.json',workshop.exportJson(),'application/json');}
+  catch(e){message('Workshop export rejected: '+e.message);}
+});
+$('#workshopExportGlb').addEventListener('click',async()=>{
+  try{const glb=await workshop.exportGLB();download('domistika-xr-assembly.glb',glb,'model/gltf-binary');message('Assembly GLB exported with spatial paint.');}
+  catch(e){message('Workshop GLB failed: '+e.message);}
+});
+$('#workshopImport').addEventListener('click',()=>$('#workshopFile').click());
+$('#workshopFile').addEventListener('change',async e=>{
+  const file=e.target.files?.[0];e.target.value='';if(!file)return;
+  try{if(file.size>2_000_000)throw Error('Maximum 2 MB');workshop.importJson(await file.text());message('Workshop objects restored from JSON.');}
+  catch(error){message('Workshop import rejected: '+error.message);}
+});
+$('#workshopClear').addEventListener('click',()=>{
+  if(window.confirm('Clear all editable WORKSHOP objects? Your spatial painting, CAD preview and canvas remain untouched. Export assembly first.')){
+    try{workshop.clear();message('Workshop cleared. Source files and painted strokes untouched.');}
+    catch(e){message(e.message);}
+  }
+});
+function updateWorkshopSources(){
+  const bpc=$('#workshopBpcSource');bpc.replaceChildren();
+  for(const [i,asset] of (bpcMotion?.assets||[]).entries()){
+    const option=document.createElement('option');option.value=String(i);option.textContent=(i+1)+'. '+asset.label;bpc.append(option);
+  }
+  if(!bpc.options.length){const option=document.createElement('option');option.value='';option.textContent='Load BPC first';bpc.append(option);}
+  const cad=$('#workshopCadSource');cad.replaceChildren();
+  for(const [i,wall] of (openBluePreview?.sourcePlan?.walls||[]).entries()){
+    const option=document.createElement('option');option.value=String(i);option.textContent=(i+1)+'. '+wall.id;cad.append(option);
+  }
+  if(!cad.options.length){const option=document.createElement('option');option.value='';option.textContent='Load CAD first';cad.append(option);}
+}
+$('#workshopCopyBpc').addEventListener('click',()=>{
+  try{
+    const index=Number($('#workshopBpcSource').value),asset=bpcMotion?.assets?.[index],mesh=bpcMeshRoot.children[index];
+    if(!asset||!mesh)throw Error('Load a Framefield BPC preview, then select a mesh.');
+    if(!window.confirm('Create an editable STATIC COPY of this Framefield mesh at its current pose? Original animation stays read-only.'))return;
+    workshop.promoteFramefield(asset,mesh);setMode('work-move');
+    message('Static Framefield mesh copied into editable assembly. Source preview unchanged.');
+  }catch(e){message('Framefield copy rejected: '+e.message);}
+});
+$('#workshopCopyCad').addEventListener('click',()=>{
+  try{
+    const index=Number($('#workshopCadSource').value),wall=openBluePreview?.sourcePlan?.walls?.[index],
+      mesh=openBluePreview?.group?.children[index];
+    if(!wall||!mesh)throw Error('Load an OpenBlueprint plan, then select a wall.');
+    if(!window.confirm('Create an editable VISUAL COPY of this CAD wall? This does not edit the authoritative CAD design.'))return;
+    workshop.promoteCad(mesh,'OpenBlue wall '+wall.id);setMode('work-move');
+    message('CAD wall copied into editable workshop geometry. Check scale and dimension source. Original CAD unchanged.');
+  }catch(e){message('CAD copy rejected: '+e.message);}
+});
+updateWorkshopSources();
+
 document.querySelectorAll('[data-air-style]').forEach(b=>b.addEventListener('click',()=>setAirStyle(b.dataset.airStyle)));
 $('#airMirror').addEventListener('click',toggleAirMirror);
 $('#airUndo').addEventListener('click',()=>brushStudio.undo());
@@ -551,6 +631,7 @@ function clearBpcMeshes(){
   bpcMeshRoot.position.set(0,0,0);
   bpcMeshRoot.scale.setScalar(1);
   bpcMotion=null;bpcLastTick=null;
+  updateWorkshopSources();
   $('#bpcPreviewCount').textContent='None loaded';
   syncBpcPlaybackUI();
 }
@@ -593,6 +674,7 @@ function showBpcMeshes(preview){
       assumedTiming:preview.assumedTiming,playing:false,frame:0};
     setBpcFrame(0);
     syncBpcPlaybackUI();
+    updateWorkshopSources();
   }catch(error){
     next.traverse(obj=>{
       obj.geometry?.dispose();
@@ -640,7 +722,7 @@ function clearOpenBluePreview(){
   if(openBluePreview){
     scene.remove(openBluePreview.group);openBluePreview.dispose();openBluePreview=null;
   }
-  updateOpenBlueControls();
+  updateOpenBlueControls();updateWorkshopSources();
 }
 $('#openblueLoad').addEventListener('click',()=>$('#openblueFile').click());
 $('#openblueFile').addEventListener('change',async e=>{
@@ -655,6 +737,8 @@ $('#openblueFile').addEventListener('change',async e=>{
     scene.add(candidate.group);
     candidate=null;
     if(old){scene.remove(old.group);old.dispose();}
+    openBluePreview.sourcePlan=plan;
+    updateWorkshopSources();
     updateOpenBlueControls();
     message('OpenBlue plan preview loaded: '+plan.walls.length+' walls, '+plan.symbols.length+
       ' symbols. '+(openBluePreview.summary.notOneToOne?'Scaled to fit XR. ':'')+'Read-only; source untouched.');
@@ -677,7 +761,7 @@ $('#resetView').addEventListener('click',()=>{
 window.addEventListener('keydown',e=>{
   if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||''))return;
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();if(e.shiftKey)redo();else undo();}
-  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();persist();brushStudio.save();}
+  if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();persist();brushStudio.save();workshop.save();}
 });
 try{
   const vr=VRButton.createButton(renderer,{optionalFeatures:['local-floor','hand-tracking']});
@@ -697,6 +781,7 @@ renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
 renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
   for(const i of [...xrInteractions.keys()])endXR(i);
   brushStudio.finishAll();
+  workshop.save();
   scene.background=new THREE.Color(bgColor);scene.fog=new THREE.Fog(bgColor,7,19);
   grid.visible=true;floor.visible=true;controls.enabled=true;persist();
 });
