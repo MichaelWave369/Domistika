@@ -9,7 +9,7 @@ test('all Pattern Forge controls are real wired buttons and inputs',()=>{
   'patternAlignTarget','patternAlignAxis','patternAlign','patternFloor'];
  for(const id of ids){
   assert.ok(html.includes('id="'+id+'"'),'Missing HTML '+id);
-  assert.match(js,new RegExp('\\\\$\\\\(\\\\x27#'+id+'\\\\x27\\\\)'));
+  assert.ok(js.includes("$('#"+id+"')"),'Missing JS control '+id);
  }
  for(const str of ["type:'work-pattern',value:'linear'","type:'work-pattern',value:'radial'","type:'work-floor'","workshop.patternSelected","workshop.alignSelected","workshop.floorSelected"]){
   assert.ok(js.includes(str),'Missing in-world or desktop behavior '+str);
