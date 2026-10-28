@@ -152,9 +152,10 @@ export function createWorkshop({scene,storage=globalThis.localStorage,onStatus=(
     if(!motionPlaying)return;
     if(typeof deltaSeconds!=='number'||!Number.isFinite(deltaSeconds)||deltaSeconds<0)
       throw Error('Invalid motion frame delta.');
+    const previous=motionSeconds;
     motionSeconds=(motionSeconds+Math.min(deltaSeconds,.1))%60;
     drawPose(motionSeconds);
-    onMotion({playing:true,time:motionSeconds});
+    if(Math.floor(previous*10)!==Math.floor(motionSeconds*10))onMotion({playing:true,time:motionSeconds});
   }
   function setSelectedMotion(settings){
     if(active.size)throw Error('Release held objects before changing motion.');
