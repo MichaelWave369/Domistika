@@ -1,3 +1,7 @@
+## Domistika XR · Spatial Workshop v0.2
+
+[Open the VR Workshop](https://michaelwave369.github.io/Domistika/xr.html) to make cubes, spheres, cylinders, toruses and knots, grab/rotate/scale with Quest controllers, snap to a meter grid, set exact measurements, and export a separate editable JSON assembly or combined GLB with spatial paintings. Operator-approved copies of Framefield BPC mesh previews and OpenBlueprint CAD walls can become independent workshop objects; **original projects and preview-only assets remain untouched**. Hardware acceptance for this upgrade is pending. See [Spatial Workshop v0.2 guide](docs/XR_SPATIAL_WORKSHOP_V02.md).
+
 ## Domistika XR · Connected 3D Workbench v0.1
 
 The [XR studio](https://michaelwave369.github.io/Domistika/xr.html) now connects the existing [FramefieldStudio](https://michaelwave369.github.io/FramefieldStudio/) **Export BPC XR** animated mesh preview and a new read-only [OpenBlueprintStudio](https://michaelwave369.github.io/OpenBlueprintStudio/) **Export JSON** architectural plan preview, alongside free-air painting. Both imports are explicit local files; neither replaces the original source scene. See [the contract and Quest playtest guide](docs/XR_CONNECTED_WORKBENCH_V01.md).
