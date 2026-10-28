@@ -40,7 +40,7 @@ export function sampleMotion(object,timeSeconds,audioEnergy=0){
     position[2]+=(motion.amplitude+selectedEnergy*.4)*sin;
   }
   if(motion.mode==='pulse'){
-    const factor=1+(motion.amplitude*.35+audioEnergy*.35)*sin;
+    const factor=1+(motion.amplitude*.35+selectedEnergy*.35)*sin;
     for(let i=0;i<3;i++)scale[i]*=factor;
   }
   return {position,rotation,scale};
