@@ -42,7 +42,7 @@
       <p class="help">Desktop preview: select Paint in 3D and drag anywhere in the scene. Quest: pull either trigger to paint freely in space; release to finish. Mirroring uses the room's center plane. Existing 2D canvases stay separate.</p>
     </section>
     <section class="workshop-tools" aria-label="Spatial Workshop editable objects">
-      <h2>Spatial Workshop v0.6 <span id="workshopCount">0 / 48</span></h2>
+      <h2>Spatial Workshop v0.7 <span id="workshopCount">0 / 48</span></h2>
       <p class="workshop-copy">Create 3D shapes, grab them with Quest triggers, snap transforms, and assemble alongside airbrush paintings. Source CAD/BPC previews stay read-only until you explicitly copy an object.</p>
       <div class="mode-grid" role="group" aria-label="Workshop manipulation mode">
         <button class="mode" data-mode="work-move" aria-pressed="false">✥ Grab / Move</button>
@@ -113,7 +113,15 @@
         </div>
         <label class="control-label" for="motionPhase">PHASE OFFSET (degrees)
           <input id="motionPhase" type="number" min="0" max="360" step="15" value="0"></label>
-        <button id="motionApply" class="wide">Apply effect to selected object</button>
+        <label class="control-label" for="motionBand">LOCAL AUDIO RESPONSE BAND</label>
+        <select id="motionBand" aria-label="Frequency band driving selected object's effect">
+          <option value="full">Full energy (v0.6 behavior)</option>
+          <option value="bass">Bass / kick (35–260 Hz)</option>
+          <option value="mid">Mids (260–2,000 Hz)</option>
+          <option value="high">Highs (2,000–8,000 Hz)</option>
+          <option value="beat">Estimated bass onset pulse</option>
+        </select>
+        <button id="motionApply" class="wide">Apply effect + audio band</button>
         <div class="button-row"><button id="motionPlay">Play motion</button><button id="motionStop">Stop & reset</button></div>
         <label class="control-label" for="motionScrub">PREVIEW TIME <output id="motionTime">0.0 s · stopped</output></label>
         <input id="motionScrub" type="range" min="0" max="8" step=".05" value="0" aria-label="Preview animation at time">
@@ -129,9 +137,17 @@
         <label class="control-label" for="rhythmSensitivity">AUDIO REACTIVITY <output id="rhythmStrength">1.0×</output></label>
         <input id="rhythmSensitivity" type="range" min="0" max="2" step=".1" value="1" aria-label="Bass reactivity sensitivity">
         <div class="button-row"><button id="rhythmPlay" disabled>Play track + motion</button><button id="rhythmPause">Stop track + reset</button></div>
+        <h3 class="rhythm-heading">Beat Forge v0.7 · Spectrum Studio</h3>
+        <p class="help">Select a different frequency band per object in Motion Forge. A beat is a brief detected bass attack, not a BPM estimate or guaranteed kick detection. These values never leave your browser.</p>
+        <div class="rhythm-spectrum" aria-label="Local frequency band levels">
+          <label>BASS <output id="beatBassValue">0%</output><progress id="beatBass" max="100" value="0"></progress></label>
+          <label>MIDS <output id="beatMidValue">0%</output><progress id="beatMid" max="100" value="0"></progress></label>
+          <label>HIGHS <output id="beatHighValue">0%</output><progress id="beatHigh" max="100" value="0"></progress></label>
+        </div>
+        <p id="beatPulse" class="rhythm-pulse" role="status">Waiting for a local audio transient</p>
         <label class="control-label" for="rhythmMeter">BASS / ENERGY <output id="rhythmLevel">0%</output></label>
         <progress id="rhythmMeter" max="100" value="0" aria-label="Current reactive energy"></progress>
-        <p class="help">First assign a Motion Forge effect (Spin, Bob, Orbit or Pulse) to one or more workshop objects. Then choose a file and start the track. In Quest VR, preload your file in the browser sidebar before entering VR; use the in-world RHYTHM PLAY / STOP button. Original audio stays on your device and is never included in scene JSON or GLB. Supported formats depend on Quest Browser and codec availability.</p>
+        <p class="help">First assign a Motion Forge effect (Spin, Bob, Orbit or Pulse) to one or more workshop objects. Then choose a file and start the track. In Quest VR, preload your file in the browser sidebar before entering VR; use the in-world RHYTHM PLAY / STOP and BAND FX buttons. Original audio stays on your device and is never included in scene JSON or GLB. Supported formats depend on Quest Browser and codec availability.</p>
       </section>
       <h2>3D Center-to-Center Ruler</h2>
       <p class="workshop-copy">Select two editable object centers, or use the MEASURE button in VR and trigger-select two different objects. Measures layout distance, not surface clearance.</p>
