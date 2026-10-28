@@ -9,7 +9,7 @@ test('new band monitor and VR BAND FX are wired, existing play path still presen
  for(const id of ['motionBand','beatBass','beatBassValue','beatMid','beatMidValue',
   'beatHigh','beatHighValue','beatPulse']){
   assert.ok(html.includes('id="'+id+'"'),'Missing '+id);
-  assert.ok(main.includes("'#"+id+"'")||main.includes("'beatBass'")||main.includes("'beatMid'")||main.includes("'beatHigh'")||main.includes("'#'+id"),'Missing handler '+id);
+  assert.ok(main.includes("'#"+id+"'")||(main.includes("'"+id+"'")&&main.includes("'#'+id")), 'Missing handler '+id);
  }
  for(const code of ["type:'work-band-cycle'","cycleSelectedBand()","rhythm.sampleFrame()",
   "workshop.tickMotion(seconds,frame)","rhythm.play()","rhythm.pause()"])
