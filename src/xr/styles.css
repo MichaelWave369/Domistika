@@ -116,3 +116,17 @@ background:#183348;border:1px solid #486a85}
 .rhythm-pulse{border-radius:8px;border:1px solid #4b6e6e;padding:7px 9px;
  color:#a4dcd5;background:#111e2a;font-size:11px}
 .motion-forge #motionBand{margin-bottom:9px}
+
+/* Light Forge v0.8: compact, accessible ambient material-gain controls. */
+.light-forge{padding:12px;margin:18px 0;border:1px solid #5382a0;border-radius:12px;
+ background:linear-gradient(150deg,#1b243f,#173a42)}
+.light-forge h2{margin:3px 0 11px;color:#beedff}
+.light-forge .workshop-copy{color:#c2dce8}
+.light-forge>.control-label{display:flex;align-items:center;gap:6px;margin:12px 0 6px}
+.light-forge select{width:100%;border:1px solid #6389a2;border-radius:8px;padding:10px;
+ background:#13223c;color:#e8faff}
+.light-forge input[type=range]{width:100%;accent-color:#80cfff}
+.light-forge #lightGainLabel{margin-left:auto;color:#d5f5ff}
+.light-forge .help{margin-top:12px}
+.light-forge select:focus-visible,.light-forge input:focus-visible{outline:2px solid #a3ebff;outline-offset:3px}
+.light-forge button:hover{border-color:#b7eaff}
