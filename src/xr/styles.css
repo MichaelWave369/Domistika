@@ -175,3 +175,33 @@ background:#183348;border:1px solid #486a85}
 .easel-tools button{background:#523925;border-color:#b88d53;color:#fff1da}
 .easel-tools button.active,.easel-tools button:hover{background:#76502b;border-color:#ffe1a1}
 .easel-tools .help{margin:12px 0 0;color:#d6c5af}
+
+/* Room-first navigation. All legacy editing controls remain in Advanced. */
+#xr-app.studio-simple #studio-legacy-tools{display:none}
+.studio-navigator{margin-top:16px;padding:13px;border:1px solid #4e7290;border-radius:14px;background:linear-gradient(150deg,#132943,#131b30)}
+.studio-navigator h2{margin:0 0 8px;color:#e8e4bd}
+.studio-intro,.studio-room-hint,.studio-shortcuts,.studio-caption{font-size:12px;line-height:1.5;color:#b4cbdd}
+.studio-intro{margin:0 0 12px}
+.studio-room-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
+.studio-room-grid button{padding:13px 7px;text-align:left;min-height:68px;border:1px solid #436183;background:#15283b}
+.studio-room-grid button strong,.studio-room-grid button small{display:block}
+.studio-room-grid button strong{font-size:12px;color:#e8f3ff}
+.studio-room-grid button small{font-size:10px;color:#adbed0;margin-top:5px}
+.studio-room-grid button.active{border-color:#80e7d7;background:#17464c}
+.studio-home-button{width:100%;margin-top:12px}
+.studio-home-button[hidden],.studio-quick [hidden]{display:none!important}
+.studio-room-hint{margin:13px 0 8px;color:#e2e9f6}
+.studio-advanced-button{width:100%;border:1px solid #56637f;background:#1f283d;margin-top:7px}
+.studio-shortcuts{font-size:10px;color:#9db8c8;margin-bottom:0}
+.studio-quick{margin:18px 0 5px;padding:12px;border:1px solid #426174;border-radius:12px;background:#111d30}
+.studio-quick h2{margin:0 0 10px;color:#b9f6ec}
+.studio-quick .control-label{margin:10px 0 7px}
+.studio-quick input[type=color]{width:100%;border:1px solid #43546d;border-radius:8px;height:44px}
+.studio-quick select{width:100%;border:1px solid #4d6482;border-radius:8px;background:#1b3049;color:#eef8ff;padding:10px}
+.studio-quick .button-row button{min-height:44px}
+.studio-quick .wide{margin-top:8px}
+.studio-quick .studio-brush-row{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:5px}
+.studio-brush-row button{padding:12px 3px}
+.studio-quick-boardpicker{margin-top:17px;border-top:1px solid #365067;padding-top:15px}
+.studio-quick-boardpicker .canvas-list{max-height:200px}
+#xr-app[data-studio-room="home"] .studio-quick{display:none}

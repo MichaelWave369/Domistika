@@ -8,10 +8,65 @@
 <title>Domistika XR | Paint Beyond the Page</title>
 </head>
 <body>
-<div id="xr-app">
+<div id="xr-app" class="studio-simple">
   <aside class="sidebar" aria-label="Drawing controls">
     <header class="brand"><strong class="brand-mark">D·XR</strong><div><h1>DOMISTIKA XR</h1><p>PAINT BEYOND THE PAGE</p></div></header>
     <a class="back-link" href="./">← Back to Domistika</a>
+    <nav class="studio-navigator" aria-label="Domistika studio rooms">
+      <h2>Studio Home</h2>
+      <p class="studio-intro">Make art first. The complicated stuff can wait.</p>
+      <div class="studio-room-grid">
+        <button data-studio-room="canvas" aria-pressed="false"><strong>1 · Canvas</strong><small>Paint at an easel</small></button>
+        <button data-studio-room="spatial" aria-pressed="false"><strong>2 · 3D Paint</strong><small>Draw in space</small></button>
+        <button data-studio-room="workshop" aria-pressed="false"><strong>3 · Sculpt</strong><small>Build objects</small></button>
+        <button data-studio-room="gallery" aria-pressed="false"><strong>4 · Gallery</strong><small>View your art</small></button>
+      </div>
+      <button id="studioHome" class="studio-home-button" type="button">⌂ Return to Studio Home</button>
+      <p id="studioRoomHint" class="studio-room-hint" aria-live="polite">Choose a creative space to begin.</p>
+      <button id="studioAdvancedToggle" class="studio-advanced-button" type="button" aria-expanded="false" aria-controls="studio-legacy-tools">Show advanced tools</button>
+      <p class="studio-shortcuts">Desktop: 1–4 choose rooms · H goes Home · wheel zooms · right-drag pans.</p>
+    </nav>
+    <section class="studio-quick" aria-label="Room tools">
+      <div data-studio-quick="canvas">
+        <h2>Canvas painting</h2>
+        <p class="studio-caption">Click or hold the Quest trigger on the easel to paint.</p>
+        <label class="control-label" for="quickBrushColor">COLOR</label>
+        <input id="quickBrushColor" type="color" value="#68e4ff" aria-label="Canvas brush color">
+        <label class="control-label" for="quickBrushWidth">BRUSH SIZE <output id="quickWidthValue">12</output></label>
+        <input id="quickBrushWidth" type="range" min="2" max="80" value="12">
+        <div class="button-row"><button data-studio-action="eraser">Eraser</button><button data-studio-action="new-canvas">New canvas</button></div>
+        <div class="button-row"><button data-studio-action="undo">Undo</button><button data-studio-action="redo">Redo</button></div>
+        <div class="button-row"><button data-studio-action="save-canvas">Save locally</button><button data-studio-action="export-png">Export PNG</button></div>
+        <button class="wide" data-studio-action="easel-toggle">Toggle easel / floating canvas</button>
+      </div>
+      <div data-studio-quick="spatial">
+        <h2>Painting in 3D</h2>
+        <p class="studio-caption">Draw anywhere with a controller trigger or desktop drag.</p>
+        <div class="studio-brush-row"><button data-studio-brush="neon">Neon</button><button data-studio-brush="ribbon">Ribbon</button><button data-studio-brush="spark">Spark</button></div>
+        <div class="button-row"><button data-studio-action="spatial-undo">Undo 3D</button><button data-studio-action="spatial-redo">Redo 3D</button></div>
+        <div class="button-row"><button data-studio-action="spatial-save">Save 3D</button><button data-studio-action="spatial-export">Export 3D</button></div>
+      </div>
+      <div data-studio-quick="workshop">
+        <h2>Sculpture Workshop</h2>
+        <p class="studio-caption">Add a shape, then drag or trigger-grab it to move.</p>
+        <label class="control-label" for="quickShape">ADD A SHAPE</label>
+        <select id="quickShape"><option value="box">Cube</option><option value="sphere">Sphere</option><option value="cylinder">Cylinder</option><option value="torus">Torus</option></select>
+        <button class="wide" data-studio-action="work-add">Add object</button>
+        <div class="button-row"><button data-studio-action="work-undo">Undo</button><button data-studio-action="work-delete">Delete selected</button></div>
+        <div class="button-row"><button data-studio-action="work-save">Save locally</button><button data-studio-action="work-export">Export JSON</button></div>
+      </div>
+      <div data-studio-quick="gallery">
+        <h2>Your Gallery</h2>
+        <p class="studio-caption">View-only arrangement; original canvas positions are preserved.</p>
+        <button class="wide" data-studio-action="export-png">Export selected painting</button>
+        <button class="wide" data-studio-action="save-canvas">Save scene locally</button>
+      </div>
+      <div data-studio-quick="canvas" class="studio-quick-boardpicker">
+        <h2>Your paintings</h2>
+        <div id="studioCanvasList" class="canvas-list"></div>
+      </div>
+    </section>
+    <div id="studio-legacy-tools">
     <h2>Interaction</h2>
     <div class="mode-grid" role="group" aria-label="Tool mode">
       <button class="mode active" data-mode="draw" aria-pressed="true">✎ Draw</button>
@@ -270,6 +325,7 @@
     </div>
     <p class="help bpc-help">Use <a href="https://michaelwave369.github.io/BackyardProductionCompany/" target="_blank" rel="noopener noreferrer">BPC Bridge Lab</a> to export a Framefield mesh preview. Read-only 3D mesh with Framefield transform-keyframe playback and scrubbing. You can play/pause with the BPC button inside VR. Meshes are never added to drawing scenes or local backups.</p>
     <p class="help"><b>DESKTOP:</b> Drag to paint or transform. Choose Paint in 3D to paint open-air strokes.<br><br><b>QUEST:</b> Two in-world tool decks let you select canvas tools or spatial brushes. Physical headset verification is still required.</p>
+    </div><!-- /studio-legacy-tools -->
   </aside>
   <main class="stage" aria-label="3D drawing studio">
     <div class="stage-top">SPATIAL SKETCH STUDIO <span id="modeName">/ DRAW</span></div>
