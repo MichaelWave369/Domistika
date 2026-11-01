@@ -4,6 +4,7 @@ export const MAX_BOARDS = 12;
 export const MAX_STROKES = 600;
 export const MAX_POINTS = 2500;
 const validColor = /^#[0-9a-f]{6}$/i;
+const validBrush = new Set(['dry','wash','marker']);
 const finite = (v,d=0) => Number.isFinite(v) ? v : d;
 const clamp = (v,lo,hi) => Math.max(lo,Math.min(hi,v));
 const vec = (v,def,lo,hi) => def.map((n,i) => clamp(finite(v?.[i],n),lo,hi));
@@ -23,8 +24,10 @@ export function makeScene() {
   return {schema:SCHEMA,selectedId:board.id,boards:[board]};
 }
 export function point(u,v) {return [clamp(finite(u),0,1),clamp(finite(v),0,1)];}
-export function newStroke(color,width,eraser=false,uv=[.5,.5]) {
-  return {color:validColor.test(color)?color.toLowerCase():'#68e4ff',width:clamp(finite(width,10),2,120),erase:!!eraser,points:[point(uv[0],uv[1])]};
+export function newStroke(color,width,eraser=false,uv=[.5,.5],brush='solid') {
+  const stroke={color:validColor.test(color)?color.toLowerCase():'#68e4ff',width:clamp(finite(width,10),2,120),erase:!!eraser,points:[point(uv[0],uv[1])]};
+  if(!stroke.erase&&validBrush.has(brush))stroke.brush=brush;
+  return stroke;
 }
 export function extendStroke(stroke,uv) {
   if (!stroke||!Array.isArray(stroke.points)||stroke.points.length>=MAX_POINTS) return false;
@@ -43,8 +46,10 @@ export function sanitizeScene(input) {
     ids.add(id);
     const strokes=b.strokes.map(s=>{
       if (!s||!Array.isArray(s.points)||!s.points.length||s.points.length>MAX_POINTS) throw Error('Invalid stroke data.');
-      return {color:validColor.test(s.color)?s.color.toLowerCase():'#68e4ff',width:clamp(finite(s.width,10),2,120),erase:!!s.erase,
+      const stroke={color:validColor.test(s.color)?s.color.toLowerCase():'#68e4ff',width:clamp(finite(s.width,10),2,120),erase:!!s.erase,
         points:s.points.map(p=>{if(!Array.isArray(p)||p.length!==2||!p.every(Number.isFinite))throw Error('Invalid stroke coordinate.');return point(p[0],p[1]);})};
+      if(!stroke.erase&&validBrush.has(s.brush))stroke.brush=s.brush;
+      return stroke;
     });
     return {id,name:String(b.name||('Canvas '+(i+1))).slice(0,60),position:vec(b.position,[0,1.5,-1.35],-30,30),rotation:vec(b.rotation,[0,0,0],-Math.PI*8,Math.PI*8),scale:vec(b.scale,[1,1,1],.25,4),strokes};
   });
