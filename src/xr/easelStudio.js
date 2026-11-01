@@ -93,6 +93,46 @@ export function createEaselStudio({scene}){
     }else mesh.raycast=()=>{};
     fitPanel.add(mesh);
   }
+  // Color Lab is a separate, compact side deck. Pigment ingredients come
+  // from whichever color the user most recently chose on the wooden palette.
+  const colorPanel=new THREE.Group();
+  colorPanel.name='Quest Color Laboratory';
+  colorPanel.position.set(2.86,1.55,-1.12);stage.add(colorPanel);
+  const colorBacking=new THREE.Mesh(new THREE.PlaneGeometry(.91,2.34),
+    new THREE.MeshBasicMaterial({color:0x243143,side:THREE.DoubleSide}));
+  colorBacking.position.z=-.02;colorBacking.raycast=()=>{};colorPanel.add(colorBacking);
+  const labButtons=[
+    ['COLOR LAB',null],
+    ['CAPTURE A','capture-a'],['CAPTURE B','capture-b'],
+    ['MORE A','more-a'],['MORE B','more-b'],['USE MIX','use-mix'],
+    ['SOLID','brush-solid'],['DRY BRUSH','brush-dry'],
+    ['WATERCOLOR','brush-wash'],['MARKER','brush-marker']
+  ];
+  const labButtonMeshes=[];
+  for(const [i,[title,action]] of labButtons.entries()){
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.76,.165),
+      new THREE.MeshBasicMaterial({map:labelTexture(title),side:THREE.DoubleSide}));
+    mesh.position.set(0,.95-i*.20,.025);
+    if(action){
+      mesh.userData.action={type:'lab-action',value:action};
+      actionMeshes.push(mesh);labButtonMeshes.push(mesh);
+    }else mesh.raycast=()=>{};
+    colorPanel.add(mesh);
+  }
+  const mixedSwatch=new THREE.Mesh(new THREE.PlaneGeometry(.69,.18),
+    new THREE.MeshBasicMaterial({color:0x734aa0,side:THREE.DoubleSide}));
+  mixedSwatch.name='Color Lab mixed pigment preview';
+  mixedSwatch.position.set(0,-1.04,.03);
+  mixedSwatch.raycast=()=>{};colorPanel.add(mixedSwatch);
+  function setMixPreview(hex){
+    if(/^#[0-9a-f]{6}$/i.test(hex))mixedSwatch.material.color.set(hex);
+  }
+  function setActiveBrush(brush){
+    for(const mesh of labButtonMeshes){
+      const value=mesh.userData.action.value;
+      if(value.startsWith('brush-'))mesh.material.color.setHex(value.slice(6)===brush?0xffdeaa:0xffffff);
+    }
+  }
   const snapshots=new WeakMap();
   let active=null;
   function restore(){
@@ -146,7 +186,7 @@ export function createEaselStudio({scene}){
   }
   applyFit();
   return {
-    stage,actionMeshes,select,setEnabled,setFit,adjustFit,
+    stage,actionMeshes,select,setEnabled,setFit,adjustFit,setMixPreview,setActiveBrush,
     get fit(){return {...fit};},
     get enabled(){return stage.visible;},
     originalPose(group){

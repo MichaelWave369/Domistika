@@ -39,6 +39,34 @@
         <div class="button-row"><button data-studio-action="undo">Undo</button><button data-studio-action="redo">Redo</button></div>
         <div class="button-row"><button data-studio-action="save-canvas">Save locally</button><button data-studio-action="export-png">Export PNG</button></div>
         <button class="wide" data-studio-action="easel-toggle">Toggle easel / floating canvas</button>
+        <fieldset class="color-lab" aria-label="Color Laboratory pigment mixing and brushes">
+          <legend>Color Laboratory</legend>
+          <p>Blend two artist-wheel pigments. This is an RYB approximation, not spectrally calibrated paint.</p>
+          <div class="color-lab-pigments">
+            <label for="labPigmentA">Pigment A <input id="labPigmentA" type="color" value="#e54b39"></label>
+            <label for="labPigmentB">Pigment B <input id="labPigmentB" type="color" value="#3756ba"></label>
+          </div>
+          <label class="control-label" for="labTarget">PRESET SWATCH TO</label>
+          <select id="labTarget" aria-label="Target pigment for preset colors">
+            <option value="a">Pigment A</option><option value="b">Pigment B</option>
+          </select>
+          <div id="labPresetList" class="color-lab-presets" role="group" aria-label="Pigment colors"></div>
+          <label class="control-label" for="labRatio">PIGMENT B SHARE <output id="labRatioValue">50% B</output></label>
+          <input id="labRatio" type="range" min="0" max="100" step="1" value="50">
+          <div class="color-lab-result">
+            <output id="labMixedColor" aria-label="Mixed paint preview">#734AA0</output>
+            <button type="button" id="labApply">Use mixed paint</button>
+          </div>
+          <fieldset id="labBrushes" class="color-lab-brushes">
+            <legend>BRUSH STYLE · NEW STROKES</legend>
+            <button type="button" data-lab-brush="solid" aria-pressed="true" class="active">Solid</button>
+            <button type="button" data-lab-brush="dry" aria-pressed="false">Dry Brush</button>
+            <button type="button" data-lab-brush="wash" aria-pressed="false">Watercolor</button>
+            <button type="button" data-lab-brush="marker" aria-pressed="false">Marker</button>
+          </fieldset>
+          <p>Quest: choose a palette color, CAPTURE A/B on the Color Lab deck, change the mix with MORE A/B, then USE MIX. Brush buttons select the style.</p>
+        </fieldset>
+
         <fieldset class="atelier-fit" aria-label="Easel position and angle">
           <legend>Easel fit · seated or standing</legend>
           <label class="control-label" for="easelHeight">HEIGHT <output id="easelHeightValue">1.50 m</output></label>
