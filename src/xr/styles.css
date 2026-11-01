@@ -219,3 +219,28 @@ background:#183348;border:1px solid #486a85}
 .atelier-fit input{width:100%;accent-color:#eab779;min-height:28px}
 .atelier-fit button{margin-top:12px;border-color:#a08b6c;background:#54422c}
 .atelier-fit p{font-size:11px;color:#d2c4b1;line-height:1.5;margin:10px 0 0}
+
+/* Color Laboratory keeps pigments, blend and brush styles readable in the Canvas room. */
+.color-lab{margin:18px 0 14px;padding:12px;border:1px solid #8e7199;border-radius:11px;
+ background:linear-gradient(150deg,#28263f,#242032);min-width:0}
+.color-lab>legend{font-size:12px;font-weight:750;color:#e5c8ff;padding:0 6px}
+.color-lab p{font-size:11px;color:#d2c3e3;line-height:1.5;margin:8px 0 12px}
+.color-lab-pigments{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.color-lab-pigments label{min-width:0;font-size:11px;color:#dbcfea}
+.color-lab-pigments input[type=color]{display:block;width:100%;height:42px;margin-top:6px;padding:4px;
+ border:1px solid #685a7e;border-radius:8px}
+.color-lab select{width:100%;padding:9px;color:#eee8f7;background:#1a2030;
+ border:1px solid #67577e;border-radius:8px}
+.color-lab-presets{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;margin:10px 0 8px}
+.color-lab-presets button{height:35px;padding:3px;border:2px solid #af9cbb;border-radius:8px}
+.color-lab-presets button:focus-visible{outline:2px solid #eaccff;outline-offset:3px}
+.color-lab-result{display:grid;grid-template-columns:1fr 1fr;gap:8px;align-items:stretch;margin-top:12px}
+.color-lab-result output{display:grid;place-items:center;min-height:43px;font-size:11px;
+ font-weight:750;color:white;text-shadow:0 1px 3px #000,0 0 5px #000;
+ border:1px solid #9b8cbb;border-radius:8px;background:#734aa0}
+.color-lab-result button{border-color:#9b76a6;background:#433057}
+.color-lab-brushes{margin:13px 0 0;padding:10px;border:1px solid #625470;border-radius:9px;
+ display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;min-width:0}
+.color-lab-brushes legend{color:#dbbdea;font-size:10px;letter-spacing:.04em}
+.color-lab-brushes button{min-height:42px;padding:8px 4px;border-color:#655b78}
+.color-lab-brushes button.active{border-color:#dcabec;background:#583966;color:#fff3ff}

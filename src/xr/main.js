@@ -6,6 +6,8 @@ import { MAX_BOARDS, MAX_STROKES, makeBoard, makeScene, newStroke, extendStroke,
 import {readBpcFramefieldPreview, sampleFramefieldPose, FRAMEFIELD_EULER_ORDER, BPC_PREVIEW_MAX_BYTES} from './framefieldPreview.js';
 import {createBrushStudio} from './brushStudio.js';
 import {createEaselStudio} from './easelStudio.js';
+import {CANVAS_BRUSHES,DEFAULT_MIX,PIGMENTS,normalizeBrush,normalizeMix,mixPigments} from './colorLaboratory.js';
+import {paintStroke} from './paintTextures.js';
 import {createControllerPaintbrush} from './controllerPaintbrush.js';
 import {createStudioNavigator,STUDIO_ROOMS} from './studioNavigator.js';
 import {createStudioEnvironments} from './studioEnvironments.js';
@@ -27,6 +29,7 @@ const renderedBoards=new Map(), xrInteractions=new Map();
 let sceneData=makeScene(), selectedId=sceneData.selectedId, mode='draw', erasing=false, pointerState=null;
 let airStyle='neon',airMirror=false;
 let activeStudioRoom='home',showStudioScenery=true;
+let canvasBrush='solid',labMix={...DEFAULT_MIX};
 const scene=new THREE.Scene();
 // Read-only BPC objects are deliberately outside sceneData and its localStorage schema.
 const bpcMeshRoot=new THREE.Group();
@@ -87,14 +90,7 @@ function textTexture(text,color='#c7ffef') {
   const t=new THREE.CanvasTexture(el);t.colorSpace=THREE.SRGBColorSpace;
   return t;
 }
-function strokeDraw(ctx,s) {
-  const pts=s.points;if(!pts.length)return;
-  ctx.save();ctx.globalCompositeOperation=s.erase?'destination-out':'source-over';
-  ctx.fillStyle=s.erase?'black':s.color;ctx.strokeStyle=ctx.fillStyle;ctx.lineWidth=s.width;ctx.lineCap='round';ctx.lineJoin='round';
-  if(pts.length===1){ctx.beginPath();ctx.arc(pts[0][0]*W,pts[0][1]*H,s.width/2,0,Math.PI*2);ctx.fill();}
-  else{ctx.beginPath();ctx.moveTo(pts[0][0]*W,pts[0][1]*H);for(let i=1;i<pts.length;i++)ctx.lineTo(pts[i][0]*W,pts[i][1]*H);ctx.stroke();}
-  ctx.restore();
-}
+function strokeDraw(ctx,s){paintStroke(ctx,s,W,H);}
 function paintBoard(b) {
   const r=renderedBoards.get(b.id);if(!r)return;
   const ctx=r.canvas.getContext('2d');ctx.clearRect(0,0,W,H);
@@ -188,7 +184,7 @@ function hitBoard(ray){
 function uv(uv){return [uv.x,1-uv.y];}
 function beginStroke(board,p){
   if(board.strokes.length>=MAX_STROKES){message('Stroke limit reached. Use a new canvas.');return null;}
-  const s=newStroke(ink(),size(),erasing,p);
+  const s=newStroke(ink(),size(),erasing,p,canvasBrush);
   board.strokes.push(s);renderedBoards.get(board.id).undo.length=0;paintBoard(board);return s;
 }
 function continueStroke(board,s,p){if(s&&extendStroke(s,p))paintBoard(board);}
@@ -787,6 +783,79 @@ for(const key of ['Height','Tilt','Distance']){
     setEaselFit({[key.toLowerCase()]:Number(event.target.value)}));
 }
 $('#easelResetFit').addEventListener('click',()=>adjustEaselFit('reset'));
+
+/** Color Laboratory only changes the current brush and future Canvas strokes. */
+function syncColorLabUI(){
+  const mix=normalizeMix(labMix);
+  labMix=mix;
+  const paint=mixPigments(mix.a,mix.b,mix.ratio);
+  $('#labPigmentA').value=mix.a;
+  $('#labPigmentB').value=mix.b;
+  $('#labRatio').value=String(mix.ratio);
+  $('#labRatioValue').textContent=mix.ratio+'% B';
+  const preview=$('#labMixedColor');
+  preview.style.backgroundColor=paint;
+  preview.textContent=paint.toUpperCase();
+  preview.setAttribute('aria-label','Mixed paint '+paint);
+  for(const btn of document.querySelectorAll('[data-lab-brush]')){
+    const selected=btn.dataset.labBrush===canvasBrush;
+    btn.classList.toggle('active',selected);
+    btn.setAttribute('aria-pressed',String(selected));
+  }
+  easel.setMixPreview(paint);
+  easel.setActiveBrush(canvasBrush);
+}
+function setLabMix(partial){
+  labMix=normalizeMix({...labMix,...partial});
+  syncColorLabUI();
+}
+function useMixedPaint(){
+  const paint=mixPigments(labMix.a,labMix.b,labMix.ratio);
+  chooseEaselColor(paint);
+  syncColorLabUI();
+  message('Color Lab: mixed '+paint+' applied to the canvas brush.');
+}
+function setCanvasBrush(value){
+  canvasBrush=normalizeBrush(value);
+  syncColorLabUI();
+  message('New Canvas strokes use '+({solid:'Solid',dry:'Dry Brush',wash:'Watercolor Wash',marker:'Marker'}[canvasBrush])+
+    '. Existing painting strokes are unchanged.');
+}
+function questColorLab(action){
+  if(action==='capture-a')setLabMix({a:ink()});
+  else if(action==='capture-b')setLabMix({b:ink()});
+  else if(action==='more-a')setLabMix({ratio:labMix.ratio-10});
+  else if(action==='more-b')setLabMix({ratio:labMix.ratio+10});
+  else if(action==='use-mix'){useMixedPaint();return;}
+  else if(action.startsWith('brush-')){setCanvasBrush(action.slice(6));return;}
+  message('Color Lab '+action.replaceAll('-',' ')+' · A '+labMix.a+' · B '+labMix.b+
+    ' · '+labMix.ratio+'% B.');
+}
+function setupColorLab(){
+  const presets=$('#labPresetList');
+  for(const pigment of PIGMENTS){
+    const button=document.createElement('button');
+    button.type='button';button.title=pigment.name+' '+pigment.color;
+    button.setAttribute('aria-label',pigment.name+' '+pigment.color);
+    button.style.backgroundColor=pigment.color;
+    button.addEventListener('click',()=>{
+      const key=$('#labTarget').value==='b'?'b':'a';
+      setLabMix({[key]:pigment.color});
+    });
+    presets.append(button);
+  }
+  for(const key of ['A','B']){
+    $('#labPigment'+key).addEventListener('input',event=>setLabMix({
+      [key.toLowerCase()]:event.target.value
+    }));
+  }
+  $('#labRatio').addEventListener('input',event=>setLabMix({ratio:Number(event.target.value)}));
+  $('#labApply').addEventListener('click',useMixedPaint);
+  document.querySelectorAll('[data-lab-brush]').forEach(button=>
+    button.addEventListener('click',()=>setCanvasBrush(button.dataset.labBrush)));
+  syncColorLabUI();
+}
+
 function toggleEraser(){
   erasing=!erasing;$('#eraser').textContent='◌ Eraser: '+(erasing?'ON':'OFF');
   $('#eraser').setAttribute('aria-pressed',String(erasing));updateToolColors();
@@ -944,6 +1013,7 @@ function startXR(c,index){
     if(a.type==='mode')setMode(a.value);
     if(a.type==='easel-toggle')toggleEasel();
     if(a.type==='easel-color')chooseEaselColor(a.value);
+    if(a.type==='lab-action')questColorLab(a.value);
     if(a.type==='easel-fit')adjustEaselFit(a.value);
     if(a.type==='erase')toggleEraser();
     if(a.type==='bpc-playback')toggleBpcPlayback();
@@ -1556,7 +1626,7 @@ function resize(){
   renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
 }
 window.addEventListener('resize',resize);new ResizeObserver(resize).observe($('#render-root'));
-resize();syncEaselUI();updateToolColors();syncLightUI();syncShowUI();renderRunnerEditor();
+resize();setupColorLab();syncEaselUI();updateToolColors();syncLightUI();syncShowUI();renderRunnerEditor();
 goToStudioRoom('home',true);
 syncBpcPlaybackUI();
 let lastMotionFrame=null,lastRhythmBucket=-1;
