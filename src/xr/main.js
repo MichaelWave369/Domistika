@@ -749,6 +749,122 @@ function toggleEraser(){
   erasing=!erasing;$('#eraser').textContent='◌ Eraser: '+(erasing?'ON':'OFF');
   $('#eraser').setAttribute('aria-pressed',String(erasing));updateToolColors();
 }
+
+/* Focused studio rooms share the same local-first drawing engines and saved files. */
+function isWorldVisible(mesh){
+ for(let object=mesh;object;object=object.parent)if(!object.visible)return false;
+ return true;
+}
+function studioXRTargets(){
+ return [...studioNav.controls,...controls3d,...(easel.enabled?easel.actionMeshes:[])].filter(isWorldVisible);
+}
+function syncBoardVisibility(){
+ for(const [id,render] of renderedBoards){
+  render.group.visible=activeStudioRoom==='gallery'||(activeStudioRoom==='canvas'&&id===selectedId);
+ }
+}
+function syncRoomUI(){
+ const room=STUDIO_ROOMS[activeStudioRoom];
+ $('#xr-app').dataset.studioRoom=activeStudioRoom;
+ $('#studioRoomHint').textContent=room.hint;
+ $('#studioHome').hidden=activeStudioRoom==='home';
+ $('#modeName').textContent='/ '+room.title.toUpperCase();
+ for(const button of document.querySelectorAll('[data-studio-room]')){
+  const chosen=button.dataset.studioRoom===activeStudioRoom;
+  button.classList.toggle('active',chosen);button.setAttribute('aria-pressed',String(chosen));
+ }
+ for(const el of document.querySelectorAll('[data-studio-quick]')){
+  el.hidden=el.dataset.studioQuick!==activeStudioRoom;
+ }
+ const advanced=$('#xr-app').classList.contains('studio-advanced');
+ $('#studioAdvancedToggle').textContent=advanced?'Hide advanced tools':'Show advanced tools';
+ $('#studioAdvancedToggle').setAttribute('aria-expanded',String(advanced));
+}
+function syncRoomScene(){
+ studioNav.setRoom(activeStudioRoom);
+ toolPanel.visible=activeStudioRoom==='canvas';
+ airDeck.visible=activeStudioRoom==='spatial';
+ workDeck.visible=activeStudioRoom==='workshop';
+ workDeck.position.set(1.65,1.68,-1.45);
+ workDeck.rotation.y=-.22;
+ brushStudio.root.visible=activeStudioRoom==='spatial';
+ workshop.root.visible=activeStudioRoom==='workshop';
+ bpcMeshRoot.visible=activeStudioRoom==='workshop';
+ syncBoardVisibility();
+ const blend=renderer.xr.getSession()?.environmentBlendMode;
+ const passthrough=renderer.xr.isPresenting&&(blend==='alpha-blend'||blend==='additive');
+ grid.visible=!passthrough&&(activeStudioRoom==='spatial'||activeStudioRoom==='workshop');
+}
+function goToStudioRoom(room,force=false){
+ if(!Object.hasOwn(STUDIO_ROOMS,room))return;
+ if(!force&&room===activeStudioRoom)return;
+ if(pointerState){message('Release the mouse or brush before changing rooms.');return;}
+ if(xrInteractions.size){
+  message('Release the controller triggers before changing rooms.');return;
+ }
+ // Restore original transforms before new temporary presentations.
+ if(studioNav.isGallery)studioNav.leaveGallery();
+ if(easel.enabled)easel.setEnabled(false);
+ activeStudioRoom=room;
+ if(room==='canvas'){
+  setMode('draw');
+  easel.setEnabled(true,renderedBoards.get(selectedId));
+ }else if(room==='spatial')setMode('airbrush');
+ else if(room==='workshop')setMode('work-move');
+ else setMode('draw');
+ if(room==='gallery')studioNav.showGallery([...renderedBoards.values()]);
+ syncRoomScene();syncEaselUI();syncRoomUI();
+ if(!renderer.xr.isPresenting){
+  camera.position.set(0,1.75,3.6);
+  controls.target.set(0,1.5,-1.5);
+  controls.update();
+ }
+ message(STUDIO_ROOMS[room].hint);
+}
+document.querySelectorAll('[data-studio-room]').forEach(button=>
+ button.addEventListener('click',()=>goToStudioRoom(button.dataset.studioRoom)));
+$('#studioHome').addEventListener('click',()=>goToStudioRoom('home'));
+$('#studioAdvancedToggle').addEventListener('click',()=>{
+ const advanced=$('#xr-app').classList.toggle('studio-advanced');
+ $('#xr-app').classList.toggle('studio-simple',!advanced);
+ syncRoomUI();
+});
+$('#quickBrushColor').addEventListener('input',event=>{
+ $('#brushColor').value=event.target.value;
+ $('#brushColor').dispatchEvent(new Event('input',{bubbles:true}));
+});
+$('#quickBrushWidth').addEventListener('input',event=>{
+ $('#brushWidth').value=event.target.value;
+ $('#brushWidth').dispatchEvent(new Event('input',{bubbles:true}));
+});
+document.querySelectorAll('[data-studio-brush]').forEach(button=>button.addEventListener('click',()=>{
+ setAirStyle(button.dataset.studioBrush);
+ for(const tile of document.querySelectorAll('[data-studio-brush]')){
+  tile.classList.toggle('active',tile===button);
+ }
+}));
+document.querySelectorAll('[data-studio-action]').forEach(button=>button.addEventListener('click',()=>{
+ const action=button.dataset.studioAction;
+ try{
+  if(action==='undo')undo();
+  else if(action==='redo')redo();
+  else if(action==='eraser')toggleEraser();
+  else if(action==='easel-toggle')toggleEasel();
+  else if(action==='new-canvas')addBoard();
+  else if(action==='save-canvas')persist();
+  else if(action==='export-png')$('#downloadPng').click();
+  else if(action==='spatial-undo')brushStudio.undo();
+  else if(action==='spatial-redo')brushStudio.redo();
+  else if(action==='spatial-save')brushStudio.save();
+  else if(action==='spatial-export')$('#airExport').click();
+  else if(action==='work-add')addWorkshopShape($('#quickShape').value);
+  else if(action==='work-undo')workshop.undo();
+  else if(action==='work-delete')deleteWorkshop();
+  else if(action==='work-save')workshop.save();
+  else if(action==='work-export')$('#workshopExportJson').click();
+ }catch(error){message('Studio action unavailable: '+error.message);}
+}));
+
 const controllers=[0,1].map(i=>{
   const c=renderer.xr.getController(i);
   const laser=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(0,0,-1)]),new THREE.LineBasicMaterial({color:i?0xc89cff:0x8fffe8}));
