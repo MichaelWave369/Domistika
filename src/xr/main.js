@@ -8,6 +8,8 @@ import {createBrushStudio} from './brushStudio.js';
 import {createEaselStudio} from './easelStudio.js';
 import {CANVAS_BRUSHES,DEFAULT_MIX,PIGMENTS,normalizeBrush,normalizeMix,mixPigments} from './colorLaboratory.js';
 import {paintStroke} from './paintTextures.js';
+import {BASE_LAYER_ID,canvasLayers,activeCanvasLayer,strokeLayerId,editCanvasLayers} from './layerModel.js';
+import {renderLayeredBoard} from './layerRendering.js';
 import {createControllerPaintbrush} from './controllerPaintbrush.js';
 import {createStudioNavigator,STUDIO_ROOMS} from './studioNavigator.js';
 import {createStudioEnvironments} from './studioEnvironments.js';
@@ -93,8 +95,10 @@ function textTexture(text,color='#c7ffef') {
 function strokeDraw(ctx,s){paintStroke(ctx,s,W,H);}
 function paintBoard(b) {
   const r=renderedBoards.get(b.id);if(!r)return;
-  const ctx=r.canvas.getContext('2d');ctx.clearRect(0,0,W,H);
-  for(const s of b.strokes)strokeDraw(ctx,s);
+  renderLayeredBoard(r.canvas,b,strokeDraw,()=>{
+    if(!r.layerScratch)r.layerScratch=document.createElement('canvas');
+    return r.layerScratch;
+  });
   r.texture.needsUpdate=true;
 }
 function disposeBoard(r){
@@ -135,6 +139,7 @@ function selectBoard(id){
       btn.addEventListener('click',()=>selectBoard(b.id));target.append(btn);
     }
   }
+  syncCanvasLayersUI();
 }
 function mountScene(data){
   // Existing projects are unchanged; temporary gallery/easel transforms are discarded.
@@ -184,7 +189,10 @@ function hitBoard(ray){
 function uv(uv){return [uv.x,1-uv.y];}
 function beginStroke(board,p){
   if(board.strokes.length>=MAX_STROKES){message('Stroke limit reached. Use a new canvas.');return null;}
+  const layer=activeCanvasLayer(board);
+  if(!layer.visible){message('Layer hidden. Show it before painting.');return null;}
   const s=newStroke(ink(),size(),erasing,p,canvasBrush);
+  if(layer.id!==BASE_LAYER_ID)s.layerId=layer.id;
   board.strokes.push(s);renderedBoards.get(board.id).undo.length=0;paintBoard(board);return s;
 }
 function continueStroke(board,s,p){if(s&&extendStroke(s,p))paintBoard(board);}
@@ -856,6 +864,60 @@ function setupColorLab(){
   syncColorLabUI();
 }
 
+
+function applyCanvasLayerAction(action,id){
+  if(activeStudioRoom!=='canvas'){message('Enter Canvas Studio to edit painting layers.');return;}
+  if(pointerState||xrInteractions.size){message('Release the brush or trigger before editing layers.');return;}
+  const board=selected();if(!board)return;
+  try{
+    const state=editCanvasLayers(board,action,id);
+    board.layers=state.layers;board.activeLayerId=state.activeLayerId;
+    // Deleting even an empty layer can invalidate an earlier undone stroke.
+    if(action==='remove-empty')renderedBoards.get(board.id)?.undo.splice(0);
+    paintBoard(board);syncCanvasLayersUI();persist();
+    const current=activeCanvasLayer(board);
+    message('Layer: '+current.name+' ('+canvasLayers(board).length+' total)'+
+      (current.visible?'':' · HIDDEN')+'.');
+  }catch(error){message(error.message);}
+}
+function syncCanvasLayersUI(){
+  const board=selected();if(!board)return;
+  const layers=canvasLayers(board),active=activeCanvasLayer(board);
+  const activeIndex=layers.findIndex(layer=>layer.id===active.id);
+  $('#canvasLayerCount').textContent=layers.length+' / 8';
+  const list=$('#canvasLayerList');list.replaceChildren();
+  // Visually topmost layer appears first.
+  for(let index=layers.length-1;index>=0;index--){
+    const layer=layers[index];
+    const row=document.createElement('div');row.className='canvas-layer-row';
+    const choose=document.createElement('button');
+    choose.type='button';choose.className='canvas-layer-name'+(layer.id===active.id?' active':'');
+    choose.textContent=(layer.id===BASE_LAYER_ID?'▣ ':'▤ ')+layer.name;
+    choose.title='Paint on '+layer.name;
+    choose.setAttribute('aria-pressed',String(layer.id===active.id));
+    choose.addEventListener('click',()=>applyCanvasLayerAction('select',layer.id));
+    row.append(choose);
+    function button(text,label,action,disabled=false){
+      const el=document.createElement('button');el.type='button';
+      el.textContent=text;el.title=label;
+      el.setAttribute('aria-label',label+' '+layer.name);
+      el.disabled=disabled;
+      el.addEventListener('click',()=>applyCanvasLayerAction(action,layer.id));
+      row.append(el);
+    }
+    button(layer.visible?'◉':'◌',layer.visible?'Hide':'Show','toggle');
+    button('↑','Move up','up',index===0||index===layers.length-1);
+    button('↓','Move down','down',index<=1);
+    button('×','Remove empty layer','remove-empty',
+      index===0||board.strokes.some(s=>strokeLayerId(s)===layer.id));
+    list.append(row);
+  }
+  $('#canvasLayerAdd').disabled=layers.length>=8;
+  $('#canvasLayerSelected').textContent='Painting on: '+active.name+(active.visible?'':' (hidden)');
+  easel.setLayerStatus((activeIndex+1)+'/'+layers.length+' '+active.name,active.visible);
+}
+$('#canvasLayerAdd').addEventListener('click',()=>applyCanvasLayerAction('add'));
+
 function toggleEraser(){
   erasing=!erasing;$('#eraser').textContent='◌ Eraser: '+(erasing?'ON':'OFF');
   $('#eraser').setAttribute('aria-pressed',String(erasing));updateToolColors();
@@ -1014,6 +1076,7 @@ function startXR(c,index){
     if(a.type==='easel-toggle')toggleEasel();
     if(a.type==='easel-color')chooseEaselColor(a.value);
     if(a.type==='lab-action')questColorLab(a.value);
+    if(a.type==='layer-action')applyCanvasLayerAction(a.value);
     if(a.type==='easel-fit')adjustEaselFit(a.value);
     if(a.type==='erase')toggleEraser();
     if(a.type==='bpc-playback')toggleBpcPlayback();
@@ -1110,6 +1173,7 @@ function addBoard(copy=false){
     b.name=(source.name+' copy').slice(0,60);
     b.position=[source.position[0]+.32,source.position[1]+.13,source.position[2]+.2];
     b.rotation=[...source.rotation];b.scale=[...source.scale];b.strokes=structuredClone(source.strokes);
+    if(source.layers){b.layers=structuredClone(source.layers);b.activeLayerId=source.activeLayerId??BASE_LAYER_ID;}
   }
   sceneData.boards.push(b);createBoard(b);selectBoard(b.id);persist();
 }
