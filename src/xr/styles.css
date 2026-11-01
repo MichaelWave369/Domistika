@@ -205,3 +205,7 @@ background:#183348;border:1px solid #486a85}
 .studio-quick-boardpicker{margin-top:17px;border-top:1px solid #365067;padding-top:15px}
 .studio-quick-boardpicker .canvas-list{max-height:200px}
 #xr-app[data-studio-room="home"] .studio-quick{display:none}
+
+/* Accessible, session-only scenic backdrop toggle; never alters saved projects. */
+.studio-scenery-button{width:100%;margin-top:8px;border:1px solid #647d86;background:#1b3840;color:#d6f2ed}
+.studio-scenery-button:hover{border-color:#c5e8d8}

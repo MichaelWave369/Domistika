@@ -57,6 +57,13 @@ export function createStudioNavigator({scene}){
  returnButton.name='Return to Studio Home';
  returnButton.userData.action={type:'studio-room',value:'home'};
  scene.add(returnButton);controls.push(returnButton);
+ const decorButton=new THREE.Mesh(new THREE.PlaneGeometry(.94,.33),new THREE.MeshBasicMaterial({
+  map:texture('SCENERY','ON / OFF','#92e6e0'),side:THREE.DoubleSide,depthTest:false
+ }));
+ decorButton.position.set(-.23,2.14,-1.15);
+ decorButton.name='Toggle Studio Scenery';
+ decorButton.userData.action={type:'studio-decor'};
+ scene.add(decorButton);controls.push(decorButton);
  const galleryPoses=new Map();
  let activeRoom='home';
  function leaveGallery(){
@@ -82,8 +89,10 @@ export function createStudioNavigator({scene}){
  function setRoom(room){
   if(!Object.hasOwn(STUDIO_ROOMS,room))throw Error('Unknown studio room.');
   activeRoom=room;home.visible=room==='home';returnButton.visible=room!=='home';
+  decorButton.visible=room!=='home';
  }
- return {home,controls,setRoom,showGallery,leaveGallery,
+ function setDecorState(enabled){decorButton.material.color.setHex(enabled?0xffffff:0xf7aaa4);}
+ return {home,controls,setRoom,setDecorState,showGallery,leaveGallery,
   get room(){return activeRoom;},
   get isGallery(){return galleryPoses.size>0;},
   originalPose(group){return galleryPoses.get(group)||null;}
