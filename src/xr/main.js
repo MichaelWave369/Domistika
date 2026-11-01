@@ -6,6 +6,7 @@ import { MAX_BOARDS, MAX_STROKES, makeBoard, makeScene, newStroke, extendStroke,
 import {readBpcFramefieldPreview, sampleFramefieldPose, FRAMEFIELD_EULER_ORDER, BPC_PREVIEW_MAX_BYTES} from './framefieldPreview.js';
 import {createBrushStudio} from './brushStudio.js';
 import {createEaselStudio} from './easelStudio.js';
+import {createStudioNavigator,STUDIO_ROOMS} from './studioNavigator.js';
 import {parseOpenBluePreview,OPENBLUE_MAX_BYTES} from './openblueModel.js';
 import {buildOpenBluePreview} from './openbluePreview.js';
 import {createWorkshop} from './workshopRuntime.js';
@@ -23,6 +24,7 @@ const STORE_KEY='domistika.xr.scene.v1';
 const renderedBoards=new Map(), xrInteractions=new Map();
 let sceneData=makeScene(), selectedId=sceneData.selectedId, mode='draw', erasing=false, pointerState=null;
 let airStyle='neon',airMirror=false;
+let activeStudioRoom='home';
 const scene=new THREE.Scene();
 // Read-only BPC objects are deliberately outside sceneData and its localStorage schema.
 const bpcMeshRoot=new THREE.Group();
@@ -51,6 +53,7 @@ const grid=new THREE.GridHelper(22,32,0x446b77,0x253747);scene.add(grid);
 const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshBasicMaterial({color:0x0d1930,transparent:true,opacity:.65}));
 floor.rotation.x=-Math.PI/2;floor.position.y=-.012;scene.add(floor);
 const raycaster=new THREE.Raycaster(), mouse=new THREE.Vector2();
+const studioNav=createStudioNavigator({scene});
 const byId=id=>sceneData.boards.find(b=>b.id===id);
 const selected=()=>byId(selectedId);
 const ink=()=>$('#brushColor').value;
@@ -123,16 +126,20 @@ function selectBoard(id){
   selectedId=id;sceneData.selectedId=id;
   easel.select(renderedBoards.get(id));
   for(const [key,r] of renderedBoards)r.outline.material.color.setHex(key===id?0x75ffe0:0x4b6581);
+  syncBoardVisibility();
   $('#boardCount').textContent=sceneData.boards.length+' / '+MAX_BOARDS;
   const list=$('#canvasList');list.replaceChildren();
+  const quick=$('#studioCanvasList');quick.replaceChildren();
   for(const b of sceneData.boards){
-    const btn=document.createElement('button');btn.className='canvas-item'+(b.id===id?' active':'');btn.textContent=b.name;
-    btn.addEventListener('click',()=>selectBoard(b.id));list.append(btn);
+    for(const target of [list,quick]){
+      const btn=document.createElement('button');btn.className='canvas-item'+(b.id===id?' active':'');btn.textContent=b.name;
+      btn.addEventListener('click',()=>selectBoard(b.id));target.append(btn);
+    }
   }
 }
 function mountScene(data){
-  // Startup mounts before the in-world toolbar exists; sync the button after import.
-  easel.setEnabled(false);
+  // Existing projects are unchanged; temporary gallery/easel transforms are discarded.
+  studioNav.leaveGallery();easel.setEnabled(false);
   for(const r of renderedBoards.values())disposeBoard(r);
   renderedBoards.clear();sceneData=data;
   for(const b of data.boards)createBoard(b);
@@ -144,7 +151,7 @@ function capture(){
     const r=renderedBoards.get(b.id);if(!r)continue;
     r.group.updateWorldMatrix(true,false);
     const position=new THREE.Vector3(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3();
-    const original=easel.originalPose(r.group);
+    const original=easel.originalPose(r.group)||studioNav.originalPose(r.group);
     if(original){position.copy(original.position);rotation.setFromEuler(original.rotation);scale.copy(original.scale);}
     else r.group.matrixWorld.decompose(position,rotation,scale);
     b.position=position.toArray();
@@ -171,7 +178,7 @@ function controllerRay(controller){
   raycaster.set(origin,direction);return raycaster;
 }
 function hitBoard(ray){
-  const surfaces=[...renderedBoards.values()].map(r=>r.surface);
+  const surfaces=[...renderedBoards.values()].filter(r=>r.group.visible).map(r=>r.surface);
   const hit=ray.intersectObjects(surfaces,false)[0];
   return hit?{hit,board:byId(hit.object.userData.boardId)}:null;
 }
@@ -254,6 +261,14 @@ function setMode(next){
 }
 function startMouse(e){
   if(e.button!==0||renderer.xr.isPresenting||pointerState)return;
+  if(activeStudioRoom==='home'){
+    const tile=mouseRay(e).intersectObjects(studioNav.controls.filter(isWorldVisible),false)[0];
+    if(tile?.object.userData.action?.type==='studio-room'){
+      e.preventDefault();goToStudioRoom(tile.object.userData.action.value);
+    }
+    return;
+  }
+  if(activeStudioRoom==='gallery')return;
   if(mode==='airbrush'){
     const p=mouseRay(e).ray.at(2.4,new THREE.Vector3());
     if(!brushStudio.start('mouse',p.toArray(),ink(),size(),airStyle,airMirror))return;
@@ -718,6 +733,7 @@ function toggleEasel(){
 function chooseEaselColor(color){
   $('#brushColor').value=color;
   $('#colorValue').textContent=color.toUpperCase();
+  $('#quickBrushColor').value=color;
   if(erasing)toggleEraser();
   setMode('draw');
   message('Palette color '+color+' selected.');
@@ -726,6 +742,7 @@ function adjustEaselWidth(delta){
   const input=$('#brushWidth');
   input.value=String(THREE.MathUtils.clamp(Number(input.value)+delta,Number(input.min),Number(input.max)));
   $('#widthValue').textContent=input.value;
+  $('#quickBrushWidth').value=input.value;$('#quickWidthValue').textContent=input.value;
   message('Brush width '+input.value+' px.');
 }
 function toggleEraser(){
@@ -742,9 +759,10 @@ const controllers=[0,1].map(i=>{
 });
 function startXR(c,index){
   if(xrInteractions.has(index))return;
-  const ray=controllerRay(c),tool=ray.intersectObjects(easel.enabled?[...controls3d,...easel.actionMeshes]:controls3d,false)[0],boardHit=hitBoard(ray),workHit=workshop.hit(ray);
+  const ray=controllerRay(c),tool=ray.intersectObjects(studioXRTargets(),false)[0],boardHit=activeStudioRoom==='canvas'?hitBoard(ray):null,workHit=activeStudioRoom==='workshop'?workshop.hit(ray):null;
   if(tool&&(!boardHit||tool.distance<boardHit.hit.distance)&&(!workHit||tool.distance<workHit.hit.distance)){
     const a=tool.object.userData.action;
+    if(a.type==='studio-room')goToStudioRoom(a.value);
     if(a.type==='mode')setMode(a.value);
     if(a.type==='easel-toggle')toggleEasel();
     if(a.type==='easel-color')chooseEaselColor(a.value);
@@ -783,6 +801,7 @@ function startXR(c,index){
     if(a.type==='color'){$('#brushColor').value=a.value;$('#colorValue').textContent=a.value.toUpperCase();erasing=false;$('#eraser').textContent='◌ Eraser: OFF';$('#eraser').setAttribute('aria-pressed','false');updateToolColors();}
     return;
   }
+  if(activeStudioRoom==='home'||activeStudioRoom==='gallery')return;
   if(mode==='work-measure'){
     if(workHit){try{const measurement=workshop.measurePick(workHit.id);message(measurement?'Center distance: '+measurement.distance.toFixed(3)+' m':'First center recorded. Pick another object.');}
       catch(e){message(e.message);}}
@@ -815,7 +834,7 @@ function updateXR(){
   if(!renderer.xr.isPresenting)return;
   for(const [index,item] of controllers.entries()){
     const ray=controllerRay(item.controller);
-    const tool=ray.intersectObjects(easel.enabled?[...controls3d,...easel.actionMeshes]:controls3d,false)[0],hit=hitBoard(ray);
+    const tool=ray.intersectObjects(studioXRTargets(),false)[0],hit=activeStudioRoom==='canvas'?hitBoard(ray):null;
     item.laser.scale.z=mode==='airbrush'&&!tool? .16 :Math.max(.08,Math.min(tool?.distance??6,hit?.hit?.distance??6,6));
     const state=xrInteractions.get(index);if(!state)continue;
     if(state.kind==='airbrush'){brushStudio.extend(index,controllerTip(item.controller));continue;}
@@ -852,12 +871,16 @@ function removeBoard(){
   if(sceneData.boards.length===1){message('At least one canvas must remain.');return;}
   if([...xrInteractions.values()].some(s=>s.board?.id===selectedId)){message('Release the canvas first.');return;}
   if(easel.enabled)easel.setEnabled(false);syncEaselUI();
+  if(studioNav.isGallery)studioNav.leaveGallery();
   const index=sceneData.boards.findIndex(b=>b.id===selectedId);
   if(index<0)return;
   disposeBoard(renderedBoards.get(selectedId));renderedBoards.delete(selectedId);
-  sceneData.boards.splice(index,1);selectBoard(sceneData.boards[Math.max(0,index-1)].id);persist();
+  sceneData.boards.splice(index,1);selectBoard(sceneData.boards[Math.max(0,index-1)].id);
+  if(activeStudioRoom==='gallery')studioNav.showGallery([...renderedBoards.values()]);
+  persist();
 }
 function gallery(){
+  if(activeStudioRoom==='gallery'){message('Gallery arrangement is already active. Leave Gallery to restore your saved layout.');return;}
   capture();
   if(easel.enabled){easel.setEnabled(false);syncEaselUI();}
   for(const [i,b] of sceneData.boards.entries()){
@@ -873,11 +896,16 @@ function download(name,data,type){
   setTimeout(()=>URL.revokeObjectURL(url),1500);
 }
 $('#brushColor').addEventListener('input',e=>{
+  $('#quickBrushColor').value=e.target.value;
   $('#colorValue').textContent=e.target.value.toUpperCase();
   erasing=false;$('#eraser').textContent='◌ Eraser: OFF';$('#eraser').setAttribute('aria-pressed','false');updateToolColors();
 });
-$('#brushWidth').addEventListener('input',e=>{$('#widthValue').textContent=e.target.value;});
-document.querySelectorAll('[data-mode]').forEach(el=>el.addEventListener('click',()=>setMode(el.dataset.mode)));
+$('#brushWidth').addEventListener('input',e=>{$('#widthValue').textContent=e.target.value;$('#quickBrushWidth').value=e.target.value;$('#quickWidthValue').textContent=e.target.value;});
+document.querySelectorAll('[data-mode]').forEach(el=>el.addEventListener('click',()=>{
+  const next=el.dataset.mode,room=next.startsWith('work-')?'workshop':next==='airbrush'?'spatial':'canvas';
+  if(room!==activeStudioRoom)goToStudioRoom(room);
+  setMode(next);
+}));
 $('#eraser').addEventListener('click',toggleEraser);
 $('#addBoard').addEventListener('click',()=>addBoard());
 $('#duplicateBoard').addEventListener('click',()=>addBoard(true));
@@ -1098,7 +1126,7 @@ $('#exportScene').addEventListener('click',()=>download('domistika-xr-scene.json
 $('#importScene').addEventListener('click',()=>$('#sceneFile').click());
 $('#sceneFile').addEventListener('change',async e=>{
   const file=e.target.files?.[0];if(!file)return;
-  try{if(file.size>10_000_000)throw Error('File exceeds 10 MB limit.');mountScene(readScene(await file.text()));syncEaselUI();persist();message('Imported '+sceneData.boards.length+' canvases.');}
+  try{if(file.size>10_000_000)throw Error('File exceeds 10 MB limit.');goToStudioRoom('home');mountScene(readScene(await file.text()));syncEaselUI();persist();message('Imported '+sceneData.boards.length+' canvases. Choose a studio room to continue.');}
   catch(error){message('Import rejected: '+error.message);}
   e.target.value='';
 });
@@ -1303,6 +1331,10 @@ $('#resetView').addEventListener('click',()=>{
 });
 window.addEventListener('keydown',e=>{
   if(/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName||''))return;
+  if(!e.ctrlKey&&!e.metaKey&&!e.altKey){
+    const room={1:'canvas',2:'spatial',3:'workshop',4:'gallery',h:'home'}[e.key.toLowerCase()];
+    if(room){e.preventDefault();goToStudioRoom(room);return;}
+  }
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='z'){e.preventDefault();if(e.shiftKey)redo();else undo();}
   if((e.ctrlKey||e.metaKey)&&e.key.toLowerCase()==='s'){e.preventDefault();persist();brushStudio.save();workshop.save();}
 });
@@ -1318,7 +1350,7 @@ renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
   const passthrough=blend==='alpha-blend'||blend==='additive';
   scene.background=passthrough?null:new THREE.Color(bgColor);
   scene.fog=passthrough?null:new THREE.Fog(bgColor,7,19);
-  grid.visible=!passthrough;floor.visible=!passthrough;
+  grid.visible=!passthrough&&(activeStudioRoom==='spatial'||activeStudioRoom==='workshop');floor.visible=!passthrough;
   controls.enabled=false;message(passthrough?'Mixed reality active; no room anchoring.':'VR active; trigger to paint or move.');
 });
 renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
@@ -1330,7 +1362,7 @@ renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
   workshop.stopMotion();
   workshop.save();
   scene.background=new THREE.Color(bgColor);scene.fog=new THREE.Fog(bgColor,7,19);
-  grid.visible=true;floor.visible=true;controls.enabled=true;persist();
+  grid.visible=activeStudioRoom==='spatial'||activeStudioRoom==='workshop';floor.visible=true;controls.enabled=true;persist();
 });
 function resize(){
   const el=$('#render-root'),width=Math.max(1,el.clientWidth),height=Math.max(1,el.clientHeight);
@@ -1338,6 +1370,7 @@ function resize(){
 }
 window.addEventListener('resize',resize);new ResizeObserver(resize).observe($('#render-root'));
 resize();syncEaselUI();updateToolColors();syncLightUI();syncShowUI();renderRunnerEditor();
+goToStudioRoom('home',true);
 syncBpcPlaybackUI();
 let lastMotionFrame=null,lastRhythmBucket=-1;
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopRunner();stopShowDemo();rhythm.pause();workshop.stopMotion();lastMotionFrame=null;}});
@@ -1378,4 +1411,4 @@ renderer.setAnimationLoop(timeMs=>{
   updateBpcPlayback(timeMs);
   if(renderer.xr.isPresenting)updateXR();else controls.update();renderer.render(scene,camera);
 });
-message(location.protocol==='https:'||['localhost','127.0.0.1'].includes(location.hostname)?'Studio ready. Drag on the canvas to draw.':'Desktop ready. Immersive XR requires HTTPS or localhost.');
+message(location.protocol==='https:'||['localhost','127.0.0.1'].includes(location.hostname)?'Studio Home ready. Choose a room to begin.':'Desktop Studio Home ready. Immersive XR requires HTTPS or localhost.');
