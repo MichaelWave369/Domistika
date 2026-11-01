@@ -209,3 +209,13 @@ background:#183348;border:1px solid #486a85}
 /* Accessible, session-only scenic backdrop toggle; never alters saved projects. */
 .studio-scenery-button{width:100%;margin-top:8px;border:1px solid #647d86;background:#1b3840;color:#d6f2ed}
 .studio-scenery-button:hover{border-color:#c5e8d8}
+
+/* Living Atelier: accessible bounded fit controls in the focused Canvas room. */
+.atelier-fit{margin:16px 0 0;padding:10px 12px 12px;border:1px solid #9f815a;
+ border-radius:10px;background:#2c2932;min-width:0}
+.atelier-fit legend{font-size:12px;font-weight:700;color:#ffe0ac;padding:0 6px}
+.atelier-fit .control-label{display:flex;justify-content:space-between;color:#f1dfcb;margin:12px 0 5px}
+.atelier-fit output{color:#ffe0ac;font-variant-numeric:tabular-nums}
+.atelier-fit input{width:100%;accent-color:#eab779;min-height:28px}
+.atelier-fit button{margin-top:12px;border-color:#a08b6c;background:#54422c}
+.atelier-fit p{font-size:11px;color:#d2c4b1;line-height:1.5;margin:10px 0 0}
