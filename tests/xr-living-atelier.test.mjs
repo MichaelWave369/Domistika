@@ -51,7 +51,7 @@ test('Quest and desktop UI have real easel fit and controller brush integration'
   assert.match(main,/type==='easel-fit'/);
   assert.match(main,/item\.brush\.setCursor/);
   assert.match(easel,/function setFit/);
-  assert.match(easel,/render\.group\.position\.fromArray/);
+  assert.match(easel,/active\.group\.position\.fromArray/);
   for(const key of ['easelHeight','easelTilt','easelDistance','easelResetFit']){
     assert.ok(html.includes('id="'+key+'"'));
   }
