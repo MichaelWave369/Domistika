@@ -165,3 +165,13 @@ background:#183348;border:1px solid #486a85}
 .showrunner-studio progress{height:12px;width:100%;accent-color:#f4b981}
 .showrunner-studio .workshop-selection{font-variant-numeric:tabular-nums;color:#ffe2bb}
 .showrunner-studio .help{margin-top:12px}
+
+/* Artist Easel: visual studio layer; painting and backups reuse the existing XR canvas. */
+.easel-tools{margin:22px 0;padding:14px;border:1px solid #97764c;border-radius:13px;
+ background:linear-gradient(145deg,#35291c,#1c2432)}
+.easel-tools h2{margin:3px 0 10px;color:#ffe5ae}
+.easel-tools h2 span{color:#ffc980}
+.easel-tools .workshop-copy{color:#f0d9ba}
+.easel-tools button{background:#523925;border-color:#b88d53;color:#fff1da}
+.easel-tools button.active,.easel-tools button:hover{background:#76502b;border-color:#ffe1a1}
+.easel-tools .help{margin:12px 0 0;color:#d6c5af}
