@@ -230,6 +230,12 @@
       <input id="workshopFile" type="file" accept=".json,application/json" hidden>
       <p class="help">Quest: use SPATIAL WORKSHOP to create, duplicate, mirror, and manipulate shapes. MEASURE switches into a two-object center ruler, trigger-select two different objects. Paint, workshop geometry and source CAD previews remain independent. Mirror X creates a reflected copy across world X=0, including local geometry. Ruler overlays are transient and not part of GLB or JSON.</p>
     </section>
+    <section class="easel-tools" aria-label="Artist Easel painting studio">
+      <h2>Artist Easel <span>Canvas Mode</span></h2>
+      <p class="workshop-copy">Sit or stand at a wooden easel and paint your existing 2D canvas. In Quest VR or MR, point and pull a controller trigger on the white canvas. Pick pigments from the floating palette, or use the XR tool deck.</p>
+      <button class="wide" id="easelToggle" aria-pressed="false">Enter Artist Easel</button>
+      <p class="help">Switching out restores the floating canvas position. Your strokes remain in the same local-first project. Export PNG or scene JSON for backup. No physical-room anchoring or hand-pinch support yet.</p>
+    </section>
     <h2>Your canvases <span id="boardCount">1 / 12</span></h2>
     <div id="canvasList" class="canvas-list" role="group" aria-label="Canvas selection"></div>
     <div class="button-row"><button id="addBoard">+ New canvas</button><button id="duplicateBoard">Duplicate</button></div>

@@ -5,6 +5,7 @@ import { ARButton } from 'three/addons/webxr/ARButton.js';
 import { MAX_BOARDS, MAX_STROKES, makeBoard, makeScene, newStroke, extendStroke, readScene, writeScene } from './model.js';
 import {readBpcFramefieldPreview, sampleFramefieldPose, FRAMEFIELD_EULER_ORDER, BPC_PREVIEW_MAX_BYTES} from './framefieldPreview.js';
 import {createBrushStudio} from './brushStudio.js';
+import {createEaselStudio} from './easelStudio.js';
 import {parseOpenBluePreview,OPENBLUE_MAX_BYTES} from './openblueModel.js';
 import {buildOpenBluePreview} from './openbluePreview.js';
 import {createWorkshop} from './workshopRuntime.js';
@@ -56,6 +57,7 @@ const ink=()=>$('#brushColor').value;
 const size=()=>Number($('#brushWidth').value);
 const message=(text)=>status(text);
 const brushStudio=createBrushStudio({scene,onStatus:message,onCount:n=>{$('#spatialCount').textContent=n+' / 160';}});
+const easel=createEaselStudio({scene});
 const workshop=createWorkshop({scene,onStatus:message,paintRoot:()=>brushStudio.root,onChange:data=>{
   $('#workshopCount').textContent=data.count+' / 48';refreshWorkshopSelection(data.selected);refreshWorkshopObjectLab(data);
 },onMotion:({playing,time})=>{
@@ -113,12 +115,13 @@ function createBoard(b){
   const label=new THREE.Mesh(new THREE.PlaneGeometry(.9,.18),new THREE.MeshBasicMaterial({map:labelTexture,side:THREE.DoubleSide}));
   label.position.set(0,BOARD_H/2+.15,.005);group.add(label);
   scene.add(group);
-  renderedBoards.set(b.id,{group,canvas,texture,surface,outline,labelTexture,undo:[]});
+  renderedBoards.set(b.id,{group,canvas,texture,paper,surface,outline,labelTexture,undo:[]});
   paintBoard(b);
 }
 function selectBoard(id){
   if(!renderedBoards.has(id))return;
   selectedId=id;sceneData.selectedId=id;
+  easel.select(renderedBoards.get(id));
   for(const [key,r] of renderedBoards)r.outline.material.color.setHex(key===id?0x75ffe0:0x4b6581);
   $('#boardCount').textContent=sceneData.boards.length+' / '+MAX_BOARDS;
   const list=$('#canvasList');list.replaceChildren();
@@ -128,6 +131,8 @@ function selectBoard(id){
   }
 }
 function mountScene(data){
+  // Startup mounts before the in-world toolbar exists; sync the button after import.
+  easel.setEnabled(false);
   for(const r of renderedBoards.values())disposeBoard(r);
   renderedBoards.clear();sceneData=data;
   for(const b of data.boards)createBoard(b);
@@ -139,7 +144,9 @@ function capture(){
     const r=renderedBoards.get(b.id);if(!r)continue;
     r.group.updateWorldMatrix(true,false);
     const position=new THREE.Vector3(),rotation=new THREE.Quaternion(),scale=new THREE.Vector3();
-    r.group.matrixWorld.decompose(position,rotation,scale);
+    const original=easel.originalPose(r.group);
+    if(original){position.copy(original.position);rotation.setFromEuler(original.rotation);scale.copy(original.scale);}
+    else r.group.matrixWorld.decompose(position,rotation,scale);
     b.position=position.toArray();
     b.rotation=new THREE.Euler().setFromQuaternion(rotation,'XYZ').toArray().slice(0,3);
     b.scale=scale.toArray();
@@ -240,6 +247,7 @@ function refreshWorkshopSelection(item){
   }
 }
 function setMode(next){
+  if(next!=='draw'&&easel.enabled){easel.setEnabled(false);syncEaselUI();}
   mode=next;$('#modeName').textContent='/ '+next.toUpperCase();
   document.querySelectorAll('[data-mode]').forEach(b=>{b.classList.toggle('active',b.dataset.mode===next);b.setAttribute('aria-pressed',String(b.dataset.mode===next));});
   updateToolColors();message(next.toUpperCase()+' mode active');
@@ -309,6 +317,8 @@ const toolPanel=new THREE.Group();toolPanel.position.set(1.8,1.65,-1.25);toolPan
 const backing=new THREE.Mesh(new THREE.PlaneGeometry(.93,2.15),new THREE.MeshBasicMaterial({color:0x102238,side:THREE.DoubleSide}));
 backing.position.z=-.01;toolPanel.add(backing);
 const controls3d=[];
+const easelToggle3D=new THREE.Mesh(new THREE.PlaneGeometry(.75,.16),new THREE.MeshBasicMaterial({map:textTexture('ARTIST EASEL'),side:THREE.DoubleSide}));
+easelToggle3D.position.set(0,.89,.025);easelToggle3D.userData.action={type:'easel-toggle'};toolPanel.add(easelToggle3D);controls3d.push(easelToggle3D);
 const headingTex=textTexture('XR TOOL DECK');
 const heading=new THREE.Mesh(new THREE.PlaneGeometry(.78,.15),new THREE.MeshBasicMaterial({map:headingTex,side:THREE.DoubleSide}));
 heading.position.set(0,.65,.02);toolPanel.add(heading);
@@ -673,6 +683,7 @@ function updateToolColors(){
     if(a.type==='work-light-toggle')mesh.material.color.setHex(workshop.lightSettings.enabled?0xb2f7c0:0xffffff);
     if(a.type==='air-style')mesh.material.color.setHex(airStyle===a.value?0xff82d4:0xffffff);
     if(a.type==='air-mirror')mesh.material.color.setHex(airMirror?0xff82d4:0xffffff);
+    if(a.type==='easel-toggle')mesh.material.color.setHex(easel.enabled?0xffd58b:0xffffff);
   }
 }
 function setAirStyle(value){
@@ -686,6 +697,37 @@ function syncAirControls(){
 }
 function toggleAirMirror(){airMirror=!airMirror;syncAirControls();message('3D mirror '+(airMirror?'enabled':'disabled')+' for new strokes.');}
 function controllerTip(controller){controller.updateWorldMatrix(true,false);return new THREE.Vector3(0,0,-.12).applyMatrix4(controller.matrixWorld).toArray();}
+function syncEaselUI(){
+  const button=$('#easelToggle');
+  button.textContent=easel.enabled?'Leave Artist Easel':'Enter Artist Easel';
+  button.setAttribute('aria-pressed',String(easel.enabled));
+  button.classList.toggle('active',easel.enabled);
+  updateToolColors();
+}
+function toggleEasel(){
+  if(easel.enabled){
+    easel.setEnabled(false);
+    message('Floating canvas studio restored. Your painting was preserved.');
+  }else{
+    setMode('draw');
+    easel.setEnabled(true,renderedBoards.get(selectedId));
+    message('Artist Easel active. Paint the white canvas with a Quest trigger or desktop pointer.');
+  }
+  syncEaselUI();
+}
+function chooseEaselColor(color){
+  $('#brushColor').value=color;
+  $('#colorValue').textContent=color.toUpperCase();
+  if(erasing)toggleEraser();
+  setMode('draw');
+  message('Palette color '+color+' selected.');
+}
+function adjustEaselWidth(delta){
+  const input=$('#brushWidth');
+  input.value=String(THREE.MathUtils.clamp(Number(input.value)+delta,Number(input.min),Number(input.max)));
+  $('#widthValue').textContent=input.value;
+  message('Brush width '+input.value+' px.');
+}
 function toggleEraser(){
   erasing=!erasing;$('#eraser').textContent='◌ Eraser: '+(erasing?'ON':'OFF');
   $('#eraser').setAttribute('aria-pressed',String(erasing));updateToolColors();
@@ -700,10 +742,12 @@ const controllers=[0,1].map(i=>{
 });
 function startXR(c,index){
   if(xrInteractions.has(index))return;
-  const ray=controllerRay(c),tool=ray.intersectObjects(controls3d,false)[0],boardHit=hitBoard(ray),workHit=workshop.hit(ray);
+  const ray=controllerRay(c),tool=ray.intersectObjects(easel.enabled?[...controls3d,...easel.actionMeshes]:controls3d,false)[0],boardHit=hitBoard(ray),workHit=workshop.hit(ray);
   if(tool&&(!boardHit||tool.distance<boardHit.hit.distance)&&(!workHit||tool.distance<workHit.hit.distance)){
     const a=tool.object.userData.action;
     if(a.type==='mode')setMode(a.value);
+    if(a.type==='easel-toggle')toggleEasel();
+    if(a.type==='easel-color')chooseEaselColor(a.value);
     if(a.type==='erase')toggleEraser();
     if(a.type==='bpc-playback')toggleBpcPlayback();
     if(a.type==='openblue-toggle')toggleOpenBluePreview();
@@ -771,7 +815,7 @@ function updateXR(){
   if(!renderer.xr.isPresenting)return;
   for(const [index,item] of controllers.entries()){
     const ray=controllerRay(item.controller);
-    const tool=ray.intersectObjects(controls3d,false)[0],hit=hitBoard(ray);
+    const tool=ray.intersectObjects(easel.enabled?[...controls3d,...easel.actionMeshes]:controls3d,false)[0],hit=hitBoard(ray);
     item.laser.scale.z=mode==='airbrush'&&!tool? .16 :Math.max(.08,Math.min(tool?.distance??6,hit?.hit?.distance??6,6));
     const state=xrInteractions.get(index);if(!state)continue;
     if(state.kind==='airbrush'){brushStudio.extend(index,controllerTip(item.controller));continue;}
@@ -806,7 +850,8 @@ function redo(){
 }
 function removeBoard(){
   if(sceneData.boards.length===1){message('At least one canvas must remain.');return;}
-  if([...xrInteractions.values()].some(s=>s.board.id===selectedId)){message('Release the canvas first.');return;}
+  if([...xrInteractions.values()].some(s=>s.board?.id===selectedId)){message('Release the canvas first.');return;}
+  if(easel.enabled)easel.setEnabled(false);syncEaselUI();
   const index=sceneData.boards.findIndex(b=>b.id===selectedId);
   if(index<0)return;
   disposeBoard(renderedBoards.get(selectedId));renderedBoards.delete(selectedId);
@@ -814,6 +859,7 @@ function removeBoard(){
 }
 function gallery(){
   capture();
+  if(easel.enabled){easel.setEnabled(false);syncEaselUI();}
   for(const [i,b] of sceneData.boards.entries()){
     const n=sceneData.boards.length,angle=(i-(n-1)/2)*Math.min(.29,1.5/Math.max(2,n-1)),r=renderedBoards.get(b.id);
     r.group.position.set(Math.sin(angle)*4.3,1.55,-1.4+Math.abs(Math.sin(angle))*1.6);
@@ -839,6 +885,7 @@ $('#removeBoard').addEventListener('click',removeBoard);
 $('#undo').addEventListener('click',undo);
 $('#redo').addEventListener('click',redo);
 $('#gallery').addEventListener('click',gallery);
+$('#easelToggle').addEventListener('click',toggleEasel);
 $('#save').addEventListener('click',()=>{persist();brushStudio.save();});
 $('#workshopAdd').addEventListener('click',()=>addWorkshopShape($('#workshopShape').value));
 $('#showBuild').addEventListener('click',()=>addShowStage($('#showPreset').value));
@@ -1051,7 +1098,7 @@ $('#exportScene').addEventListener('click',()=>download('domistika-xr-scene.json
 $('#importScene').addEventListener('click',()=>$('#sceneFile').click());
 $('#sceneFile').addEventListener('change',async e=>{
   const file=e.target.files?.[0];if(!file)return;
-  try{if(file.size>10_000_000)throw Error('File exceeds 10 MB limit.');mountScene(readScene(await file.text()));persist();message('Imported '+sceneData.boards.length+' canvases.');}
+  try{if(file.size>10_000_000)throw Error('File exceeds 10 MB limit.');mountScene(readScene(await file.text()));syncEaselUI();persist();message('Imported '+sceneData.boards.length+' canvases.');}
   catch(error){message('Import rejected: '+error.message);}
   e.target.value='';
 });
@@ -1290,7 +1337,7 @@ function resize(){
   renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
 }
 window.addEventListener('resize',resize);new ResizeObserver(resize).observe($('#render-root'));
-resize();updateToolColors();syncLightUI();syncShowUI();renderRunnerEditor();
+resize();syncEaselUI();updateToolColors();syncLightUI();syncShowUI();renderRunnerEditor();
 syncBpcPlaybackUI();
 let lastMotionFrame=null,lastRhythmBucket=-1;
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopRunner();stopShowDemo();rhythm.pause();workshop.stopMotion();lastMotionFrame=null;}});
