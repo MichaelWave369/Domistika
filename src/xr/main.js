@@ -131,7 +131,8 @@ function selectBoard(id){
   }
 }
 function mountScene(data){
-  easel.setEnabled(false);syncEaselUI();
+  // Startup mounts before the in-world toolbar exists; sync the button after import.
+  easel.setEnabled(false);
   for(const r of renderedBoards.values())disposeBoard(r);
   renderedBoards.clear();sceneData=data;
   for(const b of data.boards)createBoard(b);
@@ -1097,7 +1098,7 @@ $('#exportScene').addEventListener('click',()=>download('domistika-xr-scene.json
 $('#importScene').addEventListener('click',()=>$('#sceneFile').click());
 $('#sceneFile').addEventListener('change',async e=>{
   const file=e.target.files?.[0];if(!file)return;
-  try{if(file.size>10_000_000)throw Error('File exceeds 10 MB limit.');mountScene(readScene(await file.text()));persist();message('Imported '+sceneData.boards.length+' canvases.');}
+  try{if(file.size>10_000_000)throw Error('File exceeds 10 MB limit.');mountScene(readScene(await file.text()));syncEaselUI();persist();message('Imported '+sceneData.boards.length+' canvases.');}
   catch(error){message('Import rejected: '+error.message);}
   e.target.value='';
 });
