@@ -6,6 +6,7 @@ import { MAX_BOARDS, MAX_STROKES, makeBoard, makeScene, newStroke, extendStroke,
 import {readBpcFramefieldPreview, sampleFramefieldPose, FRAMEFIELD_EULER_ORDER, BPC_PREVIEW_MAX_BYTES} from './framefieldPreview.js';
 import {createBrushStudio} from './brushStudio.js';
 import {createEaselStudio} from './easelStudio.js';
+import {createControllerPaintbrush} from './controllerPaintbrush.js';
 import {createStudioNavigator,STUDIO_ROOMS} from './studioNavigator.js';
 import {createStudioEnvironments} from './studioEnvironments.js';
 import {parseOpenBluePreview,OPENBLUE_MAX_BYTES} from './openblueModel.js';
@@ -730,7 +731,7 @@ function toggleEasel(){
     easel.setEnabled(true,renderedBoards.get(selectedId));
     message('Artist Easel active. Paint the white canvas with a Quest trigger or desktop pointer.');
   }
-  syncEaselUI();
+  syncEaselUI();syncEaselFitUI();
 }
 function chooseEaselColor(color){
   $('#brushColor').value=color;
@@ -747,6 +748,45 @@ function adjustEaselWidth(delta){
   $('#quickBrushWidth').value=input.value;$('#quickWidthValue').textContent=input.value;
   message('Brush width '+input.value+' px.');
 }
+function syncEaselFitUI(){
+  const fit=easel.fit;
+  for(const [name,value,formatted] of [
+    ['Height',fit.height,fit.height.toFixed(2)+' m'],
+    ['Tilt',fit.tilt,fit.tilt.toFixed(0)+'°'],
+    ['Distance',fit.distance,fit.distance.toFixed(2)+' m']
+  ]){
+    $('#easel'+name).value=String(value);
+    $('#easel'+name+'Value').textContent=formatted;
+  }
+}
+function fitMessage(fit){
+  return 'Easel fit: '+fit.height.toFixed(2)+' m high · '+fit.tilt.toFixed(0)+
+    '° tilt · '+fit.distance.toFixed(2)+' m away. The painting itself is unchanged.';
+}
+function setEaselFit(partial){
+  if(pointerState||xrInteractions.size){
+    message('Release the trigger or mouse before adjusting the easel.');
+    syncEaselFitUI();return;
+  }
+  if(activeStudioRoom!=='canvas'){message('Enter Canvas Studio to adjust the easel.');return;}
+  if(!easel.enabled)easel.setEnabled(true,renderedBoards.get(selectedId));
+  const fit=easel.setFit(partial);
+  syncEaselFitUI();syncEaselUI();message(fitMessage(fit));
+}
+function adjustEaselFit(action){
+  if(pointerState||xrInteractions.size){
+    message('Release the trigger before adjusting the easel.');return;
+  }
+  if(activeStudioRoom!=='canvas')return;
+  if(!easel.enabled)easel.setEnabled(true,renderedBoards.get(selectedId));
+  const fit=easel.adjustFit(action);
+  syncEaselFitUI();syncEaselUI();message(fitMessage(fit));
+}
+for(const key of ['Height','Tilt','Distance']){
+  $('#easel'+key).addEventListener('input',event=>
+    setEaselFit({[key.toLowerCase()]:Number(event.target.value)}));
+}
+$('#easelResetFit').addEventListener('click',()=>adjustEaselFit('reset'));
 function toggleEraser(){
   erasing=!erasing;$('#eraser').textContent='◌ Eraser: '+(erasing?'ON':'OFF');
   $('#eraser').setAttribute('aria-pressed',String(erasing));updateToolColors();
@@ -827,7 +867,7 @@ function goToStudioRoom(room,force=false){
  else if(room==='workshop')setMode('work-move');
  else setMode('draw');
  if(room==='gallery')studioNav.showGallery([...renderedBoards.values()]);
- syncRoomScene();syncEaselUI();syncRoomUI();
+ syncRoomScene();syncEaselUI();syncEaselFitUI();syncRoomUI();
  if(!renderer.xr.isPresenting){
   camera.position.set(0,1.75,3.6);
   controls.target.set(0,1.5,-1.5);
@@ -887,11 +927,12 @@ document.querySelectorAll('[data-studio-action]').forEach(button=>button.addEven
 
 const controllers=[0,1].map(i=>{
   const c=renderer.xr.getController(i);
+  const brush=createControllerPaintbrush({controller:c,scene});
   const laser=new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(),new THREE.Vector3(0,0,-1)]),new THREE.LineBasicMaterial({color:i?0xc89cff:0x8fffe8}));
   laser.scale.z=3;c.add(laser);scene.add(c);
   c.addEventListener('selectstart',()=>startXR(c,i));
   c.addEventListener('selectend',()=>endXR(i));
-  return {controller:c,laser};
+  return {controller:c,laser,brush};
 });
 function startXR(c,index){
   if(xrInteractions.has(index))return;
@@ -903,6 +944,7 @@ function startXR(c,index){
     if(a.type==='mode')setMode(a.value);
     if(a.type==='easel-toggle')toggleEasel();
     if(a.type==='easel-color')chooseEaselColor(a.value);
+    if(a.type==='easel-fit')adjustEaselFit(a.value);
     if(a.type==='erase')toggleEraser();
     if(a.type==='bpc-playback')toggleBpcPlayback();
     if(a.type==='openblue-toggle')toggleOpenBluePreview();
@@ -961,6 +1003,7 @@ function startXR(c,index){
   xrInteractions.set(index,state);
 }
 function endXR(index){
+  controllers[index]?.brush.setPainting(false);
   const state=xrInteractions.get(index);if(!state)return;
   if(state.kind==='airbrush')brushStudio.end(index);
   if(state.kind==='workshop')workshop.finish(index);
@@ -972,6 +1015,12 @@ function updateXR(){
   for(const [index,item] of controllers.entries()){
     const ray=controllerRay(item.controller);
     const tool=ray.intersectObjects(studioXRTargets(),false)[0],hit=activeStudioRoom==='canvas'?hitBoard(ray):null;
+    const paintingCanvas=activeStudioRoom==='canvas'&&easel.enabled&&mode==='draw';
+    item.brush.setActive(paintingCanvas);
+    item.brush.setColor(ink(),erasing);
+    const toolIsCloser=!!(tool&&(!hit||tool.distance<hit.hit.distance));
+    item.brush.setCursor(paintingCanvas&&!toolIsCloser&&hit?hit.hit.point:null);
+    item.brush.setPainting(xrInteractions.get(index)?.kind==='draw');
     item.laser.scale.z=mode==='airbrush'&&!tool? .16 :Math.max(.08,Math.min(tool?.distance??6,hit?.hit?.distance??6,6));
     const state=xrInteractions.get(index);if(!state)continue;
     if(state.kind==='airbrush'){brushStudio.extend(index,controllerTip(item.controller));continue;}
@@ -1499,6 +1548,7 @@ renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
   workshop.stopMotion();
   workshop.save();
   scene.background=new THREE.Color(bgColor);scene.fog=new THREE.Fog(bgColor,7,19);
+  for(const item of controllers)item.brush.setActive(false);
   grid.visible=activeStudioRoom==='spatial'||activeStudioRoom==='workshop';floor.visible=true;controls.enabled=true;syncRoomScene();persist();
 });
 function resize(){

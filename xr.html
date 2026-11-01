@@ -39,6 +39,17 @@
         <div class="button-row"><button data-studio-action="undo">Undo</button><button data-studio-action="redo">Redo</button></div>
         <div class="button-row"><button data-studio-action="save-canvas">Save locally</button><button data-studio-action="export-png">Export PNG</button></div>
         <button class="wide" data-studio-action="easel-toggle">Toggle easel / floating canvas</button>
+        <fieldset class="atelier-fit" aria-label="Easel position and angle">
+          <legend>Easel fit · seated or standing</legend>
+          <label class="control-label" for="easelHeight">HEIGHT <output id="easelHeightValue">1.50 m</output></label>
+          <input id="easelHeight" type="range" min="1.1" max="1.85" step=".05" value="1.5">
+          <label class="control-label" for="easelTilt">TILT <output id="easelTiltValue">0°</output></label>
+          <input id="easelTilt" type="range" min="-25" max="25" step="5" value="0">
+          <label class="control-label" for="easelDistance">DISTANCE <output id="easelDistanceValue">1.33 m</output></label>
+          <input id="easelDistance" type="range" min="1.05" max="2" step=".05" value="1.33">
+          <button type="button" class="wide" id="easelResetFit">Reset easel fit</button>
+          <p>Quest: adjust these settings using the in-world EASEL FIT panel, then paint with the controller brush and trigger.</p>
+        </fieldset>
       </div>
       <div data-studio-quick="spatial">
         <h2>Painting in 3D</h2>
