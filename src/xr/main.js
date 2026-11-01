@@ -7,6 +7,7 @@ import {readBpcFramefieldPreview, sampleFramefieldPose, FRAMEFIELD_EULER_ORDER, 
 import {createBrushStudio} from './brushStudio.js';
 import {createEaselStudio} from './easelStudio.js';
 import {createStudioNavigator,STUDIO_ROOMS} from './studioNavigator.js';
+import {createStudioEnvironments} from './studioEnvironments.js';
 import {parseOpenBluePreview,OPENBLUE_MAX_BYTES} from './openblueModel.js';
 import {buildOpenBluePreview} from './openbluePreview.js';
 import {createWorkshop} from './workshopRuntime.js';
@@ -24,7 +25,7 @@ const STORE_KEY='domistika.xr.scene.v1';
 const renderedBoards=new Map(), xrInteractions=new Map();
 let sceneData=makeScene(), selectedId=sceneData.selectedId, mode='draw', erasing=false, pointerState=null;
 let airStyle='neon',airMirror=false;
-let activeStudioRoom='home';
+let activeStudioRoom='home',showStudioScenery=true;
 const scene=new THREE.Scene();
 // Read-only BPC objects are deliberately outside sceneData and its localStorage schema.
 const bpcMeshRoot=new THREE.Group();
@@ -54,6 +55,7 @@ const floor=new THREE.Mesh(new THREE.PlaneGeometry(200,200),new THREE.MeshBasicM
 floor.rotation.x=-Math.PI/2;floor.position.y=-.012;scene.add(floor);
 const raycaster=new THREE.Raycaster(), mouse=new THREE.Vector2();
 const studioNav=createStudioNavigator({scene});
+const studioEnvironments=createStudioEnvironments({scene});
 const byId=id=>sceneData.boards.find(b=>b.id===id);
 const selected=()=>byId(selectedId);
 const ink=()=>$('#brushColor').value;
@@ -779,6 +781,10 @@ function syncRoomUI(){
  const advanced=$('#xr-app').classList.contains('studio-advanced');
  $('#studioAdvancedToggle').textContent=advanced?'Hide advanced tools':'Show advanced tools';
  $('#studioAdvancedToggle').setAttribute('aria-expanded',String(advanced));
+ const scenery=$('#studioSceneryToggle');
+ scenery.textContent=showStudioScenery?'Hide scenery':'Show scenery';
+ scenery.setAttribute('aria-pressed',String(showStudioScenery));
+ studioNav.setDecorState(showStudioScenery);
 }
 function syncRoomScene(){
  studioNav.setRoom(activeStudioRoom);
@@ -794,6 +800,14 @@ function syncRoomScene(){
  const blend=renderer.xr.getSession()?.environmentBlendMode;
  const passthrough=renderer.xr.isPresenting&&(blend==='alpha-blend'||blend==='additive');
  grid.visible=!passthrough&&(activeStudioRoom==='spatial'||activeStudioRoom==='workshop');
+ const look=studioEnvironments.setRoom(activeStudioRoom,{
+  enabled:showStudioScenery,passthrough
+ });
+ scene.background=passthrough?null:new THREE.Color(look.background);
+ scene.fog=passthrough?null:new THREE.Fog(look.background,8,22);
+ floor.material.color.setHex(look.floor);
+ lamp.color.setHex(look.keylight);
+ floor.visible=!passthrough;
 }
 function goToStudioRoom(room,force=false){
  if(!Object.hasOwn(STUDIO_ROOMS,room))return;
@@ -824,6 +838,12 @@ function goToStudioRoom(room,force=false){
 document.querySelectorAll('[data-studio-room]').forEach(button=>
  button.addEventListener('click',()=>goToStudioRoom(button.dataset.studioRoom)));
 $('#studioHome').addEventListener('click',()=>goToStudioRoom('home'));
+function toggleStudioScenery(){
+ showStudioScenery=!showStudioScenery;
+ syncRoomScene();syncRoomUI();
+ message(showStudioScenery?'Studio scenery enabled.':'Studio scenery hidden; your work is unchanged.');
+}
+$('#studioSceneryToggle').addEventListener('click',toggleStudioScenery);
 $('#studioAdvancedToggle').addEventListener('click',()=>{
  const advanced=$('#xr-app').classList.toggle('studio-advanced');
  $('#xr-app').classList.toggle('studio-simple',!advanced);
@@ -879,6 +899,7 @@ function startXR(c,index){
   if(tool&&(!boardHit||tool.distance<boardHit.hit.distance)&&(!workHit||tool.distance<workHit.hit.distance)){
     const a=tool.object.userData.action;
     if(a.type==='studio-room')goToStudioRoom(a.value);
+    if(a.type==='studio-decor')toggleStudioScenery();
     if(a.type==='mode')setMode(a.value);
     if(a.type==='easel-toggle')toggleEasel();
     if(a.type==='easel-color')chooseEaselColor(a.value);
@@ -1467,7 +1488,7 @@ renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
   scene.background=passthrough?null:new THREE.Color(bgColor);
   scene.fog=passthrough?null:new THREE.Fog(bgColor,7,19);
   grid.visible=!passthrough&&(activeStudioRoom==='spatial'||activeStudioRoom==='workshop');floor.visible=!passthrough;
-  controls.enabled=false;message(passthrough?'Mixed reality active; no room anchoring.':'VR active; trigger to paint or move.');
+  controls.enabled=false;syncRoomScene();message(passthrough?'Mixed reality active; decorative scenery hidden.':'VR active; choose a room and create.');
 });
 renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
   for(const i of [...xrInteractions.keys()])endXR(i);
@@ -1478,7 +1499,7 @@ renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
   workshop.stopMotion();
   workshop.save();
   scene.background=new THREE.Color(bgColor);scene.fog=new THREE.Fog(bgColor,7,19);
-  grid.visible=activeStudioRoom==='spatial'||activeStudioRoom==='workshop';floor.visible=true;controls.enabled=true;persist();
+  grid.visible=activeStudioRoom==='spatial'||activeStudioRoom==='workshop';floor.visible=true;controls.enabled=true;syncRoomScene();persist();
 });
 function resize(){
   const el=$('#render-root'),width=Math.max(1,el.clientWidth),height=Math.max(1,el.clientHeight);
