@@ -16,7 +16,9 @@ test('easel uses original flat canvas project and preserves pose on disable',()=
 
 test('VR uses trigger raycast to select in-world pigments before drawing',()=>{
   assert.match(easel,/userData\.action=\{type:'easel-color'/);
-  assert.match(js,/\.\.\.easel\.actionMeshes/);
+  assert.match(js,/easel\.enabled\?easel\.actionMeshes/);
+ assert.match(js,/studioXRTargets\(\)/);
+ assert.match(js,/\.filter\(isWorldVisible\)/);
   assert.match(js,/chooseEaselColor\(a\.value\)/);
   assert.match(js,/toggleEasel\(\)/);
   assert.match(js,/continueStroke\(state\.board,state\.stroke/);
