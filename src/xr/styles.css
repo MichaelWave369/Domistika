@@ -244,3 +244,19 @@ background:#183348;border:1px solid #486a85}
 .color-lab-brushes legend{color:#dbbdea;font-size:10px;letter-spacing:.04em}
 .color-lab-brushes button{min-height:42px;padding:8px 4px;border-color:#655b78}
 .color-lab-brushes button.active{border-color:#dcabec;background:#583966;color:#fff3ff}
+
+/* Rung 6: painting layers, scoped to the selected Canvas Studio painting. */
+.canvas-layer-studio{margin:17px 0 14px;padding:12px;min-width:0;border:1px solid #719c9f;
+ border-radius:10px;background:linear-gradient(145deg,#183140,#172738)}
+.canvas-layer-studio legend{font-size:12px;font-weight:750;color:#b3f2e5;padding:0 6px}
+.canvas-layer-studio legend span{color:#d9fbe9}
+.canvas-layer-studio p{font-size:11px;line-height:1.5;color:#bcd0df;margin:7px 0 11px}
+.canvas-layer-list{display:grid;gap:7px;max-height:280px;overflow:auto}
+.canvas-layer-row{display:grid;grid-template-columns:minmax(0,1fr) repeat(4,32px);gap:4px}
+.canvas-layer-row button{padding:7px 2px;min-height:36px;border:1px solid #496a80;border-radius:7px}
+.canvas-layer-row button:disabled{opacity:.38;cursor:not-allowed}
+.canvas-layer-row .canvas-layer-name{text-align:left;padding:7px 6px;min-width:0;overflow:hidden;
+ text-overflow:ellipsis;white-space:nowrap}
+.canvas-layer-row .canvas-layer-name.active{color:#d5fff4;background:#225b63;border-color:#8bf2d7}
+.canvas-layer-studio .wide{margin-top:10px;background:#20515a;border-color:#78acac}
+.canvas-layer-studio .canvas-layer-selected{color:#def6e8;font-weight:650;margin-bottom:6px}

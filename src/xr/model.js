@@ -1,4 +1,5 @@
 /** Local-first, bounded Domistika XR sketch scene model. */
+import {sanitizeLayerConfig,BASE_LAYER_ID} from './layerModel.js';
 export const SCHEMA = 'domistika.xr.scene.v1';
 export const MAX_BOARDS = 12;
 export const MAX_STROKES = 600;
@@ -44,14 +45,16 @@ export function sanitizeScene(input) {
     const id=String(b.id??'').slice(0,80);
     if (!id||ids.has(id)) throw Error('Invalid or duplicate canvas ID.');
     ids.add(id);
+    const layerConfig=sanitizeLayerConfig(b);
     const strokes=b.strokes.map(s=>{
       if (!s||!Array.isArray(s.points)||!s.points.length||s.points.length>MAX_POINTS) throw Error('Invalid stroke data.');
       const stroke={color:validColor.test(s.color)?s.color.toLowerCase():'#68e4ff',width:clamp(finite(s.width,10),2,120),erase:!!s.erase,
         points:s.points.map(p=>{if(!Array.isArray(p)||p.length!==2||!p.every(Number.isFinite))throw Error('Invalid stroke coordinate.');return point(p[0],p[1]);})};
       if(!stroke.erase&&validBrush.has(s.brush))stroke.brush=s.brush;
+      if(s.layerId!==undefined&&s.layerId!==BASE_LAYER_ID)stroke.layerId=s.layerId;
       return stroke;
     });
-    return {id,name:String(b.name||('Canvas '+(i+1))).slice(0,60),position:vec(b.position,[0,1.5,-1.35],-30,30),rotation:vec(b.rotation,[0,0,0],-Math.PI*8,Math.PI*8),scale:vec(b.scale,[1,1,1],.25,4),strokes};
+    return {id,name:String(b.name||('Canvas '+(i+1))).slice(0,60),position:vec(b.position,[0,1.5,-1.35],-30,30),rotation:vec(b.rotation,[0,0,0],-Math.PI*8,Math.PI*8),scale:vec(b.scale,[1,1,1],.25,4),strokes,...layerConfig};
   });
   return {schema:SCHEMA,selectedId:ids.has(input.selectedId)?input.selectedId:boards[0].id,boards};
 }

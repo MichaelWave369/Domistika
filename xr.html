@@ -39,6 +39,14 @@
         <div class="button-row"><button data-studio-action="undo">Undo</button><button data-studio-action="redo">Redo</button></div>
         <div class="button-row"><button data-studio-action="save-canvas">Save locally</button><button data-studio-action="export-png">Export PNG</button></div>
         <button class="wide" data-studio-action="easel-toggle">Toggle easel / floating canvas</button>
+        <fieldset class="canvas-layer-studio" id="canvasLayerStudio" aria-label="Canvas layers">
+          <legend>Painting Layers <span id="canvasLayerCount">1 / 8</span></legend>
+          <p>Keep sketches, colors and details separate. Show, hide or reorder them without losing strokes.</p>
+          <div id="canvasLayerList" class="canvas-layer-list" aria-label="Painting layer order"></div>
+          <button type="button" class="wide" id="canvasLayerAdd">+ Add painting layer</button>
+          <p id="canvasLayerSelected" class="canvas-layer-selected" role="status">Painting on: Background</p>
+          <p>Bottom Background holds your existing artwork. Eraser affects only its own layer; only empty layers can be removed.</p>
+        </fieldset>
         <fieldset class="color-lab" aria-label="Color Laboratory pigment mixing and brushes">
           <legend>Color Laboratory</legend>
           <p>Blend two artist-wheel pigments. This is an RYB approximation, not spectrally calibrated paint.</p>

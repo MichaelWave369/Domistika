@@ -133,6 +133,42 @@ export function createEaselStudio({scene}){
       if(value.startsWith('brush-'))mesh.material.color.setHex(value.slice(6)===brush?0xffdeaa:0xffffff);
     }
   }
+  // Small Quest layer deck; it never contains artwork or a painting surface.
+  const layerDeck=new THREE.Group();
+  layerDeck.name='Canvas Layer Studio deck';
+  layerDeck.position.set(-3.10,1.48,-1.12);stage.add(layerDeck);
+  const layerBacking=new THREE.Mesh(new THREE.PlaneGeometry(.91,2.14),
+    new THREE.MeshBasicMaterial({color:0x1a3140,side:THREE.DoubleSide}));
+  layerBacking.position.z=-.02;layerBacking.raycast=()=>{};layerDeck.add(layerBacking);
+  const layerActions=[
+    ['PAINT LAYERS',null],
+    ['NEW LAYER','add'],['PREVIOUS','prev'],['NEXT LAYER','next'],
+    ['SHOW / HIDE','toggle'],['MOVE UP','up'],['MOVE DOWN','down'],
+    ['REMOVE EMPTY','remove-empty']
+  ];
+  for(const [i,[title,action]] of layerActions.entries()){
+    const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.76,.18),
+      new THREE.MeshBasicMaterial({map:labelTexture(title),side:THREE.DoubleSide}));
+    mesh.position.set(0,.83-i*.22,.028);
+    if(action){
+      mesh.userData.action={type:'layer-action',value:action};
+      actionMeshes.push(mesh);
+    }else mesh.raycast=()=>{};
+    layerDeck.add(mesh);
+  }
+  const layerInfoTexture=labelTexture('BACKGROUND 1 / 1');
+  const layerInfo=new THREE.Mesh(new THREE.PlaneGeometry(.79,.19),
+    new THREE.MeshBasicMaterial({map:layerInfoTexture,side:THREE.DoubleSide}));
+  layerInfo.position.set(0,-.93,.03);layerInfo.raycast=()=>{};layerDeck.add(layerInfo);
+  function setLayerStatus(text,visible=true){
+    const canvas=layerInfoTexture.image,ctx=canvas.getContext('2d');
+    ctx.fillStyle='#162536';ctx.fillRect(0,0,512,128);
+    ctx.strokeStyle=visible?'#79d4b8':'#c88787';ctx.lineWidth=6;ctx.strokeRect(3,3,506,122);
+    ctx.fillStyle=visible?'#d5fff0':'#ffcece';
+    ctx.textAlign='center';ctx.textBaseline='middle';ctx.font='bold 37px system-ui';
+    ctx.fillText(String(text).slice(0,38),256,64,490);
+    layerInfoTexture.needsUpdate=true;
+  }
   const snapshots=new WeakMap();
   let active=null;
   function restore(){
@@ -186,7 +222,7 @@ export function createEaselStudio({scene}){
   }
   applyFit();
   return {
-    stage,actionMeshes,select,setEnabled,setFit,adjustFit,setMixPreview,setActiveBrush,
+    stage,actionMeshes,select,setEnabled,setFit,adjustFit,setMixPreview,setActiveBrush,setLayerStatus,
     get fit(){return {...fit};},
     get enabled(){return stage.visible;},
     originalPose(group){
