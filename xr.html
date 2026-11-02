@@ -100,7 +100,14 @@
           <button type="button" class="wide living-canvas-lift" id="livingCanvasLiftCurrent">Lift selected painting</button>
           <p id="livingCanvasFocused" role="status">No lifted art. Lift a canvas from Canvas Studio.</p>
           <div id="livingCanvasList" class="living-canvas-list"></div>
+          <p id="depthForgeStatus" class="depth-forge-status" role="status">Lift artwork to enable Depth Forge.</p>
+          <p class="depth-forge-instructions">Depth Forge separates visible painted layers into lightweight 3D planes. Create at least two painting layers in Canvas Studio, then enable depth and move your head to see parallax.</p>
           <div class="living-canvas-controls">
+            <button type="button" data-living-action="depth-toggle">Depth on/off</button>
+            <button type="button" data-living-action="depth-more">More depth</button>
+            <button type="button" data-living-action="depth-less">Less depth</button>
+            <button type="button" data-living-action="depth-reset">Reset depth</button>
+
             <button type="button" data-living-action="left">Turn left</button>
             <button type="button" data-living-action="right">Turn right</button>
             <button type="button" data-living-action="larger">Larger</button>
