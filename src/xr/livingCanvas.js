@@ -133,6 +133,9 @@ export function createLivingCanvas({scene,textTexture}){
   }
   function hit(raycaster){
     if(!root.visible)return null;
+    // An item can be lifted and targeted before the first renderer frame.
+    // Ensure its nested matrices are current for direct-object raycasts.
+    root.updateWorldMatrix(true,true);
     const hit=raycaster.intersectObjects([...panels.values()].map(p=>p.art),false)[0];
     if(!hit)return null;
     const panel=panels.get(hit.object.userData.livingCanvasId);
