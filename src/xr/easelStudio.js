@@ -77,6 +77,14 @@ export function createEaselStudio({scene}){
     const texture=new THREE.CanvasTexture(canvas);
     texture.colorSpace=THREE.SRGBColorSpace;return texture;
   }
+  // Quest painting handoff: the source stays a fully editable 2D canvas.
+  const liftButton=new THREE.Mesh(new THREE.PlaneGeometry(.92,.20),
+    new THREE.MeshBasicMaterial({map:labelTexture('LIFT TO 3D'),side:THREE.DoubleSide}));
+  liftButton.position.set(0,2.76,-1.19);
+  liftButton.userData.action={type:'living-lift'};
+  liftButton.name='Lift selected painting to 3D';
+  stage.add(liftButton);
+  actionMeshes.push(liftButton);
   const fitButtons=[
     ['EASEL FIT','none'],
     ['HEIGHT +','up'],['HEIGHT -','down'],
