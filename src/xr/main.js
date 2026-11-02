@@ -84,7 +84,7 @@ const rhythm=createLocalRhythm({audio:$('#rhythmAudio'),onChange:state=>{
   updateToolColors();
 }});
 const runner=createShowrunner();
-const livingCanvas=createLivingCanvas({scene,textTexture});
+const livingCanvas=createLivingCanvas({scene,textTexture,drawStroke:strokeDraw});
 function textTexture(text,color='#c7ffef') {
   const el=document.createElement('canvas');el.width=512;el.height=120;
   const c=el.getContext('2d');
@@ -337,6 +337,7 @@ function endMouse(e){
   if(pointerState.kind==='airbrush')brushStudio.end('mouse');
   if(pointerState.kind==='workshop')workshop.finish('mouse');
   if(pointerState.kind==='living')livingCanvas.release('mouse');
+  if(pointerState.kind==='draw')livingCanvas.refresh(pointerState.board.id,pointerState.board);
   pointerState=null;controls.enabled=true;
   if(renderer.domElement.hasPointerCapture(e.pointerId))renderer.domElement.releasePointerCapture(e.pointerId);
   persist();
@@ -887,7 +888,7 @@ function applyCanvasLayerAction(action,id){
     board.layers=state.layers;board.activeLayerId=state.activeLayerId;
     // Deleting even an empty layer can invalidate an earlier undone stroke.
     if(action==='remove-empty')renderedBoards.get(board.id)?.undo.splice(0);
-    paintBoard(board);syncCanvasLayersUI();persist();
+    paintBoard(board);livingCanvas.refresh(board.id,board);syncCanvasLayersUI();persist();
     const current=activeCanvasLayer(board);
     message('Layer: '+current.name+' ('+canvasLayers(board).length+' total)'+
       (current.visible?'':' · HIDDEN')+'.');
@@ -1030,7 +1031,8 @@ function liftSelectedCanvas(){
   if(!b||!render){message('Choose a painting first.');return;}
   try{
     const wasPresent=livingCanvas.all.some(p=>p.id===b.id);
-    livingCanvas.lift(b.id,render,b.name);
+    livingCanvas.lift(b.id,render,b.name,b);
+    livingCanvas.refresh(b.id,b);
     goToStudioRoom('spatial');
     syncLivingCanvasUI();
     message(wasPresent?'Focused your existing lifted painting.':
@@ -1050,8 +1052,13 @@ function actOnLivingCanvas(action,id){
       livingCanvas.clear();message('All lifted previews returned. Originals remain intact.');
     }else{
       livingCanvas.adjust(action);
+      const preview=livingCanvas.selected;
       message(action==='return'?'Lifted preview returned. The original canvas is unchanged.':
-        'Living Canvas: '+action.replaceAll('-',' ')+'.');
+        action.startsWith('depth-')?
+          (preview?.depthForge.enabled?
+            'Depth Forge active: '+preview.depthForge.visibleCount+' visible layers, '+preview.depthForge.gap.toFixed(3)+' m spacing.':
+            'Depth Forge off: displaying original flat composite.') :
+          'Living Canvas: '+action.replaceAll('-',' ')+'.');
     }
     syncLivingCanvasUI();
   }catch(error){message(error.message);}
@@ -1077,6 +1084,11 @@ function syncLivingCanvasUI(){
   }
   $('#livingCanvasFocused').textContent=chosen?'Selected floating art: '+chosen.name:
     'No lifted art. Lift a canvas from Canvas Studio.';
+  $('#depthForgeStatus').textContent=chosen?
+    (chosen.depthForge.enabled?
+      'DEPTH ON · '+chosen.depthForge.visibleCount+' visible layers · '+chosen.depthForge.gap.toFixed(3)+' m spacing':
+      'FLAT · turn on depth with a layered painting'):
+    'Lift artwork to enable Depth Forge.';
   document.querySelectorAll('[data-living-action]').forEach(button=>{
     button.disabled=!chosen&&button.dataset.livingAction!=='return-all';
     if(button.dataset.livingAction==='return-all')button.disabled=!panels.length;
@@ -1230,6 +1242,7 @@ function endXR(index){
   if(state.kind==='airbrush')brushStudio.end(index);
   if(state.kind==='workshop')workshop.finish(index);
   if(state.kind==='living'){livingCanvas.release(index);syncLivingCanvasUI();}
+  if(state.kind==='draw')livingCanvas.refresh(state.board.id,state.board);
   if(state.kind==='move'||state.kind==='rotate')scene.attach(state.render.group);
   xrInteractions.delete(index);persist();
 }
@@ -1270,12 +1283,12 @@ function addBoard(copy=false){
 function undo(){
   const b=selected(),r=renderedBoards.get(selectedId);
   if(!b||!b.strokes.length)return;
-  r.undo.push(b.strokes.pop());paintBoard(b);persist();
+  r.undo.push(b.strokes.pop());paintBoard(b);livingCanvas.refresh(b.id,b);persist();
 }
 function redo(){
   const b=selected(),r=renderedBoards.get(selectedId);
   if(!b||!r?.undo.length||b.strokes.length>=MAX_STROKES)return;
-  b.strokes.push(r.undo.pop());paintBoard(b);persist();
+  b.strokes.push(r.undo.pop());paintBoard(b);livingCanvas.refresh(b.id,b);persist();
 }
 function removeBoard(){
   if(sceneData.boards.length===1){message('At least one canvas must remain.');return;}

@@ -275,3 +275,12 @@ background:#183348;border:1px solid #486a85}
 .living-canvas-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}
 .living-canvas-controls button{min-height:42px;padding:8px 5px}
 .living-canvas-controls button:disabled{opacity:.4;cursor:not-allowed}
+
+/* Depth Forge: stateful layer spacing on a reversible 3D Living Canvas panel. */
+.living-canvas-panel .depth-forge-status{
+  padding:9px 10px;border-radius:7px;background:#1c3d48;
+  color:#bcfbe8;font-weight:700;font-variant-numeric:tabular-nums;
+}
+.living-canvas-panel .depth-forge-instructions{
+  color:#bbd6dd;line-height:1.5;
+}
