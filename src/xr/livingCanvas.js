@@ -1,4 +1,6 @@
 import * as THREE from 'three';
+import {createDepthForge} from './depthForge.js';
+import {DEPTH_DEFAULT_GAP,changeDepthGap} from './depthForgeModel.js';
 import {MAX_LIVING_PANELS,LIVING_PANEL_SIZE,initialLivingPose,clampLivingPose,adjustLivingPose} from './livingCanvasModel.js';
 
 /**
@@ -6,7 +8,7 @@ import {MAX_LIVING_PANELS,LIVING_PANEL_SIZE,initialLivingPose,clampLivingPose,ad
  * The source's CanvasTexture is shared, not copied, modified or disposed here.
  * Art panels are session-only, and never become Workshop or scene-v1 objects.
  */
-export function createLivingCanvas({scene,textTexture}){
+export function createLivingCanvas({scene,textTexture,drawStroke=()=>{}}){
   if(!scene?.add||typeof textTexture!=='function')throw Error('Living Canvas requires a scene and label renderer.');
   const root=new THREE.Group();
   root.name='The Living Canvas (temporary art previews)';
@@ -18,10 +20,10 @@ export function createLivingCanvas({scene,textTexture}){
 
   const deck=new THREE.Group();
   deck.name='Living Canvas controls';
-  deck.position.set(2.12,1.55,-1.35);
+  deck.position.set(2.12,1.60,-1.35);
   deck.rotation.y=-.24;
   root.add(deck);
-  const backing=new THREE.Mesh(new THREE.PlaneGeometry(.92,2.02),
+  const backing=new THREE.Mesh(new THREE.PlaneGeometry(.92,2.85),
     new THREE.MeshBasicMaterial({color:0x12283b,side:THREE.DoubleSide,transparent:true,opacity:.95}));
   backing.position.z=-.018;backing.raycast=()=>{};deck.add(backing);
   const controls=[];
@@ -30,12 +32,14 @@ export function createLivingCanvas({scene,textTexture}){
     ['TURN LEFT','left'],['TURN RIGHT','right'],
     ['LARGER','larger'],['SMALLER','smaller'],
     ['MOVE NEAR','forward'],['MOVE FAR','back'],
+    ['DEPTH ON/OFF','depth-toggle'],['DEPTH +','depth-more'],
+    ['DEPTH -','depth-less'],['DEPTH RESET','depth-reset'],
     ['RESET PANEL','reset'],['NEXT ART','next'],['PUT BACK','return']
   ];
   for(const [i,[label,action]] of actions.entries()){
     const mesh=new THREE.Mesh(new THREE.PlaneGeometry(.79,.15),
       new THREE.MeshBasicMaterial({map:textTexture(label,'#b2fff2'),side:THREE.DoubleSide}));
-    mesh.position.set(0,.82-i*.183,.025);
+    mesh.position.set(0,1.17-i*.185,.025);
     if(action){
       mesh.userData.action={type:'living-canvas',value:action};
       controls.push(mesh);
@@ -56,7 +60,7 @@ export function createLivingCanvas({scene,textTexture}){
       scale:panel.group.scale.x
     };
   }
-  function lift(id,render,name='Painting'){
+  function lift(id,render,name='Painting',board=null){
     if(!id||!render?.texture)throw Error('Select an existing painting before lifting it.');
     if(panels.has(id)){activeId=id;return panels.get(id);}
     if(panels.size>=MAX_LIVING_PANELS)throw Error('Six floating paintings maximum. Return a panel first.');
@@ -79,7 +83,10 @@ export function createLivingCanvas({scene,textTexture}){
       LIVING_PANEL_SIZE[0]+.08,LIVING_PANEL_SIZE[1]+.08,.045));
     const frame=new THREE.LineSegments(frameGeo,new THREE.LineBasicMaterial({color:0xc5ab81}));
     frame.raycast=()=>{};group.add(frame);
-    const panel={id,name:String(name).slice(0,60),group,art};
+    const panel={id,name:String(name).slice(0,60),group,art,board};
+    panel.depthForge=createDepthForge({
+      group,sourceCanvas:render.canvas,sourceArt:art,drawStroke
+    });
     root.add(group);
     setPose(panel,initialLivingPose(panels.size));
     panels.set(id,panel);
@@ -99,6 +106,7 @@ export function createLivingCanvas({scene,textTexture}){
     if(!panels.has(id))return false;
     for(const [key,entry] of held)if(entry.panel.id===id)release(key);
     const panel=panels.get(id);
+    panel.depthForge.dispose();
     root.remove(panel.group);
     panel.group.traverse(mesh=>{
       mesh.geometry?.dispose();
@@ -127,7 +135,11 @@ export function createLivingCanvas({scene,textTexture}){
     const panel=panels.get(activeId);
     if(!panel)throw Error('Lift a painting first.');
     if([...held.values()].some(v=>v.panel===panel))throw Error('Release the painting before changing its settings.');
-    if(action==='reset')setPose(panel,initialLivingPose([...panels.keys()].indexOf(activeId)));
+    if(action==='depth-toggle'){
+      panel.depthForge.setEnabled(!panel.depthForge.enabled,panel.board);
+    }else if(action==='depth-more'||action==='depth-less'||action==='depth-reset'){
+      panel.depthForge.setGap(changeDepthGap(panel.depthForge.gap,action));
+    }else if(action==='reset')setPose(panel,initialLivingPose([...panels.keys()].indexOf(activeId)));
     else setPose(panel,adjustLivingPose(poseOf(panel),action));
     return panel;
   }
@@ -168,6 +180,12 @@ export function createLivingCanvas({scene,textTexture}){
     const position=raycaster.ray.intersectPlane(entry.plane,new THREE.Vector3());
     if(position)entry.panel.group.position.copy(position.add(entry.offset));
   }
+  function refresh(id,board){
+    const panel=panels.get(id);
+    if(!panel)return;
+    panel.board=board;
+    panel.depthForge.refresh(board);
+  }
   function setRoom(room){root.visible=room==='spatial';}
   function dispose(){
     clear();scene.remove(root);
@@ -179,10 +197,14 @@ export function createLivingCanvas({scene,textTexture}){
   }
   return {
     root,controls,lift,hit,beginXR,beginMouse,updateMouse,release,releaseAll,
-    returnPanel,clear,select,next,adjust,setRoom,dispose,
+    returnPanel,clear,select,next,adjust,refresh,setRoom,dispose,
     get count(){return panels.size;},
     get selected(){return panels.get(activeId)||null;},
-    get all(){return [...panels.values()].map(p=>({id:p.id,name:p.name,pose:poseOf(p)}));},
+    get all(){return [...panels.values()].map(p=>({
+      id:p.id,name:p.name,pose:poseOf(p),
+      depthEnabled:p.depthForge.enabled,depthGap:p.depthForge.gap,
+      depthLayers:p.depthForge.visibleCount
+    }));},
     get active(){return held.size>0;}
   };
 }
