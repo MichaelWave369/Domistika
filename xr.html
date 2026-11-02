@@ -39,6 +39,7 @@
         <div class="button-row"><button data-studio-action="undo">Undo</button><button data-studio-action="redo">Redo</button></div>
         <div class="button-row"><button data-studio-action="save-canvas">Save locally</button><button data-studio-action="export-png">Export PNG</button></div>
         <button class="wide" data-studio-action="easel-toggle">Toggle easel / floating canvas</button>
+        <button class="wide living-canvas-lift" data-studio-action="lift-canvas">Lift this painting into 3D</button>
         <fieldset class="canvas-layer-studio" id="canvasLayerStudio" aria-label="Canvas layers">
           <legend>Painting Layers <span id="canvasLayerCount">1 / 8</span></legend>
           <p>Keep sketches, colors and details separate. Show, hide or reorder them without losing strokes.</p>
@@ -93,6 +94,27 @@
         <div class="studio-brush-row"><button data-studio-brush="neon">Neon</button><button data-studio-brush="ribbon">Ribbon</button><button data-studio-brush="spark">Spark</button></div>
         <div class="button-row"><button data-studio-action="spatial-undo">Undo 3D</button><button data-studio-action="spatial-redo">Redo 3D</button></div>
         <div class="button-row"><button data-studio-action="spatial-save">Save 3D</button><button data-studio-action="spatial-export">Export 3D</button></div>
+        <section class="living-canvas-panel" aria-label="Living Canvas floating art">
+          <h2>Living Canvas <span id="livingCanvasCount">0 / 6</span></h2>
+          <p>Lift an existing painting into 3D space. Move the floating preview without altering its original artwork or layers.</p>
+          <button type="button" class="wide living-canvas-lift" id="livingCanvasLiftCurrent">Lift selected painting</button>
+          <p id="livingCanvasFocused" role="status">No lifted art. Lift a canvas from Canvas Studio.</p>
+          <div id="livingCanvasList" class="living-canvas-list"></div>
+          <div class="living-canvas-controls">
+            <button type="button" data-living-action="left">Turn left</button>
+            <button type="button" data-living-action="right">Turn right</button>
+            <button type="button" data-living-action="larger">Larger</button>
+            <button type="button" data-living-action="smaller">Smaller</button>
+            <button type="button" data-living-action="forward">Move nearer</button>
+            <button type="button" data-living-action="back">Move farther</button>
+            <button type="button" data-living-action="reset">Reset position</button>
+            <button type="button" data-living-action="next">Next artwork</button>
+            <button type="button" data-living-action="return">Return selected</button>
+            <button type="button" data-living-action="return-all">Return all</button>
+          </div>
+          <p>Desktop: drag the painting itself. Quest: aim and hold trigger to grab, release to place. The panel is session-only and not part of your saved 3D brush scene.</p>
+        </section>
+
       </div>
       <div data-studio-quick="workshop">
         <h2>Sculpture Workshop</h2>

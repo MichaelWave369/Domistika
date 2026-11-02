@@ -260,3 +260,18 @@ background:#183348;border:1px solid #486a85}
 .canvas-layer-row .canvas-layer-name.active{color:#d5fff4;background:#225b63;border-color:#8bf2d7}
 .canvas-layer-studio .wide{margin-top:10px;background:#20515a;border-color:#78acac}
 .canvas-layer-studio .canvas-layer-selected{color:#def6e8;font-weight:650;margin-bottom:6px}
+
+/* Rung 7: Living Canvas previews. Lightweight floating copies, never source edits. */
+.living-canvas-lift{margin-top:8px;border:1px solid #6cbbb1!important;background:#244d55!important;color:#e7fff5!important}
+.living-canvas-panel{margin-top:17px;padding:13px;border:1px solid #5e96a8;border-radius:11px;
+ background:linear-gradient(150deg,#142b42,#172638)}
+.living-canvas-panel h2{margin:0 0 9px;color:#b9fff0}
+.living-canvas-panel h2 span{color:#a8d2e4;font-size:11px}
+.living-canvas-panel p{font-size:11px;line-height:1.5;color:#b8d3df;margin:9px 0 11px}
+.living-canvas-list{display:grid;gap:7px}
+.living-canvas-row{display:grid;grid-template-columns:minmax(0,1fr) 66px;gap:7px}
+.living-canvas-row button{min-width:0;min-height:38px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.living-canvas-row button.active{background:#20565f;border-color:#89ded0}
+.living-canvas-controls{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:7px;margin-top:10px}
+.living-canvas-controls button{min-height:42px;padding:8px 5px}
+.living-canvas-controls button:disabled{opacity:.4;cursor:not-allowed}
