@@ -12,7 +12,7 @@ const clamp=(value,min,max)=>Math.min(max,Math.max(min,value));
 export function initialLivingPose(index=0){
   const n=Math.min(MAX_LIVING_PANELS-1,Math.max(0,Math.floor(Number.isFinite(index)?index:0)));
   return {
-    position:[(n-2)*.62,1.55,-2.45-Math.floor(n/3)*.35],
+    position:[[0,1.5,-1.5,2.0,-2.0,.8][n],1.55,-2.45-Math.floor(n/3)*.35],
     rotation:[0,0,0],
     scale:1
   };

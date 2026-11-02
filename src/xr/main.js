@@ -10,6 +10,8 @@ import {CANVAS_BRUSHES,DEFAULT_MIX,PIGMENTS,normalizeBrush,normalizeMix,mixPigme
 import {paintStroke} from './paintTextures.js';
 import {BASE_LAYER_ID,canvasLayers,activeCanvasLayer,strokeLayerId,editCanvasLayers} from './layerModel.js';
 import {renderLayeredBoard} from './layerRendering.js';
+import {createLivingCanvas} from './livingCanvas.js';
+import {MAX_LIVING_PANELS} from './livingCanvasModel.js';
 import {createControllerPaintbrush} from './controllerPaintbrush.js';
 import {createStudioNavigator,STUDIO_ROOMS} from './studioNavigator.js';
 import {createStudioEnvironments} from './studioEnvironments.js';
@@ -82,6 +84,7 @@ const rhythm=createLocalRhythm({audio:$('#rhythmAudio'),onChange:state=>{
   updateToolColors();
 }});
 const runner=createShowrunner();
+const livingCanvas=createLivingCanvas({scene,textTexture});
 function textTexture(text,color='#c7ffef') {
   const el=document.createElement('canvas');el.width=512;el.height=120;
   const c=el.getContext('2d');
@@ -142,6 +145,7 @@ function selectBoard(id){
   syncCanvasLayersUI();
 }
 function mountScene(data){
+  livingCanvas.clear();
   // Existing projects are unchanged; temporary gallery/easel transforms are discarded.
   studioNav.leaveGallery();easel.setEnabled(false);
   for(const r of renderedBoards.values())disposeBoard(r);
@@ -276,6 +280,13 @@ function startMouse(e){
     return;
   }
   if(activeStudioRoom==='gallery')return;
+  if(activeStudioRoom==='spatial'){
+    const ray=mouseRay(e),pick=livingCanvas.hit(ray);
+    if(pick&&livingCanvas.beginMouse('mouse',ray,camera,pick)){
+      e.preventDefault();renderer.domElement.setPointerCapture(e.pointerId);controls.enabled=false;
+      pointerState={id:e.pointerId,kind:'living'};syncLivingCanvasUI();return;
+    }
+  }
   if(mode==='airbrush'){
     const p=mouseRay(e).ray.at(2.4,new THREE.Vector3());
     if(!brushStudio.start('mouse',p.toArray(),ink(),size(),airStyle,airMirror))return;
@@ -312,6 +323,7 @@ function moveMouse(e){
     brushStudio.extend('mouse',mouseRay(e).ray.at(2.4,new THREE.Vector3()).toArray());return;
   }
   if(s.kind==='workshop'){workshop.updateMouse('mouse',mouseRay(e),e);return;}
+  if(s.kind==='living'){livingCanvas.updateMouse('mouse',mouseRay(e));return;}
   const dx=e.clientX-s.x,dy=e.clientY-s.y;s.x=e.clientX;s.y=e.clientY;
   if(s.kind==='draw'){const hit=hitBoard(mouseRay(e));if(hit?.board?.id===s.board.id)continueStroke(s.board,s.stroke,uv(hit.hit.uv));}
   if(s.kind==='move'){
@@ -324,6 +336,7 @@ function endMouse(e){
   if(!pointerState||pointerState.id!==e.pointerId)return;
   if(pointerState.kind==='airbrush')brushStudio.end('mouse');
   if(pointerState.kind==='workshop')workshop.finish('mouse');
+  if(pointerState.kind==='living')livingCanvas.release('mouse');
   pointerState=null;controls.enabled=true;
   if(renderer.domElement.hasPointerCapture(e.pointerId))renderer.domElement.releasePointerCapture(e.pointerId);
   persist();
@@ -332,7 +345,7 @@ renderer.domElement.addEventListener('pointerdown',startMouse);
 renderer.domElement.addEventListener('pointermove',moveMouse);
 renderer.domElement.addEventListener('pointerup',endMouse);
 renderer.domElement.addEventListener('pointercancel',endMouse);
-window.addEventListener('blur',()=>{if(pointerState){if(pointerState.kind==='airbrush')brushStudio.end('mouse');if(pointerState.kind==='workshop')workshop.finish('mouse');pointerState=null;controls.enabled=true;persist();}});
+window.addEventListener('blur',()=>{if(pointerState){if(pointerState.kind==='airbrush')brushStudio.end('mouse');if(pointerState.kind==='workshop')workshop.finish('mouse');if(pointerState.kind==='living')livingCanvas.release('mouse');pointerState=null;controls.enabled=true;persist();}});
 
 // An actual 3D toolbar, not an HTML overlay that disappears inside XR.
 const toolPanel=new THREE.Group();toolPanel.position.set(1.8,1.65,-1.25);toolPanel.rotation.y=-.3;scene.add(toolPanel);
@@ -929,7 +942,7 @@ function isWorldVisible(mesh){
  return true;
 }
 function studioXRTargets(){
- return [...studioNav.controls,...controls3d,...(easel.enabled?easel.actionMeshes:[])].filter(isWorldVisible);
+ return [...studioNav.controls,...controls3d,...livingCanvas.controls,...(easel.enabled?easel.actionMeshes:[])].filter(isWorldVisible);
 }
 function syncBoardVisibility(){
  for(const [id,render] of renderedBoards){
@@ -959,6 +972,7 @@ function syncRoomUI(){
 }
 function syncRoomScene(){
  studioNav.setRoom(activeStudioRoom);
+ livingCanvas.setRoom(activeStudioRoom);
  toolPanel.visible=activeStudioRoom==='canvas';
  airDeck.visible=activeStudioRoom==='spatial';
  workDeck.visible=activeStudioRoom==='workshop';
@@ -998,7 +1012,7 @@ function goToStudioRoom(room,force=false){
  else if(room==='workshop')setMode('work-move');
  else setMode('draw');
  if(room==='gallery')studioNav.showGallery([...renderedBoards.values()]);
- syncRoomScene();syncEaselUI();syncEaselFitUI();syncRoomUI();
+ syncRoomScene();syncEaselUI();syncEaselFitUI();syncRoomUI();syncLivingCanvasUI();
  if(!renderer.xr.isPresenting){
   camera.position.set(0,1.75,3.6);
   controls.target.set(0,1.5,-1.5);
@@ -1006,6 +1020,72 @@ function goToStudioRoom(room,force=false){
  }
  message(STUDIO_ROOMS[room].hint);
 }
+
+/** Presentation-only handoff of Canvas Studio art to 3D Painting. */
+function liftSelectedCanvas(){
+  if(pointerState||xrInteractions.size){
+    message('Release the brush or controller before lifting the canvas.');return;
+  }
+  const b=selected(),render=renderedBoards.get(selectedId);
+  if(!b||!render){message('Choose a painting first.');return;}
+  try{
+    const wasPresent=livingCanvas.all.some(p=>p.id===b.id);
+    livingCanvas.lift(b.id,render,b.name);
+    goToStudioRoom('spatial');
+    syncLivingCanvasUI();
+    message(wasPresent?'Focused your existing lifted painting.':
+      'Your painting is floating in 3D! Grab or drag it. Original canvas and layers are untouched.');
+  }catch(error){message(error.message);}
+}
+function actOnLivingCanvas(action,id){
+  if(activeStudioRoom!=='spatial'){
+    message('Enter 3D Painting to move a lifted canvas.');return;
+  }
+  if(pointerState||xrInteractions.size){
+    message('Release the controller or mouse before adjusting floating art.');return;
+  }
+  try{
+    if(id)livingCanvas.select(id);
+    if(action==='return-all'){
+      livingCanvas.clear();message('All lifted previews returned. Originals remain intact.');
+    }else{
+      livingCanvas.adjust(action);
+      message(action==='return'?'Lifted preview returned. The original canvas is unchanged.':
+        'Living Canvas: '+action.replaceAll('-',' ')+'.');
+    }
+    syncLivingCanvasUI();
+  }catch(error){message(error.message);}
+}
+function syncLivingCanvasUI(){
+  const panels=livingCanvas.all,chosen=livingCanvas.selected;
+  $('#livingCanvasCount').textContent=panels.length+' / '+MAX_LIVING_PANELS;
+  const list=$('#livingCanvasList');list.replaceChildren();
+  for(const panel of panels){
+    const row=document.createElement('div');
+    row.className='living-canvas-row';
+    const focus=document.createElement('button');
+    focus.type='button';focus.textContent=panel.name;
+    focus.classList.toggle('active',panel.id===chosen?.id);
+    focus.setAttribute('aria-pressed',String(panel.id===chosen?.id));
+    focus.addEventListener('click',()=>{livingCanvas.select(panel.id);syncLivingCanvasUI();});
+    row.append(focus);
+    const putBack=document.createElement('button');
+    putBack.type='button';putBack.textContent='Return';
+    putBack.setAttribute('aria-label','Return '+panel.name+' to the original canvas');
+    putBack.addEventListener('click',()=>actOnLivingCanvas('return',panel.id));
+    row.append(putBack);list.append(row);
+  }
+  $('#livingCanvasFocused').textContent=chosen?'Selected floating art: '+chosen.name:
+    'No lifted art. Lift a canvas from Canvas Studio.';
+  document.querySelectorAll('[data-living-action]').forEach(button=>{
+    button.disabled=!chosen&&button.dataset.livingAction!=='return-all';
+    if(button.dataset.livingAction==='return-all')button.disabled=!panels.length;
+  });
+}
+$('#livingCanvasLiftCurrent').addEventListener('click',liftSelectedCanvas);
+document.querySelectorAll('[data-living-action]').forEach(button=>
+  button.addEventListener('click',()=>actOnLivingCanvas(button.dataset.livingAction)));
+
 document.querySelectorAll('[data-studio-room]').forEach(button=>
  button.addEventListener('click',()=>goToStudioRoom(button.dataset.studioRoom)));
 $('#studioHome').addEventListener('click',()=>goToStudioRoom('home'));
@@ -1041,6 +1121,7 @@ document.querySelectorAll('[data-studio-action]').forEach(button=>button.addEven
   else if(action==='redo')redo();
   else if(action==='eraser')toggleEraser();
   else if(action==='easel-toggle')toggleEasel();
+  else if(action==='lift-canvas')liftSelectedCanvas();
   else if(action==='new-canvas')addBoard();
   else if(action==='save-canvas')persist();
   else if(action==='export-png')$('#downloadPng').click();
@@ -1067,10 +1148,12 @@ const controllers=[0,1].map(i=>{
 });
 function startXR(c,index){
   if(xrInteractions.has(index))return;
-  const ray=controllerRay(c),tool=ray.intersectObjects(studioXRTargets(),false)[0],boardHit=activeStudioRoom==='canvas'?hitBoard(ray):null,workHit=activeStudioRoom==='workshop'?workshop.hit(ray):null;
-  if(tool&&(!boardHit||tool.distance<boardHit.hit.distance)&&(!workHit||tool.distance<workHit.hit.distance)){
+  const ray=controllerRay(c),tool=ray.intersectObjects(studioXRTargets(),false)[0],boardHit=activeStudioRoom==='canvas'?hitBoard(ray):null,workHit=activeStudioRoom==='workshop'?workshop.hit(ray):null,livingHit=activeStudioRoom==='spatial'?livingCanvas.hit(ray):null;
+  if(tool&&(!boardHit||tool.distance<boardHit.hit.distance)&&(!workHit||tool.distance<workHit.hit.distance)&&(!livingHit||tool.distance<livingHit.distance)){
     const a=tool.object.userData.action;
     if(a.type==='studio-room')goToStudioRoom(a.value);
+    if(a.type==='living-lift')liftSelectedCanvas();
+    if(a.type==='living-canvas')actOnLivingCanvas(a.value);
     if(a.type==='studio-decor')toggleStudioScenery();
     if(a.type==='mode')setMode(a.value);
     if(a.type==='easel-toggle')toggleEasel();
@@ -1113,6 +1196,12 @@ function startXR(c,index){
     if(a.type==='color'){$('#brushColor').value=a.value;$('#colorValue').textContent=a.value.toUpperCase();erasing=false;$('#eraser').textContent='◌ Eraser: OFF';$('#eraser').setAttribute('aria-pressed','false');updateToolColors();}
     return;
   }
+  if(livingHit&&(!tool||livingHit.distance<=tool.distance)){
+    if(livingCanvas.beginXR(index,c,livingHit)){
+      xrInteractions.set(index,{kind:'living'});syncLivingCanvasUI();
+    }
+    return;
+  }
   if(activeStudioRoom==='home'||activeStudioRoom==='gallery')return;
   if(mode==='work-measure'){
     if(workHit){try{const measurement=workshop.measurePick(workHit.id);message(measurement?'Center distance: '+measurement.distance.toFixed(3)+' m':'First center recorded. Pick another object.');}
@@ -1140,6 +1229,7 @@ function endXR(index){
   const state=xrInteractions.get(index);if(!state)return;
   if(state.kind==='airbrush')brushStudio.end(index);
   if(state.kind==='workshop')workshop.finish(index);
+  if(state.kind==='living'){livingCanvas.release(index);syncLivingCanvasUI();}
   if(state.kind==='move'||state.kind==='rotate')scene.attach(state.render.group);
   xrInteractions.delete(index);persist();
 }
@@ -1147,14 +1237,14 @@ function updateXR(){
   if(!renderer.xr.isPresenting)return;
   for(const [index,item] of controllers.entries()){
     const ray=controllerRay(item.controller);
-    const tool=ray.intersectObjects(studioXRTargets(),false)[0],hit=activeStudioRoom==='canvas'?hitBoard(ray):null;
+    const tool=ray.intersectObjects(studioXRTargets(),false)[0],hit=activeStudioRoom==='canvas'?hitBoard(ray):null,livingHit=activeStudioRoom==='spatial'?livingCanvas.hit(ray):null;
     const paintingCanvas=activeStudioRoom==='canvas'&&easel.enabled&&mode==='draw';
     item.brush.setActive(paintingCanvas);
     item.brush.setColor(ink(),erasing);
     const toolIsCloser=!!(tool&&(!hit||tool.distance<hit.hit.distance));
     item.brush.setCursor(paintingCanvas&&!toolIsCloser&&hit?hit.hit.point:null);
     item.brush.setPainting(xrInteractions.get(index)?.kind==='draw');
-    item.laser.scale.z=mode==='airbrush'&&!tool? .16 :Math.max(.08,Math.min(tool?.distance??6,hit?.hit?.distance??6,6));
+    item.laser.scale.z=mode==='airbrush'&&!tool&&!livingHit? .16 :Math.max(.08,Math.min(tool?.distance??6,hit?.hit?.distance??6,livingHit?.distance??6,6));
     const state=xrInteractions.get(index);if(!state)continue;
     if(state.kind==='airbrush'){brushStudio.extend(index,controllerTip(item.controller));continue;}
     if(state.kind==='workshop'){workshop.updateController(index);continue;}
@@ -1194,7 +1284,9 @@ function removeBoard(){
   if(studioNav.isGallery)studioNav.leaveGallery();
   const index=sceneData.boards.findIndex(b=>b.id===selectedId);
   if(index<0)return;
+  livingCanvas.returnPanel(selectedId);
   disposeBoard(renderedBoards.get(selectedId));renderedBoards.delete(selectedId);
+  syncLivingCanvasUI();
   sceneData.boards.splice(index,1);selectBoard(sceneData.boards[Math.max(0,index-1)].id);
   if(activeStudioRoom==='gallery')studioNav.showGallery([...renderedBoards.values()]);
   persist();
@@ -1690,7 +1782,7 @@ function resize(){
   renderer.setSize(width,height,false);camera.aspect=width/height;camera.updateProjectionMatrix();
 }
 window.addEventListener('resize',resize);new ResizeObserver(resize).observe($('#render-root'));
-resize();setupColorLab();syncEaselUI();updateToolColors();syncLightUI();syncShowUI();renderRunnerEditor();
+resize();setupColorLab();syncEaselUI();updateToolColors();syncLightUI();syncShowUI();renderRunnerEditor();syncLivingCanvasUI();
 goToStudioRoom('home',true);
 syncBpcPlaybackUI();
 let lastMotionFrame=null,lastRhythmBucket=-1;
