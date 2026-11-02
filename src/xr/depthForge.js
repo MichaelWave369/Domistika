@@ -17,7 +17,10 @@ export function createDepthForge({group,sourceCanvas,sourceArt,drawStroke}){
   group.add(depthRoot);
   let enabled=false,gap=DEPTH_DEFAULT_GAP;
   let slots=new Map(),visibleCount=0,totalCount=1;
-  const width=sourceCanvas.width,height=sourceCanvas.height;
+  // Hard-cap preview raster memory for Quest. The source keeps its full fidelity.
+  const factor=Math.min(1,512/Math.max(sourceCanvas.width,sourceCanvas.height));
+  const width=Math.max(1,Math.round(sourceCanvas.width*factor));
+  const height=Math.max(1,Math.round(sourceCanvas.height*factor));
   function disposeSlots(){
     for(const slot of slots.values()){
       depthRoot.remove(slot.mesh);
@@ -41,7 +44,10 @@ export function createDepthForge({group,sourceCanvas,sourceArt,drawStroke}){
       canvas.width=width;canvas.height=height;
       const ctx=canvas.getContext('2d');
       ctx.clearRect(0,0,width,height);
+      ctx.save();
+      ctx.scale(width/sourceCanvas.width,height/sourceCanvas.height);
       for(const s of grouped.get(layer.id)||[])drawStroke(ctx,s);
+      ctx.restore();
       const texture=new THREE.CanvasTexture(canvas);
       texture.colorSpace=THREE.SRGBColorSpace;
       texture.needsUpdate=true;
