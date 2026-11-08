@@ -183,10 +183,49 @@ test('XR UI wiring preserves standard controller route but prevents painting whi
   assert.match(main,/createNativePhiPoseMenu\(/);
   assert.match(main,/renderer\.setAnimationLoop\(\(timeMs,xrFrame\)=>/);
   assert.match(main,/xrFrame,renderer\.xr\.getSession\(\),renderer\.xr\.getReferenceSpace\(\)/);
-  assert.match(main,/if\(nativePose\.armed\s*&&/);
+  assert.match(main,/nativePose\.armed\|\|nativePose\.calibration\.active/);
   assert.match(main,/if\(a\.type==='phipose-native'\)/);
   assert.match(main,/nativePose\.resetSession\(\)/);
   assert.match(menu,/type:'phipose-native'/);
   assert.match(html,/id="phipose-native-status"/);
   assert.doesNotMatch(menu,/writeScene|persist\(|brushStudio\.start|workshop\.add/);
+});
+
+
+test('explicit native calibration changes per-hand swipe settings only for current session',()=>{
+  const feedback=[],effects=[],n=new NativePhiPoseXR({
+    onFeedback:text=>feedback.push(text),onAction:plan=>effects.push(plan)
+  });
+  const source=mockXR();
+  n._session=source.session;
+  run(n,100,source);
+  assert.equal(n.startCalibration(source.session,100),true);
+  assert.equal(n.calibration.active,true);
+  assert.equal(n.arm(source.session,100),false);
+  for(let t=200;t<=1400;t+=100)run(n,t,source);
+  assert.equal(n.calibration.active,false);
+  assert.deepEqual(n.calibrationDistances,{left:.141,right:.141});
+  assert.deepEqual(n.motion.distances,{left:.141,right:.141});
+  assert.equal(n.armed,false);
+  assert.deepEqual(effects,[]);
+  assert.ok(feedback.some(x=>x.includes('CALIBRATING')));
+  assert.ok(feedback.at(-1).includes('L14cm R14cm'));
+  assert.equal(n.arm(source.session,1450),true);
+  n.cancel('OPERATOR CANCELLED');
+  n.resetSession();
+  assert.equal(n.calibrationDistances,null);
+  assert.deepEqual(n.motion.distances,{left:.15,right:.15});
+  assert.equal(n.tracked.left,false);
+});
+test('native calibration cannot start while pose armed; cancel revokes calibration',()=>{
+  const n=new NativePhiPoseXR(),x=mockXR();n._session=x.session;
+  run(n,100,x);
+  assert.equal(n.arm(x.session,100),true);
+  assert.equal(n.startCalibration(x.session,200),false);
+  assert.equal(n.calibration.active,false);
+  n.cancel();
+  assert.equal(n.startCalibration(x.session,200),true);
+  n.cancel('STOP CALIBRATION');
+  assert.equal(n.calibration.active,false);
+  assert.equal(n.armed,false);
 });

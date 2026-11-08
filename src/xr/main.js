@@ -1109,7 +1109,11 @@ const nativePose=new NativePhiPoseXR({
   onStatus:statusText=>{
     message('Native ΦPose: '+statusText);
     $('#phipose-native-status').textContent=statusText;
-    nativePoseMenu.update(nativePose.command.label,statusText);
+    nativePoseMenu.update(nativePose.command.label,statusText,nativePose.feedback(performance.now()));
+  },
+  onFeedback:detail=>{
+    $('#phipose-native-feedback').textContent=detail;
+    nativePoseMenu.update(nativePose.command.label,nativePose.status,detail);
   },
   onAction:plan=>{
     // Actual app-specific dispatch occurs ONLY after local XR recognition
@@ -1130,7 +1134,7 @@ const nativePose=new NativePhiPoseXR({
     }
   }
 });
-nativePoseMenu.update(nativePose.command.label,nativePose.status);
+nativePoseMenu.update(nativePose.command.label,nativePose.status,nativePose.feedback(performance.now()));
 // No popup, other-window readiness message or persistent enable flag needed.
 
 const phiPoseCompanion=mountDomistikaPhiPoseCompanion({
@@ -1215,17 +1219,18 @@ function startXR(c,index){
   // Physical selectstart/pinch can otherwise draw while a gesture is armed.
   // Only CANCEL remains clickable until the one-shot attempt finishes.
   const gestureButton=tool?.object.userData.action;
-  if(nativePose.armed &&
+  if((nativePose.armed||nativePose.calibration.active) &&
      !(gestureButton?.type==='phipose-native'&&gestureButton.value==='cancel')){
-    message('ΦPose armed: finish the selected phrase or click CANCEL.');return;
+    message('ΦPose is active: finish your gesture/calibration or click CANCEL.');return;
   }
   if(tool&&(!boardHit||tool.distance<boardHit.hit.distance)&&(!workHit||tool.distance<workHit.hit.distance)&&(!livingHit||tool.distance<livingHit.distance)){
     const a=tool.object.userData.action;
     if(a.type==='phipose-native'){
       if(a.value==='cycle')nativePose.nextCommand();
       if(a.value==='arm')nativePose.arm(renderer.xr.getSession(),performance.now());
+      if(a.value==='calibrate')nativePose.startCalibration(renderer.xr.getSession(),performance.now());
       if(a.value==='cancel')nativePose.cancel('OPERATOR CANCELLED');
-      nativePoseMenu.update(nativePose.command.label,nativePose.status);
+      nativePoseMenu.update(nativePose.command.label,nativePose.status,nativePose.feedback(performance.now()));
       return;
     }
     if(a.type==='studio-room')goToStudioRoom(a.value);
@@ -1847,7 +1852,7 @@ renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
 });
 renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
   nativePose.resetSession();nativePoseMenu.group.visible=false;
-  nativePoseMenu.update(nativePose.command.label,nativePose.status);
+  nativePoseMenu.update(nativePose.command.label,nativePose.status,nativePose.feedback(performance.now()));
   phiPoseCompanion.disable();
   for(const i of [...xrInteractions.keys()])endXR(i);
   brushStudio.finishAll();

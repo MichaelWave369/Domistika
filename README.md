@@ -1,5 +1,13 @@
 ## Domistika XR v1.0 · Showrunner
 
+## Rung 14 · ΦPose XR Headset-Relative Swipe Calibration
+
+Native Domistika ΦPose now recognizes sideways wrist travel **relative to the headset's horizontal facing direction**, rather than global room X. A new **CALIBRATE HANDS** in-world control learns separate, bounded left/right swipe distances from temporary palm-span samples, while the menu shows hand-tracking state, phrase progress and a countdown.
+
+Calibration needs explicit selection, both tracked hands, and ~1.2 seconds of valid samples. It is reset on session exit; neither joint positions nor calibration data are saved or transmitted. All seven previously reviewed room/brush-only gesture actions keep their existing one-shot and drawing lockouts. **Quest 3 hardware behavior remains unverified until a physical test.**
+
+[Read Rung 14 calibration, privacy and Quest acceptance requirements](docs/XR_PHIPOSE_CALIBRATION_R14.md).
+
 ## Rung 13 · Native WebXR ΦPose Gesture Language
 
 Domistika XR now has a **one-shot native gesture controller inside the active Quest/WebXR session**, with no second browser window required. It reuses the checked-in, review-pinned OverStrings `GestureTracker`, `WristMotionTokenizer` and `PhiPoseInterpreter` modules, and shows an in-world **NEXT COMMAND / ARM ONE PHRASE / CANCEL PHRASE** menu.
