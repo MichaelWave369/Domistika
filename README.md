@@ -1,5 +1,14 @@
 ## Domistika XR v1.0 · Showrunner
 
+## Rung 13 · Native WebXR ΦPose Gesture Language
+
+Domistika XR now has a **one-shot native gesture controller inside the active Quest/WebXR session**, with no second browser window required. It reuses the checked-in, review-pinned OverStrings `GestureTracker`, `WristMotionTokenizer` and `PhiPoseInterpreter` modules, and shows an in-world **NEXT COMMAND / ARM ONE PHRASE / CANCEL PHRASE** menu.
+
+The same seven reviewed room / next-previous brush actions are available after deliberate, time-limited arming. The runtime samples only real current-session hand joints, rejects simultaneous pose steps, drawing/interaction collisions and tracking loss, and never performs paint, deletion, save/export or OS actions. Controllers remain supported. Quest 3 physical recognition and hand-select ray behavior **still require hardware acceptance**.
+
+[Read the native XR gesture guide and safety/Quest test plan](docs/XR_PHIPOSE_NATIVE_R13.md).
+
+
 ## Rung 12 · Domistika XR ΦPose Gesture Companion
 
 Domistika XR now has an **opt-in, five-minute** gesture-command host powered by the reviewed OverStrings ΦPose SDK. The paired OverStrings companion may request Studio Home/Canvas/3D Paint/Sculpture/Gallery navigation or next/previous *future-stroke* brush style. No gesture can paint, erase, save, export, or delete your artwork. Active pointer/controller interactions block commands; synthetic practice requires separate opt-in.
