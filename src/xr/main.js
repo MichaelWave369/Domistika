@@ -1871,7 +1871,7 @@ syncBpcPlaybackUI();
 let lastMotionFrame=null,lastRhythmBucket=-1;
 document.addEventListener('visibilitychange',()=>{if(document.hidden){nativePose.cancel('XR VIEW HIDDEN');stopRunner();stopShowDemo();rhythm.pause();workshop.stopMotion();lastMotionFrame=null;}});
 window.addEventListener('pagehide',()=>{nativePose.resetSession();phiPoseCompanion.disable();stopRunner();stopShowDemo();rhythm.clear();workshop.stopMotion();});
-renderer.setAnimationLoop((timeMs,frame)=>{
+renderer.setAnimationLoop((timeMs,xrFrame)=>{
   const seconds=lastMotionFrame===null?0:Math.max(0,(timeMs-lastMotionFrame)/1000);
   lastMotionFrame=timeMs;
   if(showDemoActive&&!workshop.motionPlaying)stopShowDemo();
@@ -1906,7 +1906,7 @@ renderer.setAnimationLoop((timeMs,frame)=>{
   }
   updateBpcPlayback(timeMs);
   if(renderer.xr.isPresenting){
-    nativePose.tick(timeMs,frame,renderer.xr.getSession(),renderer.xr.getReferenceSpace(),{
+    nativePose.tick(timeMs,xrFrame,renderer.xr.getSession(),renderer.xr.getReferenceSpace(),{
       room:activeStudioRoom,canvasBrush,airBrush:airStyle,
       pointerBusy:!!pointerState,xrBusy:xrInteractions.size>0
     });
