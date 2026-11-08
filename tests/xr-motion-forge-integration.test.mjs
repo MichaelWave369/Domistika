@@ -9,7 +9,7 @@ test('Motion Forge desktop controls and Quest tool actions are wired',()=>{
   assert.ok(html.includes('id="'+id+'"'),'Missing motion UI: '+id);
  for(const token of ["type:'work-motion-cycle'","type:'work-motion-toggle'","type:'work-motion-reset'","workshop.cycleSelectedMotion()","workshop.toggleMotion()","workshop.stopMotion()","workshop.previewMotion","workshop.tickMotion"])
   assert.ok(js.includes(token),'Missing motion interaction: '+token);
- assert.match(js,/renderer\.setAnimationLoop\(timeMs=>\{/);
+ assert.match(js,/renderer\.setAnimationLoop\(\(timeMs,xrFrame\)=>\{/);
  assert.match(js,/document\.addEventListener\('visibilitychange'/);
 });
 test('motion preview never serializes visual transform or overlays into saved workshop JSON',()=>{

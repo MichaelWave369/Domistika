@@ -15,6 +15,8 @@ import {MAX_LIVING_PANELS} from './livingCanvasModel.js';
 import {createControllerPaintbrush} from './controllerPaintbrush.js';
 import {createStudioNavigator,STUDIO_ROOMS} from './studioNavigator.js';
 import {mountDomistikaPhiPoseCompanion} from './phiPoseDomistikaCompanion.js';
+import {NativePhiPoseXR} from './phiPoseNativeXR.js';
+import {createNativePhiPoseMenu} from './phiPoseNativeMenu.js';
 import {createStudioEnvironments} from './studioEnvironments.js';
 import {parseOpenBluePreview,OPENBLUE_MAX_BYTES} from './openblueModel.js';
 import {buildOpenBluePreview} from './openbluePreview.js';
@@ -944,7 +946,7 @@ function isWorldVisible(mesh){
  return true;
 }
 function studioXRTargets(){
- return [...studioNav.controls,...controls3d,...livingCanvas.controls,...(easel.enabled?easel.actionMeshes:[])].filter(isWorldVisible);
+ return [...studioNav.controls,...controls3d,...nativePoseMenu.controls,...livingCanvas.controls,...(easel.enabled?easel.actionMeshes:[])].filter(isWorldVisible);
 }
 function syncBoardVisibility(){
  for(const [id,render] of renderedBoards){
@@ -1102,6 +1104,35 @@ document.querySelectorAll('[data-living-action]').forEach(button=>
 document.querySelectorAll('[data-studio-room]').forEach(button=>
  button.addEventListener('click',()=>goToStudioRoom(button.dataset.studioRoom)));
 $('#studioHome').addEventListener('click',()=>goToStudioRoom('home'));
+const nativePoseMenu=createNativePhiPoseMenu({scene,textTexture});
+const nativePose=new NativePhiPoseXR({
+  onStatus:statusText=>{
+    message('Native ΦPose: '+statusText);
+    $('#phipose-native-status').textContent=statusText;
+    nativePoseMenu.update(nativePose.command.label,statusText);
+  },
+  onAction:plan=>{
+    // Actual app-specific dispatch occurs ONLY after local XR recognition
+    // and a second, currently safe UI-only plan. No paint or persistence.
+    if(!renderer.xr.isPresenting||pointerState||xrInteractions.size)
+      throw Error('XR session no longer safe for UI navigation');
+    if(plan.kind==='room')goToStudioRoom(plan.room);
+    else if(plan.kind==='brush'){
+      if(plan.room!==activeStudioRoom)throw Error('Brush room changed');
+      if(plan.room==='canvas')setCanvasBrush(plan.style);
+      else if(plan.room==='spatial'){
+        setAirStyle(plan.style);
+        for(const tile of document.querySelectorAll('[data-studio-brush]')){
+          tile.classList.toggle('active',tile.dataset.studioBrush===plan.style);
+          tile.setAttribute('aria-pressed',String(tile.dataset.studioBrush===plan.style));
+        }
+      }
+    }
+  }
+});
+nativePoseMenu.update(nativePose.command.label,nativePose.status);
+// No popup, other-window readiness message or persistent enable flag needed.
+
 const phiPoseCompanion=mountDomistikaPhiPoseCompanion({
   element:$('#phipose-xr-bridge'),
   getContext:()=>({
@@ -1181,8 +1212,22 @@ const controllers=[0,1].map(i=>{
 function startXR(c,index){
   if(xrInteractions.has(index))return;
   const ray=controllerRay(c),tool=ray.intersectObjects(studioXRTargets(),false)[0],boardHit=activeStudioRoom==='canvas'?hitBoard(ray):null,workHit=activeStudioRoom==='workshop'?workshop.hit(ray):null,livingHit=activeStudioRoom==='spatial'?livingCanvas.hit(ray):null;
+  // Physical selectstart/pinch can otherwise draw while a gesture is armed.
+  // Only CANCEL remains clickable until the one-shot attempt finishes.
+  const gestureButton=tool?.object.userData.action;
+  if(nativePose.armed &&
+     !(gestureButton?.type==='phipose-native'&&gestureButton.value==='cancel')){
+    message('ΦPose armed: finish the selected phrase or click CANCEL.');return;
+  }
   if(tool&&(!boardHit||tool.distance<boardHit.hit.distance)&&(!workHit||tool.distance<workHit.hit.distance)&&(!livingHit||tool.distance<livingHit.distance)){
     const a=tool.object.userData.action;
+    if(a.type==='phipose-native'){
+      if(a.value==='cycle')nativePose.nextCommand();
+      if(a.value==='arm')nativePose.arm(renderer.xr.getSession(),performance.now());
+      if(a.value==='cancel')nativePose.cancel('OPERATOR CANCELLED');
+      nativePoseMenu.update(nativePose.command.label,nativePose.status);
+      return;
+    }
     if(a.type==='studio-room')goToStudioRoom(a.value);
     if(a.type==='living-lift')liftSelectedCanvas();
     if(a.type==='living-canvas')actOnLivingCanvas(a.value);
@@ -1791,6 +1836,8 @@ try{
   $('#xr-entry').append(vr,mr);
 }catch(error){message('XR init unavailable: '+error.message);}
 renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
+  nativePose.resetSession();nativePoseMenu.group.visible=true;
+  nativePoseMenu.update(nativePose.command.label,nativePose.status);
   const blend=renderer.xr.getSession()?.environmentBlendMode;
   const passthrough=blend==='alpha-blend'||blend==='additive';
   scene.background=passthrough?null:new THREE.Color(bgColor);
@@ -1799,6 +1846,8 @@ renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
   controls.enabled=false;syncRoomScene();message(passthrough?'Mixed reality active; decorative scenery hidden.':'VR active; choose a room and create.');
 });
 renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
+  nativePose.resetSession();nativePoseMenu.group.visible=false;
+  nativePoseMenu.update(nativePose.command.label,nativePose.status);
   phiPoseCompanion.disable();
   for(const i of [...xrInteractions.keys()])endXR(i);
   brushStudio.finishAll();
@@ -1820,9 +1869,9 @@ resize();setupColorLab();syncEaselUI();updateToolColors();syncLightUI();syncShow
 goToStudioRoom('home',true);
 syncBpcPlaybackUI();
 let lastMotionFrame=null,lastRhythmBucket=-1;
-document.addEventListener('visibilitychange',()=>{if(document.hidden){stopRunner();stopShowDemo();rhythm.pause();workshop.stopMotion();lastMotionFrame=null;}});
-window.addEventListener('pagehide',()=>{phiPoseCompanion.disable();stopRunner();stopShowDemo();rhythm.clear();workshop.stopMotion();});
-renderer.setAnimationLoop(timeMs=>{
+document.addEventListener('visibilitychange',()=>{if(document.hidden){nativePose.cancel('XR VIEW HIDDEN');stopRunner();stopShowDemo();rhythm.pause();workshop.stopMotion();lastMotionFrame=null;}});
+window.addEventListener('pagehide',()=>{nativePose.resetSession();phiPoseCompanion.disable();stopRunner();stopShowDemo();rhythm.clear();workshop.stopMotion();});
+renderer.setAnimationLoop((timeMs,xrFrame)=>{
   const seconds=lastMotionFrame===null?0:Math.max(0,(timeMs-lastMotionFrame)/1000);
   lastMotionFrame=timeMs;
   if(showDemoActive&&!workshop.motionPlaying)stopShowDemo();
@@ -1856,6 +1905,13 @@ renderer.setAnimationLoop(timeMs=>{
       frame.beat>.6?'BASS ATTACK DETECTED':'Listening for the next bass transient';
   }
   updateBpcPlayback(timeMs);
-  if(renderer.xr.isPresenting)updateXR();else controls.update();renderer.render(scene,camera);
+  if(renderer.xr.isPresenting){
+    nativePose.tick(timeMs,xrFrame,renderer.xr.getSession(),renderer.xr.getReferenceSpace(),{
+      room:activeStudioRoom,canvasBrush,airBrush:airStyle,
+      pointerBusy:!!pointerState,xrBusy:xrInteractions.size>0
+    });
+    updateXR();
+  }else controls.update();
+  renderer.render(scene,camera);
 });
 message(location.protocol==='https:'||['localhost','127.0.0.1'].includes(location.hostname)?'Studio Home ready. Choose a room to begin.':'Desktop Studio Home ready. Immersive XR requires HTTPS or localhost.');

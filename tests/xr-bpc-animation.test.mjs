@@ -62,7 +62,7 @@ test('animation loop, XR in-world play control and scrubbing are wired while boa
  assert.match(html,/id="bpcTimeline"/);
  assert.match(main,/function toggleBpcPlayback/);
  assert.match(main,/function updateBpcPlayback/);
- assert.match(main,/renderer\.setAnimationLoop\(timeMs=>/);
+ assert.match(main,/renderer\.setAnimationLoop\(\(timeMs,xrFrame\)=>/);
  assert.match(main,/type:'bpc-playback'/);
  assert.match(main,/sampleFramefieldPose\(bpcMotion\.assets\[i\]\.keyframes/);
  assert.match(main,/document\.addEventListener\('visibilitychange'/);
