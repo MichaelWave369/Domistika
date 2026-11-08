@@ -1108,6 +1108,7 @@ const nativePoseMenu=createNativePhiPoseMenu({scene,textTexture});
 const nativePose=new NativePhiPoseXR({
   onStatus:statusText=>{
     message('Native ΦPose: '+statusText);
+    $('#phipose-native-status').textContent=statusText;
     nativePoseMenu.update(nativePose.command.label,statusText);
   },
   onAction:plan=>{
