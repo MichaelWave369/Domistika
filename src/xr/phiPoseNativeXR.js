@@ -8,7 +8,7 @@
  */
 import {GestureTracker,JOINT_NAMES} from './phipose-core/gesture.mjs';
 import {PhiPoseInterpreter} from './phipose-core/phipose.mjs';
-import {WristMotionTokenizer} from './phipose-core/wrist-motion.mjs';
+import {ViewRelativeSwipeTokenizer,LocalPalmCalibration,viewerRightAxis,PHIPOSE_DEFAULT_SWIPE_M} from './phiPoseViewMotion.js';
 import {
   DOMISTIKA_PHIPOSE_ACTIONS,planDomistikaPhiPoseAction
 } from './phiPoseDomistikaHost.js';
@@ -59,10 +59,13 @@ export function planNativePhiPoseIntent(intent,selectedAction,context){
 }
 
 export class NativePhiPoseXR {
-  constructor({onStatus=()=>{},onAction=()=>{}}={}){
-    this.onStatus=onStatus;this.onAction=onAction;
+  constructor({onStatus=()=>{},onAction=()=>{},onFeedback=()=>{}}={}){
+    this.onStatus=onStatus;this.onAction=onAction;this.onFeedback=onFeedback;
     this.tracker=new GestureTracker();
-    this.motion=new WristMotionTokenizer();
+    this.motion=new ViewRelativeSwipeTokenizer();
+    this.calibration=new LocalPalmCalibration();
+    this.calibrationDistances=null;
+    this.lastFeedback='';
     this.interpreter=new PhiPoseInterpreter({advisoryActionIds:DOMISTIKA_PHIPOSE_ACTIONS});
     this.commandIndex=0;
     this.tracked={left:false,right:false};
@@ -71,6 +74,33 @@ export class NativePhiPoseXR {
   }
   get command(){return DOMISTIKA_NATIVE_COMMANDS[this.commandIndex];}
   get armed(){return this.interpreter.armed;}
+  feedback(nowMs){
+    const tracked='L:'+(this.tracked.left?'OK':'--')+' R:'+(this.tracked.right?'OK':'--');
+    const distances=this.calibrationDistances?
+      'L'+Math.round(this.calibrationDistances.left*100)+'cm R'+Math.round(this.calibrationDistances.right*100)+'cm':
+      'DEFAULT '+Math.round(PHIPOSE_DEFAULT_SWIPE_M*100)+'cm';
+    const remain=this.armed&&Number.isFinite(nowMs)?
+      ' · '+Math.max(0,Math.ceil((6500-(nowMs-this.armedAt))/1000))+'s': '';
+    const step=this.armed?' · STEP '+(this.interpreter.index+1)+'/'+
+      this.interpreter.binding.program.steps.length:'';
+    const calibrating=this.calibration.active?' · CALIBRATING':'';
+    return tracked+' · '+distances+step+remain+calibrating;
+  }
+  emitFeedback(nowMs){
+    const summary=this.feedback(nowMs);
+    if(summary===this.lastFeedback)return;
+    this.lastFeedback=summary;this.onFeedback(summary);
+  }
+  startCalibration(session,nowMs){
+    if(this.armed){this.setStatus('CANCEL POSE BEFORE CALIBRATION');return false;}
+    if(!session||!Number.isFinite(nowMs)||nowMs<0||
+       !this.tracked.left||!this.tracked.right||nowMs-this.trackedAt>300){
+      this.setStatus('CALIBRATION NEEDS TWO TRACKED HANDS');return false;
+    }
+    if(!this.calibration.begin(session,nowMs))return false;
+    this.setStatus('CALIBRATING · HOLD BOTH HANDS OPEN AND STEADY');
+    this.emitFeedback(nowMs);return true;
+  }
   setStatus(message){
     if(this.status===message)return;
     this.status=message;
@@ -84,6 +114,7 @@ export class NativePhiPoseXR {
     return this.command;
   }
   arm(session,nowMs){
+    if(this.calibration.active){this.setStatus('WAIT FOR CALIBRATION');return false;}
     this.cancel();
     if(!session||!Number.isFinite(nowMs)||nowMs<0||
        !(this.tracked.left&&this.tracked.right)||
@@ -108,23 +139,44 @@ export class NativePhiPoseXR {
     this.interpreter.disarm();
     this.tracker.reset();this.motion.reset();
     this.armedAt=null;this.activeSession=null;this.lastBothSeen=null;this.lastStepAt=null;
+    this.calibration.reset();
     if(reason)this.setStatus(reason);
   }
   resetSession(){
     this.cancel('XR SESSION ENDED');
     this.tracked={left:false,right:false};
     this.trackedAt=-Infinity;
+    this.calibrationDistances=null;
+    this.motion.configure({left:PHIPOSE_DEFAULT_SWIPE_M,right:PHIPOSE_DEFAULT_SWIPE_M});
+    this.lastFeedback='';
   }
   tick(nowMs,frame,session,referenceSpace,context){
     if(!Number.isFinite(nowMs)||nowMs<0||!session||!referenceSpace){
-      if(this.armed)this.cancel('TRACKING UNAVAILABLE');
-      this.tracked={left:false,right:false};return;
+      if(this.armed||this.calibration.active)this.cancel('TRACKING UNAVAILABLE');
+      this.tracked={left:false,right:false};this.emitFeedback(nowMs);return;
     }
     const hands=readNativeXRHandJoints(frame,session,referenceSpace);
     const both=!!(hands.left&&hands.right);
     this.tracked={left:!!hands.left,right:!!hands.right};
     if(both)this.trackedAt=nowMs;
-    if(!this.armed)return;
+    if(this.calibration.active){
+      if(context?.pointerBusy||context?.xrBusy){
+        this.cancel('CALIBRATION INTERRUPTED BY DRAWING');
+      }else{
+        const result=this.calibration.update(nowMs,session,hands);
+        if(result.state==='complete'){
+          this.calibrationDistances=result.distances;
+          this.motion.configure(result.distances);
+          this.setStatus('CALIBRATED · HAND DISTANCES UPDATED FOR THIS SESSION');
+        }else if(['tracking_lost','cancelled','timeout','invalid'].includes(result.state)){
+          this.setStatus('CALIBRATION FAILED · '+result.state.toUpperCase());
+        }
+      }
+      this.emitFeedback(nowMs);
+      return;
+    }
+    if(!this.armed){this.emitFeedback(nowMs);return;}
+    this.emitFeedback(nowMs);
     if(session!==this.activeSession){
       this.cancel('SESSION CHANGED · CANCELLED');return;
     }
@@ -148,7 +200,7 @@ export class NativePhiPoseXR {
         if(evt.phase==='start'&&this.receive(evt,nowMs,context))return;
       }
       const swipes=this.motion.update(hand,hands[hand],nowMs,
-        this.tracker.active(hand),'webxr');
+        this.tracker.active(hand),viewerRightAxis(frame,referenceSpace),'webxr');
       for(const evt of swipes)if(this.receive(evt,nowMs,context))return;
     }
   }
