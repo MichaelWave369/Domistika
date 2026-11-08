@@ -67,7 +67,7 @@ export class NativePhiPoseXR {
     this.commandIndex=0;
     this.tracked={left:false,right:false};
     this.trackedAt=-Infinity;this.armedAt=null;this.activeSession=null;
-    this.listenAfter=0;this.lastBothSeen=null;this.status='DISABLED';
+    this.listenAfter=0;this.lastBothSeen=null;this.lastStepAt=null;this.status='DISABLED';
   }
   get command(){return DOMISTIKA_NATIVE_COMMANDS[this.commandIndex];}
   get armed(){return this.interpreter.armed;}
@@ -97,6 +97,7 @@ export class NativePhiPoseXR {
     this.armedAt=nowMs;
     this.activeSession=session;
     this.lastBothSeen=nowMs;
+    this.lastStepAt=null;
     // Reject the select pinch used to press the 3D ARM button.
     this.listenAfter=nowMs+450;
     this.tracker.reset();this.motion.reset();
@@ -106,7 +107,7 @@ export class NativePhiPoseXR {
   cancel(reason=''){
     this.interpreter.disarm();
     this.tracker.reset();this.motion.reset();
-    this.armedAt=null;this.activeSession=null;this.lastBothSeen=null;
+    this.armedAt=null;this.activeSession=null;this.lastBothSeen=null;this.lastStepAt=null;
     if(reason)this.setStatus(reason);
   }
   resetSession(){
@@ -153,6 +154,9 @@ export class NativePhiPoseXR {
   }
   receive(event,nowMs,context){
     if(!this.armed)return false;
+    // A same-frame, two-hand simultaneous posture is not a sequential command.
+    // Require the operator to release/re-present later steps deliberately.
+    if(this.lastStepAt!==null&&nowMs-this.lastStepAt<180)return false;
     const outcome=this.interpreter.consume(event,nowMs);
     if(outcome.accepted){
       const intent=outcome.intent,selectedAction=this.command.actionId;
@@ -172,8 +176,10 @@ export class NativePhiPoseXR {
       'invalid_event','clock_invalid','chord_expired'].includes(outcome.reason)){
       this.cancel('PHRASE CANCELLED · '+outcome.reason);return true;
     }
-    if(outcome.reason==='step_completed')
+    if(outcome.reason==='step_completed'){
+      this.lastStepAt=nowMs;
       this.setStatus('STEP '+outcome.progress+' · CONTINUE '+this.command.label);
+    }
     if(outcome.reason==='awaiting_chord')this.setStatus('WAITING FOR SECOND HAND');
     return false;
   }
