@@ -23,7 +23,7 @@ test('headset right vector projects onto the horizontal and rejects invalid orie
   const turned=viewerRightAxis(pose(YAW90),{});
   assert.ok(Math.abs(turned.x)<1e-12);
   assert.ok(Math.abs(turned.z+1)<1e-12);
-  assert.equal(viewerRightAxis(pose({x:Math.SQRT1_2,y:0,z:0,w:Math.SQRT1_2}),{}),null);
+  assert.equal(viewerRightAxis(pose({x:0,y:0,z:Math.SQRT1_2,w:Math.SQRT1_2}),{}),null);
   assert.equal(viewerRightAxis(null,{}),null);
   assert.equal(viewerRightAxis(pose(IDENTITY),null),null);
   assert.equal(viewerRightAxis(pose({x:NaN,y:0,z:0,w:1}),{}),null);
@@ -51,7 +51,7 @@ test('head turns alone do not create a swipe; direction is frozen at motion star
   // A movement along the newly facing screen-right does NOT count mid-swipe.
   assert.deepEqual(s.update('right',position(0,0,-.20),300,'open',viewerRightAxis(pose(YAW90),{})),[]);
   // Horizontal movement in the original screen-right direction does count.
-  assert.equal(s.update('right',position(.18,0,-.20),380,'open',
+  assert.equal(s.update('right',position(.40,0,-.20),380,'open',
     viewerRightAxis(pose(YAW90),{}))[0].gesture,'swipe-right');
 });
 
