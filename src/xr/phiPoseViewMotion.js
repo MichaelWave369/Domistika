@@ -66,6 +66,9 @@ export class LocalPalmCalibration{
     if(nowMs-this.startedAt>3200){
       this.reset();return {state:'timeout'};
     }
+    // Never complete calibration during an occlusion, even when earlier
+    // samples already met the minimum count.
+    if(a===null||b===null)return {state:'collecting',remainingMs:0};
     if(nowMs-this.startedAt<1200 || this.samples.left.length<12)
       return {state:'collecting',remainingMs:Math.max(0,1200-(nowMs-this.startedAt))};
     const middle=items=>{
