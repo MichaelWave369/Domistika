@@ -183,7 +183,7 @@ test('XR UI wiring preserves standard controller route but prevents painting whi
   assert.match(main,/createNativePhiPoseMenu\(/);
   assert.match(main,/renderer\.setAnimationLoop\(\(timeMs,xrFrame\)=>/);
   assert.match(main,/xrFrame,renderer\.xr\.getSession\(\),renderer\.xr\.getReferenceSpace\(\)/);
-  assert.match(main,/if\(nativePose\.armed\s*&&/);
+  assert.match(main,/nativePose\.armed\|\|nativePose\.calibration\.active/);
   assert.match(main,/if\(a\.type==='phipose-native'\)/);
   assert.match(main,/nativePose\.resetSession\(\)/);
   assert.match(menu,/type:'phipose-native'/);
