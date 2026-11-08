@@ -284,3 +284,15 @@ background:#183348;border:1px solid #486a85}
 .living-canvas-panel .depth-forge-instructions{
   color:#bbd6dd;line-height:1.5;
 }
+
+
+/* Rung 12 · optional ΦPose XR companion, never an immersive input override */
+.phipose-xr-bridge { margin:18px 0 8px; padding:14px; border:1px solid #426780; border-radius:13px; background:#101d32; display:grid; gap:8px; }
+.phipose-xr-bridge h2 { margin:0; font-size:12px; color:#9cf5e8; letter-spacing:.06em; }
+.phipose-xr-bridge p { font-size:11px; line-height:1.5; color:#d2e0f0; margin:0; }
+.phipose-xr-bridge small { font-size:10px; line-height:1.5; color:#a8bacf; }
+.phipose-xr-option { display:flex; gap:8px; align-items:center; font-size:11px; }
+.phipose-xr-option input { accent-color:#71f5d7; }
+.phipose-xr-actions { display:flex; gap:8px; flex-wrap:wrap; }
+.phipose-xr-actions button { flex:1; }
+.phipose-xr-actions button:disabled { cursor:not-allowed; opacity:.55; }
