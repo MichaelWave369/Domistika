@@ -33,6 +33,7 @@ test('headset right vector projects onto the horizontal and rejects invalid orie
 test('view-relative swipes follow the user, not the room global X axis',()=>{
   const s=new ViewRelativeSwipeTokenizer(),axis=viewerRightAxis(pose(YAW90),{});
   assert.deepEqual(s.update('right',position(),0,'open',axis),[]);
+  assert.deepEqual(s.update('right',position(0,0,-0.04),100,'open',axis),[]);
   const recognized=s.update('right',position(0,0,-0.18),230,'open',axis);
   assert.equal(recognized.length,1);
   assert.equal(recognized[0].gesture,'swipe-right');
@@ -40,6 +41,7 @@ test('view-relative swipes follow the user, not the room global X axis',()=>{
   assert.equal(s.update('right',position(0,0,-0.22),270,'open',axis).length,0);
   s.reset();
   s.update('left',position(),300,'point',{x:1,z:0});
+  s.update('left',position(-.04),400,'point',{x:1,z:0});
   assert.equal(s.update('left',position(-.18),530,'point',{x:1,z:0})[0].gesture,'swipe-left');
 });
 
@@ -68,6 +70,7 @@ test('motion-denial checks reject vertical travel, forward travel, occlusion and
   assert.deepEqual(s.update('right',position(.22),300,'neutral',axis),[]);
   assert.deepEqual(s.update('right',position(.4),700,'point',null),[]);
   assert.deepEqual(s.update('right',position(.4),900,'point',axis),[]);
+  assert.deepEqual(s.update('right',position(.44),1010,'point',axis),[]);
   assert.equal(s.update('right',position(.59),1130,'point',axis)[0].gesture,'swipe-right');
   assert.throws(()=>s.configure({left:-1,right:3}),TypeError);
 });
@@ -98,9 +101,11 @@ test('per-hand calibration uses bounded, independent palm spans, without storing
   assert.equal(s.distances.left,.141);
   assert.equal(s.distances.right,.188);
   s.update('left',position(),0,'point',{x:1,z:0});
+  s.update('left',position(.05),100,'point',{x:1,z:0});
   assert.deepEqual(s.update('left',position(.13),230,'point',{x:1,z:0}),[]);
   assert.equal(s.update('left',position(.15),270,'point',{x:1,z:0})[0].gesture,'swipe-right');
   s.update('right',position(),0,'point',{x:1,z:0});
+  s.update('right',position(.05),100,'point',{x:1,z:0});
   assert.deepEqual(s.update('right',position(.16),230,'point',{x:1,z:0}),[]);
   assert.equal(s.update('right',position(.20),270,'point',{x:1,z:0})[0].gesture,'swipe-right');
 });
@@ -123,7 +128,7 @@ test('new runtime path remains in-memory and does not require multi-window trans
   assert.match(main,/nativePose\.startCalibration\(/);
   assert.match(main,/nativePose\.tick\(timeMs,xrFrame/);
   assert.match(native,/viewerRightAxis\(frame,referenceSpace\)/);
-  assert.match(menu,/value:'calibrate'/);
+  assert.match(menu,/'CALIBRATE HANDS',[^\n]*'calibrate'/);
   assert.doesNotMatch(native,/localStorage|sessionStorage|fetch\(|\.postMessage\(|\.sendBeacon\(/);
   assert.equal(PHIPOSE_DEFAULT_SWIPE_M,.15);
 });
