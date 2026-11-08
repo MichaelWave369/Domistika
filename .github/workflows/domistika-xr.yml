@@ -41,6 +41,8 @@ jobs:
       - run: node --check src/xr/phiPoseDomistikaHost.js
       - run: node --check src/xr/phiPoseDomistikaCompanion.js
       - run: node --check src/xr/phiPoseNativeXR.js
+      - run: node --check src/xr/phiPoseViewMotion.js
+      - run: node --test tests/xr-phipose-view-motion.test.mjs
       - run: node --check src/xr/phiPoseNativeMenu.js
       - run: node --check src/xr/phipose-core/calibration.mjs
       - run: node --check src/xr/phipose-core/gesture.mjs
