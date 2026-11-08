@@ -37,6 +37,10 @@ jobs:
       - run: node --check src/xr/easelFit.js
       - run: node --check src/xr/controllerPaintbrush.js
       - run: node --check src/xr/studioNavigator.js
+      - run: node --check src/xr/phiPoseHostCore.js
+      - run: node --check src/xr/phiPoseDomistikaHost.js
+      - run: node --check src/xr/phiPoseDomistikaCompanion.js
+      - run: node --test tests/xr-phipose-navigation.test.mjs
       - run: node --check src/xr/studioEnvironments.js
       - run: node --check src/xr/model.js
       - run: node --check src/xr/layerModel.js
