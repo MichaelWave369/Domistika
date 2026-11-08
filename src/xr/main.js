@@ -14,6 +14,7 @@ import {createLivingCanvas} from './livingCanvas.js';
 import {MAX_LIVING_PANELS} from './livingCanvasModel.js';
 import {createControllerPaintbrush} from './controllerPaintbrush.js';
 import {createStudioNavigator,STUDIO_ROOMS} from './studioNavigator.js';
+import {mountDomistikaPhiPoseCompanion} from './phiPoseDomistikaCompanion.js';
 import {createStudioEnvironments} from './studioEnvironments.js';
 import {parseOpenBluePreview,OPENBLUE_MAX_BYTES} from './openblueModel.js';
 import {buildOpenBluePreview} from './openbluePreview.js';
@@ -1101,6 +1102,25 @@ document.querySelectorAll('[data-living-action]').forEach(button=>
 document.querySelectorAll('[data-studio-room]').forEach(button=>
  button.addEventListener('click',()=>goToStudioRoom(button.dataset.studioRoom)));
 $('#studioHome').addEventListener('click',()=>goToStudioRoom('home'));
+const phiPoseCompanion=mountDomistikaPhiPoseCompanion({
+  element:$('#phipose-xr-bridge'),
+  getContext:()=>({
+    room:activeStudioRoom,canvasBrush,airBrush:airStyle,
+    pointerBusy:!!pointerState,xrBusy:xrInteractions.size>0
+  }),
+  onSelectRoom:room=>goToStudioRoom(room),
+  onSelectBrush:(room,style)=>{
+    if(room==='canvas')setCanvasBrush(style);
+    else if(room==='spatial'){
+      setAirStyle(style);
+      for(const tile of document.querySelectorAll('[data-studio-brush]')){
+        tile.classList.toggle('active',tile.dataset.studioBrush===style);
+        tile.setAttribute('aria-pressed',String(tile.dataset.studioBrush===style));
+      }
+      message('Future 3D strokes use '+style+'. Existing artwork is unchanged.');
+    }
+  }
+});
 function toggleStudioScenery(){
  showStudioScenery=!showStudioScenery;
  syncRoomScene();syncRoomUI();
@@ -1779,6 +1799,7 @@ renderer.xr.addEventListener('sessionstart',()=>{bpcLastTick=null;
   controls.enabled=false;syncRoomScene();message(passthrough?'Mixed reality active; decorative scenery hidden.':'VR active; choose a room and create.');
 });
 renderer.xr.addEventListener('sessionend',()=>{bpcLastTick=null;
+  phiPoseCompanion.disable();
   for(const i of [...xrInteractions.keys()])endXR(i);
   brushStudio.finishAll();
   stopRunner();
@@ -1800,7 +1821,7 @@ goToStudioRoom('home',true);
 syncBpcPlaybackUI();
 let lastMotionFrame=null,lastRhythmBucket=-1;
 document.addEventListener('visibilitychange',()=>{if(document.hidden){stopRunner();stopShowDemo();rhythm.pause();workshop.stopMotion();lastMotionFrame=null;}});
-window.addEventListener('pagehide',()=>{stopRunner();stopShowDemo();rhythm.clear();workshop.stopMotion();});
+window.addEventListener('pagehide',()=>{phiPoseCompanion.disable();stopRunner();stopShowDemo();rhythm.clear();workshop.stopMotion();});
 renderer.setAnimationLoop(timeMs=>{
   const seconds=lastMotionFrame===null?0:Math.max(0,(timeMs-lastMotionFrame)/1000);
   lastMotionFrame=timeMs;

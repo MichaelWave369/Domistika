@@ -1,5 +1,14 @@
 ## Domistika XR v1.0 · Showrunner
 
+## Rung 12 · Domistika XR ΦPose Gesture Companion
+
+Domistika XR now has an **opt-in, five-minute** gesture-command host powered by the reviewed OverStrings ΦPose SDK. The paired OverStrings companion may request Studio Home/Canvas/3D Paint/Sculpture/Gallery navigation or next/previous *future-stroke* brush style. No gesture can paint, erase, save, export, or delete your artwork. Active pointer/controller interactions block commands; synthetic practice requires separate opt-in.
+
+This is a **same-origin browser companion pilot**, not yet standalone Quest 3 hand tracking. Background XR windows and physical headset accuracy remain unverified.
+
+[Read the Rung 12 contract and Quest acceptance checklist](docs/XR_PHIPOSE_COMPANION_R12.md).
+
+
 **v1.0 is here:** a complete, local-first, portable performance workflow for the [Domistika XR workshop](https://michaelwave369.github.io/Domistika/xr.html). Create an editable installation, choreograph **three visual acts** with named cues, timed transitions, palette/gain/energy changes, and operate a silent show from desktop or the Quest's paginated **PLAY SHOW / STOP SHOW / NEXT ACT / PREV ACT** controls. Save and restore the full editable assembly and cue sheet in a validated **Showpack v1 JSON**. Your original workshop JSON, offline source previews, static GLB exports and optional music files remain independent. Playback emits no actual music and real Quest 3 device testing is still necessary. [v1.0 release notes, safety contracts and headset test plan](docs/XR_SHOWRUNNER_V10.md).
 
 ## Domistika XR · Show Forge v0.9
