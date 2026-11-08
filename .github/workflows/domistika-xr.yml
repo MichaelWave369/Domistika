@@ -40,6 +40,13 @@ jobs:
       - run: node --check src/xr/phiPoseHostCore.js
       - run: node --check src/xr/phiPoseDomistikaHost.js
       - run: node --check src/xr/phiPoseDomistikaCompanion.js
+      - run: node --check src/xr/phiPoseNativeXR.js
+      - run: node --check src/xr/phiPoseNativeMenu.js
+      - run: node --check src/xr/phipose-core/calibration.mjs
+      - run: node --check src/xr/phipose-core/gesture.mjs
+      - run: node --check src/xr/phipose-core/phipose.mjs
+      - run: node --check src/xr/phipose-core/wrist-motion.mjs
+      - run: node --test tests/xr-phipose-native.test.mjs
       - run: node --test tests/xr-phipose-navigation.test.mjs
       - run: node --check src/xr/studioEnvironments.js
       - run: node --check src/xr/model.js
